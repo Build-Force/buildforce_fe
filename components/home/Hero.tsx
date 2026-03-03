@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 
 export const Hero = () => {
     return (
-        <section className="relative min-h-[850px] flex items-center justify-center overflow-hidden pt-36 pb-24">
+        <section className="relative min-h-[850px] flex items-center justify-center overflow-hidden pt-12 pb-24">
             <img
                 alt="Construction site"
                 className="absolute inset-0 w-full h-full object-cover"

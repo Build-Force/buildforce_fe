@@ -114,7 +114,7 @@ export default function AuthPage() {
             {/* --- PANEL NHẬP LIỆU --- */}
             <motion.section
                 layout
-                className="flex-1 flex flex-col justify-center items-center pt-40 pb-24 px-6 sm:px-12 bg-white dark:bg-slate-900 transition-colors duration-300"
+                className="flex-1 flex flex-col justify-center items-center pt-12 pb-24 px-6 sm:px-12 bg-white dark:bg-slate-900 transition-colors duration-300"
             >
                 <div className="w-full max-w-md">
                     <AnimatePresence mode="wait">
