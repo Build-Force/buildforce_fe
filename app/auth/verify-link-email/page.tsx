@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import api from "../../../utils/api";
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const token = searchParams.get("token");
@@ -22,7 +22,6 @@ export default function VerifyEmailPage() {
 
         const verifyEmail = async () => {
             try {
-                // Post to the verify endpoint
                 const response = await api.post('/api/auth/verify-link-email', { token });
                 if (response.data.success) {
                     setStatus("success");
@@ -77,5 +76,17 @@ export default function VerifyEmailPage() {
                 )}
             </div>
         </div>
+    );
+}
+
+export default function VerifyEmailPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-900">
+                <div className="w-16 h-16 border-4 border-slate-200 border-t-primary rounded-full animate-spin"></div>
+            </div>
+        }>
+            <VerifyEmailContent />
+        </Suspense>
     );
 }
