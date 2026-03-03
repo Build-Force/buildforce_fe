@@ -9,8 +9,9 @@ export function generateStaticParams() {
     }));
 }
 
-export default function JobDetailPage({ params }: { params: { id: string } }) {
-    const jobId = Number(params.id);
+export default async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
+    const jobId = Number(id);
     const job = JOBS.find((j) => j.id === jobId);
 
     if (!job) {
