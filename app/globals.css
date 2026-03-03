@@ -15,7 +15,6 @@
 @layer base {
   body {
     @apply font-sans antialiased text-slate-900 bg-background-light dark:bg-background-dark dark:text-slate-100 transition-colors duration-300;
-    font-size: 1.125rem;
   }
 }
 
@@ -39,11 +38,26 @@
   .card-shadow {
     box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.05);
   }
-}
 
-input:focus {
-  border-color: #0EA5E9 !important;
-  box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.1) !important;
+  .filter-section {
+    @apply mb-12 border-b border-slate-200 dark:border-slate-800 pb-8;
+  }
+
+  input[type="range"] {
+    @apply w-full h-3 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-primary;
+  }
+
+  .glass {
+    @apply bg-white/95 dark:bg-slate-900/90 backdrop-blur-md;
+  }
+
+  .prose-custom ul {
+    @apply space-y-4 list-none p-0;
+  }
+
+  .prose-custom li {
+    @apply flex items-start gap-3 before:content-[''] before:w-2 before:h-2 before:bg-primary before:rounded-full before:mt-3 before:shrink-0;
+  }
 }
 
 .material-symbols-outlined {

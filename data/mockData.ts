@@ -1,5 +1,5 @@
 export const NAV_LINKS = [
-    { label: "Find Jobs", href: "#" },
+    { label: "Find Jobs", href: "/jobs" },
     { label: "Hire Talent", href: "#" },
     { label: "Safety Hub", href: "#" },
 ];
@@ -17,6 +17,36 @@ export const JOBS = [
         applicants: 12,
         verified: true,
         onTimePayment: true,
+        type: "Full-Time",
+        description: "We are seeking a highly skilled Senior Structural Welder for a high-profile infrastructure project in Downtown Metro. You will be responsible for complex structural steel fabrication, welding in various positions, and ensuring all work meets rigorous safety and quality standards.",
+        responsibilities: [
+            "Perform high-quality welds using GMAW, FCAW, and SMAW processes on heavy structural steel.",
+            "Interpret blueprints, engineering drawings, and welding symbols accurately.",
+            "Collaborate with the site engineering team to resolve technical welding challenges.",
+            "Maintain strict adherence to AWS D1.1 structural welding codes.",
+            "Lead and mentor junior welders on the site for safety and technique."
+        ],
+        requirements: [
+            "Valid CWB or AWS certification for structural steel welding.",
+            "Minimum 8 years of experience in heavy industrial or infrastructure projects.",
+            "Proficiency in reading complex blueprints and structural plans.",
+            "Expert level with multiple welding processes (Stick, MIG, Flux-Core).",
+            "Must pass a pre-employment weld test and safety screening.",
+            "Reliable transportation to the Downtown Metro site."
+        ],
+        benefits: [
+            { icon: "medical_services", label: "Premium Health & Dental" },
+            { icon: "savings", label: "401k Matching" },
+            { icon: "commute", label: "Travel Allowance" },
+            { icon: "apparel", label: "Tool & Gear Credit" }
+        ],
+        contractor: {
+            name: "Mainland Infrastructure Group",
+            type: "Top Tier Contractor",
+            onTimeRate: "100%",
+            rating: "4.9 / 5.0",
+            icon: "architecture"
+        }
     },
     {
         id: 2,
@@ -30,6 +60,32 @@ export const JOBS = [
         applicants: 8,
         verified: true,
         onTimePayment: true,
+        type: "Full-Time",
+        description: "Join Skyline Dev Partners as a Commercial Electrician (L2). You will work on major commercial developments, ensuring electrical systems are installed and maintained according to the highest industry standards.",
+        responsibilities: [
+            "Install, maintain, and repair electrical systems in commercial buildings.",
+            "Test electrical systems using specialized diagnostic tools.",
+            "Ensure compliance with all safety regulations and building codes.",
+            "Work from blueprints and technical diagrams."
+        ],
+        requirements: [
+            "Master or Journeyman Electrician License.",
+            "At least 5 years of experience in commercial electrical work.",
+            "Strong understanding of NEC (National Electrical Code).",
+            "Ability to work independently or as part of a team."
+        ],
+        benefits: [
+            { icon: "medical_services", label: "Health & Vision" },
+            { icon: "payments", label: "Performance Bonuses" },
+            { icon: "schedule", label: "Flexible Shifts" }
+        ],
+        contractor: {
+            name: "Skyline Dev Partners",
+            type: "Verified Contractor",
+            onTimeRate: "98%",
+            rating: "4.7 / 5.0",
+            icon: "domain"
+        }
     },
 ];
 

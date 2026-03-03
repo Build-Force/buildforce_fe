@@ -29,7 +29,7 @@ export const Footer = () => {
                     <div>
                         <h5 className="font-black mb-8 uppercase text-sm tracking-[0.2em] text-slate-400">Platform</h5>
                         <ul className="space-y-6 text-lg text-slate-700 dark:text-slate-300 font-semibold">
-                            <li><Link href="#" className="hover:text-primary transition-colors flex items-center gap-2">Browse Jobs</Link></li>
+                            <li><Link href="/jobs" className="hover:text-primary transition-colors flex items-center gap-2">Browse Jobs</Link></li>
                             <li><Link href="#" className="hover:text-primary transition-colors flex items-center gap-2">Find Skilled Workers</Link></li>
                             <li><Link href="#" className="hover:text-primary transition-colors flex items-center gap-2">Verification Services</Link></li>
                             <li><Link href="#" className="hover:text-primary transition-colors flex items-center gap-2">Apprenticeships</Link></li>
