@@ -240,7 +240,7 @@ export default function AuthPage() {
 
                         {!isLogin && (
                             <div className="mt-20">
-                                <p className="text-white/60 text-sm font-medium italic">"The most transparent way to find construction work locally."</p>
+                                <p className="text-white/60 text-sm font-medium italic">&quot;The most transparent way to find construction work locally.&quot;</p>
                             </div>
                         )}
                     </motion.div>
@@ -351,7 +351,7 @@ export default function AuthPage() {
 
                                 <div className="mt-12 text-center">
                                     <p className="text-slate-500 dark:text-slate-400 font-medium text-lg">
-                                        Don't have an account?
+                                        Don&apos;t have an account?
                                         <button onClick={toggleAuthMode} className="text-primary font-black ml-1 hover:underline">
                                             Sign up now
                                         </button>
@@ -492,7 +492,7 @@ export default function AuthPage() {
                             Check Your Email
                         </h3>
                         <p className="text-slate-600 dark:text-slate-400 mb-6 leading-relaxed">
-                            We've sent a verification link to <span className="font-bold text-slate-800 dark:text-slate-200">{registeredEmail}</span>. Please click the link to activate your account.
+                            We&apos;ve sent a verification link to <span className="font-bold text-slate-800 dark:text-slate-200">{registeredEmail}</span>. Please click the link to activate your account.
                         </p>
 
                         <div className="flex items-center justify-center gap-3 text-sm text-slate-500 mb-6 border border-slate-200 dark:border-slate-700 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50">

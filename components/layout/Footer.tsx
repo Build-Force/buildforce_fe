@@ -18,7 +18,7 @@ export const Footer = () => {
                             </span>
                         </div>
                         <p className="text-slate-500 text-lg leading-relaxed mb-8">
-                            The industry's most reliable talent marketplace. Connecting skilled tradespeople with top-tier construction projects nationwide.
+                            The industry&apos;s most reliable talent marketplace. Connecting skilled tradespeople with top-tier construction projects nationwide.
                         </p>
                         <div className="p-6 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">
                             <p className="text-slate-900 dark:text-white font-black text-sm uppercase tracking-widest mb-2">Our Promise</p>

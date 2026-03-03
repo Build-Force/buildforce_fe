@@ -189,7 +189,7 @@ export default function JobDetailPage({ params }: { params: { id: string } }) {
                             <div>
                                 <h4 className="text-3xl font-black mb-4">Safety Standards</h4>
                                 <p className="text-xl text-slate-600 dark:text-slate-400 leading-relaxed">
-                                    This contractor is "Safety First" certified. They undergo bi-monthly site inspections and provide all necessary PPE on day one. Your safety is our primary metric for contractor evaluation.
+                                    This contractor is &quot;Safety First&quot; certified. They undergo bi-monthly site inspections and provide all necessary PPE on day one. Your safety is our primary metric for contractor evaluation.
                                 </p>
                             </div>
                         </div>
