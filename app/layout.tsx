@@ -4,8 +4,8 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 
 export const metadata: Metadata = {
-  title: "Workforce Connection | Construction Talent Hub",
-  description: "Connecting Skilled Hands to Reliable Projects. The industry's most reliable talent marketplace.",
+  title: "BuildForce | Nền tảng kết nối nhân lực xây dựng",
+  description: "Kết nối những bàn tay lành nghề với các dự án tin cậy. Thị trường nhân lực uy tín nhất ngành xây dựng.",
 };
 
 export default function RootLayout({
@@ -14,7 +14,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="light">
+    <html lang="vi" className="light">
       <body>
         <Header />
         <main className="pt-28">{children}</main>

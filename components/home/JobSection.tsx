@@ -8,11 +8,11 @@ export const JobSection = () => {
             <div className="max-w-7xl mx-auto px-6">
                 <div className="flex flex-col md:flex-row justify-between items-center mb-20">
                     <div>
-                        <h2 className="text-4xl font-display font-bold text-slate-900 dark:text-white mb-2">Trending Opportunities</h2>
-                        <p className="text-slate-500 font-medium">Sorted by relevance based on your profile</p>
+                        <h2 className="text-4xl font-display font-bold text-slate-900 dark:text-white mb-2">Cơ hội việc làm nổi bật</h2>
+                        <p className="text-slate-500 font-medium">Được sắp xếp theo mức độ phù hợp với hồ sơ của bạn</p>
                     </div>
                     <button className="hidden md:block bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 px-8 py-4 rounded-2xl font-bold text-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm">
-                        View All 1,240 Openings
+                        Xem tất cả 1,240 đầu việc
                     </button>
                 </div>
 

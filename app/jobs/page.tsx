@@ -13,36 +13,36 @@ export default function JobsPage() {
                     <aside className="w-full lg:w-[400px] shrink-0">
                         <div className="bg-white dark:bg-slate-900 p-10 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 sticky top-32">
                             <div className="flex items-center justify-between mb-12">
-                                <h2 className="text-3xl font-black">Filters</h2>
-                                <button className="text-primary font-bold text-lg hover:underline">Clear All</button>
+                                <h2 className="text-3xl font-black">Bộ lọc</h2>
+                                <button className="text-primary font-bold text-lg hover:underline">Xóa tất cả</button>
                             </div>
 
                             <div className="filter-section">
                                 <div className="flex justify-between items-center mb-6">
-                                    <label className="text-xl font-black">Location</label>
+                                    <label className="text-xl font-black">Địa điểm</label>
                                     <button className="flex items-center gap-2 text-sm font-bold bg-slate-100 dark:bg-slate-800 px-4 py-2 rounded-full">
-                                        <span className="material-symbols-outlined text-lg">map</span> Map View
+                                        <span className="material-symbols-outlined text-lg">map</span> Bản đồ
                                     </button>
                                 </div>
                                 <div className="relative">
                                     <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-2xl">location_on</span>
                                     <input
                                         className="w-full h-16 pl-14 pr-6 rounded-2xl border-2 border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-lg font-medium focus:ring-primary focus:border-primary"
-                                        placeholder="City or province"
+                                        placeholder="Thành phố hoặc tỉnh thành"
                                         type="text"
                                     />
                                 </div>
                             </div>
 
                             <div className="filter-section">
-                                <label className="block text-xl font-black mb-6">Trade / Skill</label>
+                                <label className="block text-xl font-black mb-6">Ngành nghề / Kỹ năng</label>
                                 <div className="space-y-4">
-                                    {["Electrician", "Welder", "Carpentry", "Plumbing"].map((skill) => (
+                                    {["Thợ điện", "Thợ hàn", "Thợ mộc", "Thợ ống nước"].map((skill) => (
                                         <label key={skill} className="flex items-center gap-4 cursor-pointer group">
                                             <input
                                                 className="w-7 h-7 rounded-lg border-2 border-slate-300 text-primary focus:ring-primary"
                                                 type="checkbox"
-                                                defaultChecked={skill === "Carpentry"}
+                                                defaultChecked={skill === "Thợ mộc"}
                                             />
                                             <span className="text-lg font-bold text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors">
                                                 {skill}
@@ -54,28 +54,28 @@ export default function JobsPage() {
 
                             <div className="filter-section">
                                 <div className="flex justify-between items-center mb-6">
-                                    <label className="text-xl font-black">Salary Range</label>
-                                    <span className="text-xl font-black text-primary">$35 - $65/hr</span>
+                                    <label className="text-xl font-black">Mức lương</label>
+                                    <span className="text-xl font-black text-primary">35 - 65tr/tháng</span>
                                 </div>
                                 <input className="mb-4" max="100" min="20" type="range" defaultValue="45" />
                                 <div className="flex justify-between text-sm font-bold text-slate-400">
-                                    <span>$20/hr</span>
-                                    <span>$100/hr</span>
+                                    <span>20tr</span>
+                                    <span>100tr</span>
                                 </div>
                             </div>
 
                             <div className="filter-section border-none pb-0">
-                                <label className="block text-xl font-black mb-6">Contractor Rating</label>
+                                <label className="block text-xl font-black mb-6">Đánh giá nhà thầu</label>
                                 <div className="space-y-4">
                                     <label className="flex items-center gap-4 cursor-pointer">
                                         <input className="w-7 h-7 text-primary focus:ring-primary" name="rating" type="radio" />
                                         <span className="flex items-center gap-1 text-yellow-500 font-bold text-lg">
-                                            4.5+ Stars
+                                            4.5+ Sao
                                         </span>
                                     </label>
                                     <label className="flex items-center gap-4 cursor-pointer">
                                         <input className="w-7 h-7 text-primary focus:ring-primary" name="rating" type="radio" />
-                                        <span className="text-lg font-bold text-slate-700 dark:text-slate-300">Show All Verified</span>
+                                        <span className="text-lg font-bold text-slate-700 dark:text-slate-300">Hiển thị tất cả đã xác minh</span>
                                     </label>
                                 </div>
                             </div>
@@ -86,15 +86,15 @@ export default function JobsPage() {
                     <section className="flex-1">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-16 gap-6">
                             <div>
-                                <h1 className="text-4xl font-black mb-3">1,240 Jobs Found</h1>
-                                <p className="text-slate-500 font-bold text-lg">Results are personalized based on your profile</p>
+                                <h1 className="text-4xl font-black mb-3">Đã tìm thấy 1,240 công việc</h1>
+                                <p className="text-slate-500 font-bold text-lg">Kết quả được cá nhân hóa dựa trên hồ sơ của bạn</p>
                             </div>
                             <div className="flex items-center gap-4 bg-white dark:bg-slate-900 px-6 py-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
-                                <label className="text-base font-black text-slate-400 uppercase tracking-widest shrink-0">Sort By</label>
+                                <label className="text-base font-black text-slate-400 uppercase tracking-widest shrink-0">Sắp xếp theo</label>
                                 <select className="bg-transparent border-none focus:ring-0 text-lg font-black pr-10 cursor-pointer">
-                                    <option>Relevance</option>
-                                    <option>Newest</option>
-                                    <option>Highest Pay</option>
+                                    <option>Phù hợp nhất</option>
+                                    <option>Mới nhất</option>
+                                    <option>Lương cao nhất</option>
                                 </select>
                             </div>
                         </div>
@@ -129,9 +129,9 @@ export default function JobsPage() {
             <section className="py-32 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800">
                 <div className="max-w-7xl mx-auto px-8">
                     <div className="text-center mb-24">
-                        <h2 className="text-5xl font-display font-bold text-slate-900 dark:text-white mb-8">Work with Contractors You Can Trust</h2>
+                        <h2 className="text-5xl font-display font-bold text-slate-900 dark:text-white mb-8">Làm việc với các nhà thầu đẳng cấp</h2>
                         <p className="text-2xl text-slate-600 dark:text-slate-400 max-w-4xl mx-auto leading-relaxed">
-                            Every contractor’s history is visible before you apply. We hold our partners to the highest standards.
+                            Lịch sử của mọi nhà thầu đều được hiển thị minh bạch. Chúng tôi đặt ra những tiêu chuẩn cao nhất cho các đối tác của mình.
                         </p>
                     </div>
 
@@ -144,23 +144,23 @@ export default function JobsPage() {
                                     </div>
                                     <div>
                                         <h4 className="text-3xl font-black text-slate-900 dark:text-white">{contractor.name}</h4>
-                                        <p className="text-xl text-slate-500 font-bold">Verified Member since {contractor.verifiedSince}</p>
+                                        <p className="text-xl text-slate-500 font-bold">Thành viên đã xác minh từ {contractor.verifiedSince}</p>
                                     </div>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-10 mb-10">
                                     <div className="bg-slate-50 dark:bg-slate-800 p-8 rounded-3xl text-center">
                                         <p className="text-5xl font-black text-slate-900 dark:text-white mb-2">{contractor.projectsCount}</p>
-                                        <p className="text-base font-black text-slate-400 uppercase tracking-widest">Projects Done</p>
+                                        <p className="text-base font-black text-slate-400 uppercase tracking-widest">Dự án hoàn thành</p>
                                     </div>
                                     <div className="bg-slate-50 dark:bg-slate-800 p-8 rounded-3xl text-center">
                                         <p className="text-5xl font-black text-secondary mb-2">{contractor.rating}</p>
-                                        <p className="text-base font-black text-slate-400 uppercase tracking-widest">Worker Rating</p>
+                                        <p className="text-base font-black text-slate-400 uppercase tracking-widest">Đánh giá của thợ</p>
                                     </div>
                                 </div>
 
                                 <div className="p-8 bg-green-50 dark:bg-green-900/20 rounded-3xl flex items-center justify-between">
-                                    <span className="text-xl font-bold text-slate-700 dark:text-slate-200">Payment Reliability</span>
+                                    <span className="text-xl font-bold text-slate-700 dark:text-slate-200">Độ tin cậy thanh toán</span>
                                     <span className="text-2xl font-black text-secondary">{contractor.reliability}</span>
                                 </div>
                             </div>
