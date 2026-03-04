@@ -1,7 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Map, {
+    NavigationControl,
+    FullscreenControl,
+    Marker,
+} from "react-map-gl/mapbox";
+import "mapbox-gl/dist/mapbox-gl.css";
 
 const SKILL_OPTIONS = [
     "Thợ xây", "Thợ điện", "Thợ hàn", "Thợ mộc", "Thợ ống nước",
@@ -12,10 +18,15 @@ const PROVINCES = [
     "Đà Nẵng", "Hà Nội", "TP.HCM", "Quảng Nam", "Huế", "Bình Dương", "Đồng Nai", "Cần Thơ"
 ];
 
+const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN as string | undefined;
+
 export default function PostJobPage() {
     const [step, setStep] = useState(1);
     const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
     const [submitted, setSubmitted] = useState(false);
+    const [isMapLoading, setIsMapLoading] = useState(false);
+    const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
+    const [isMapModalOpen, setIsMapModalOpen] = useState(false);
     const [form, setForm] = useState({
         title: "",
         jobType: "full-time",
@@ -37,6 +48,68 @@ export default function PostJobPage() {
     };
 
     const handleSubmit = () => setSubmitted(true);
+
+    // Cập nhật static map từ Mapbox theo địa chỉ/province
+    useEffect(() => {
+        if (!MAPBOX_TOKEN) return;
+
+        const queryParts = [];
+        if (form.address.trim()) queryParts.push(form.address.trim());
+        if (form.province.trim()) queryParts.push(form.province.trim());
+        queryParts.push("Việt Nam");
+
+        const query = queryParts.join(", ");
+
+        if (!query.trim()) return;
+
+        let cancelled = false;
+        const controller = new AbortController();
+
+        const fetchCoords = async () => {
+            try {
+                setIsMapLoading(true);
+                const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
+                    query
+                )}.json?access_token=${MAPBOX_TOKEN}&limit=1`;
+
+                const res = await fetch(url, { signal: controller.signal });
+                if (!res.ok) throw new Error("Geocoding failed");
+
+                const data = await res.json();
+                const feature = data.features?.[0];
+                if (!feature || cancelled) {
+                    if (!cancelled) setMapCenter(null);
+                    return;
+                }
+
+                const [lng, lat] = feature.center as [number, number];
+
+                if (!cancelled) {
+                    setMapCenter({ lat, lng });
+                }
+            } catch {
+                if (!cancelled) {
+                    setMapCenter(null);
+                }
+            } finally {
+                if (!cancelled) {
+                    setIsMapLoading(false);
+                }
+            }
+        };
+
+        // Tránh gọi API khi người dùng chưa nhập gì
+        if (form.address.trim().length >= 3 || form.province.trim().length > 0) {
+            fetchCoords();
+        } else {
+            setMapCenter(null);
+        }
+
+        return () => {
+            cancelled = true;
+            controller.abort();
+        };
+    }, [form.address, form.province]);
 
     if (submitted) {
         return (
@@ -209,18 +282,82 @@ export default function PostJobPage() {
                                     </div>
                                 </div>
 
-                                {/* Map placeholder */}
-                                <div className="mt-6 relative h-52 rounded-3xl overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-dashed border-slate-300 dark:border-slate-700 flex flex-col items-center justify-center group cursor-pointer hover:border-primary transition-all">
-                                    <div className="absolute inset-0 opacity-30"
-                                        style={{ backgroundImage: "url('https://api.mapbox.com/styles/v1/mapbox/light-v11/static/108.2208,16.0678,12,0/800x200?access_token=pk.placeholder')", backgroundSize: "cover" }}
-                                    />
-                                    <div className="relative z-10 text-center">
-                                        <span className="material-symbols-outlined text-primary text-5xl mb-2 block">add_location_alt</span>
-                                        <p className="font-black text-slate-700 dark:text-slate-300 text-sm">Nhấp để chọn vị trí trên bản đồ</p>
-                                        <p className="text-xs text-slate-400 font-bold mt-1">{form.province} • Việt Nam</p>
-                                    </div>
-                                    <div className="absolute bottom-4 right-4 bg-white dark:bg-slate-900 rounded-2xl px-4 py-2 shadow-lg">
-                                        <p className="text-xs font-black text-slate-500">📍 {form.province}</p>
+                                {/* Map preview (Mapbox) */}
+                                <div className="mt-6 relative h-80 md:h-96 rounded-[2.5rem] overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-700 group hover:border-primary transition-all">
+                                    {MAPBOX_TOKEN && mapCenter ? (
+                                        <Map
+                                            initialViewState={{
+                                                longitude: mapCenter.lng,
+                                                latitude: mapCenter.lat,
+                                                zoom: 14,
+                                            }}
+                                            mapStyle="mapbox://styles/mapbox/light-v11"
+                                            mapboxAccessToken={MAPBOX_TOKEN}
+                                            style={{ width: "100%", height: "100%" }}
+                                            reuseMaps
+                                        >
+                                            <NavigationControl
+                                                position="bottom-right"
+                                                showCompass={false}
+                                            />
+                                            <FullscreenControl position="top-right" />
+                                            <Marker
+                                                longitude={mapCenter.lng}
+                                                latitude={mapCenter.lat}
+                                                anchor="bottom"
+                                            >
+                                                <span className="material-symbols-outlined text-3xl text-red-500 drop-shadow-md">
+                                                    location_on
+                                                </span>
+                                            </Marker>
+                                        </Map>
+                                    ) : (
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center px-4 text-center">
+                                            <span className="material-symbols-outlined text-primary text-5xl mb-2 block">
+                                                add_location_alt
+                                            </span>
+                                            <p className="font-black text-slate-700 dark:text-slate-300 text-sm">
+                                                {MAPBOX_TOKEN
+                                                    ? "Nhập địa chỉ để xem vị trí công trình trên bản đồ"
+                                                    : "Chưa cấu hình MAPBOX_TOKEN • Vui lòng thêm NEXT_PUBLIC_MAPBOX_TOKEN vào env"}
+                                            </p>
+                                            <p className="text-xs text-slate-400 font-bold mt-1">
+                                                {form.address
+                                                    ? `${form.address}, ${form.province} • Việt Nam`
+                                                    : `${form.province} • Việt Nam`}
+                                            </p>
+                                            {isMapLoading && (
+                                                <p className="mt-2 text-[10px] font-bold text-primary">
+                                                    Đang tải bản đồ từ Mapbox...
+                                                </p>
+                                            )}
+                                            {!isMapLoading && MAPBOX_TOKEN && form.address.trim().length >= 3 && !mapCenter && (
+                                                <p className="mt-2 text-[10px] font-bold text-slate-400">
+                                                    Chưa tìm thấy vị trí chính xác. Hãy kiểm tra lại địa chỉ.
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+                                    <div className="pointer-events-none absolute inset-0 flex flex-col justify-between">
+                                        <div className="flex justify-end p-4">
+                                            {MAPBOX_TOKEN && mapCenter && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setIsMapModalOpen(true)}
+                                                    className="pointer-events-auto flex items-center gap-1 bg-slate-900/80 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full shadow-lg hover:bg-slate-900"
+                                                >
+                                                    <span className="material-symbols-outlined text-xs">
+                                                        fullscreen
+                                                    </span>
+                                                    Xem bản đồ lớn
+                                                </button>
+                                            )}
+                                        </div>
+                                        <div className="self-end mb-4 mr-4 bg-white/90 dark:bg-slate-900/90 rounded-2xl px-4 py-2 shadow-lg">
+                                            <p className="text-xs font-black text-slate-500">
+                                                📍 {form.province}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -430,6 +567,51 @@ export default function PostJobPage() {
                         </motion.div>
                     )}
                 </AnimatePresence>
+
+                {/* Fullscreen map modal */}
+                {MAPBOX_TOKEN && mapCenter && isMapModalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                        <div className="relative w-full max-w-5xl mx-4">
+                            <div className="bg-slate-900 rounded-[2.5rem] border border-slate-700 overflow-hidden shadow-2xl h-[70vh]">
+                                <Map
+                                    initialViewState={{
+                                        longitude: mapCenter.lng,
+                                        latitude: mapCenter.lat,
+                                        zoom: 14,
+                                    }}
+                                    mapStyle="mapbox://styles/mapbox/light-v11"
+                                    mapboxAccessToken={MAPBOX_TOKEN}
+                                    style={{ width: "100%", height: "100%" }}
+                                    reuseMaps
+                                >
+                                    <NavigationControl
+                                        position="bottom-right"
+                                        showCompass={false}
+                                    />
+                                    <FullscreenControl position="top-right" />
+                                    <Marker
+                                        longitude={mapCenter.lng}
+                                        latitude={mapCenter.lat}
+                                        anchor="bottom"
+                                    >
+                                        <span className="material-symbols-outlined text-3xl text-red-500 drop-shadow-md">
+                                            location_on
+                                        </span>
+                                    </Marker>
+                                </Map>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setIsMapModalOpen(false)}
+                                className="absolute -top-4 right-6 w-10 h-10 rounded-2xl bg-white text-slate-900 flex items-center justify-center shadow-lg border border-slate-200"
+                            >
+                                <span className="material-symbols-outlined text-xl">
+                                    close
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

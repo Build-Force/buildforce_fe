@@ -2,10 +2,35 @@
 
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
+import api from "@/utils/api";
 import { SurveyWizard } from "./SurveyWizard";
 
 export const Hero = () => {
+    const router = useRouter();
     const [isSurveyOpen, setIsSurveyOpen] = React.useState(false);
+    const [isLoggedIn, setIsLoggedIn] = React.useState(false);
+    const [isHR, setIsHR] = React.useState(false);
+
+    React.useEffect(() => {
+        const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+        if (!token) return;
+
+        setIsLoggedIn(true);
+
+        const fetchProfile = async () => {
+            try {
+                const res = await api.get("/api/auth/profile");
+                if (res.data?.success && res.data?.data?.role) {
+                    setIsHR(res.data.data.role === "hr");
+                }
+            } catch (err) {
+                console.error("Failed to fetch profile for hero:", err);
+            }
+        };
+
+        fetchProfile();
+    }, []);
 
     return (
         <section className="relative min-h-[850px] flex items-center justify-center overflow-hidden pt-12 pb-24">
@@ -48,12 +73,20 @@ export const Hero = () => {
                     >
                         Bắt đầu khảo sát 2 phút
                     </button>
-                    <button className="bg-white text-slate-900 px-10 py-6 rounded-2xl font-bold text-xl shadow-xl hover:bg-slate-100 transition-all active:scale-95">
+                    <button
+                        onClick={() => router.push("/jobs")}
+                        className="bg-white text-slate-900 px-10 py-6 rounded-2xl font-bold text-xl shadow-xl hover:bg-slate-100 transition-all active:scale-95"
+                    >
                         Tìm việc
                     </button>
-                    <button className="border-2 border-white/40 backdrop-blur-md text-white px-10 py-6 rounded-2xl font-bold text-xl hover:bg-white/10 transition-all active:scale-95">
-                        Đăng việc
-                    </button>
+                    {isHR && (
+                        <button
+                            onClick={() => router.push("/post-job")}
+                            className="border-2 border-white/40 backdrop-blur-md text-white px-10 py-6 rounded-2xl font-bold text-xl hover:bg-white/10 transition-all active:scale-95"
+                        >
+                            Đăng việc
+                        </button>
+                    )}
                 </motion.div>
 
                 <AnimatePresence>

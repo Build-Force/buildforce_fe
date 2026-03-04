@@ -12,6 +12,8 @@ export default function ForgotPasswordPage() {
     // Steps: 1 (Email), 2 (OTP), 3 (New Password)
     const [step, setStep] = useState<1 | 2 | 3>(1);
 
+    const [identifier, setIdentifier] = useState("");
+    const [sentToEmail, setSentToEmail] = useState("");
     const [email, setEmail] = useState("");
     const [otp, setOtp] = useState("");
     const [newPassword, setNewPassword] = useState("");
@@ -228,6 +230,7 @@ export default function ForgotPasswordPage() {
                                 >
                                     {isLoading ? "Đang đặt lại..." : "Đặt lại mật khẩu"}
                                 </button>
+                            </div>
                         </motion.form>
                     )}
                 </AnimatePresence>
