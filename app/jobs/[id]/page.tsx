@@ -17,9 +17,9 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     if (!job) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh]">
-                <h1 className="text-4xl font-black mb-4">Job Not Found</h1>
+                <h1 className="text-4xl font-black mb-4">Không tìm thấy công việc</h1>
                 <Link href="/jobs" className="text-primary font-bold hover:underline">
-                    Back to all jobs
+                    Quay lại danh sách công việc
                 </Link>
             </div>
         );
@@ -33,7 +33,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                 {/* Breadcrumbs */}
                 <header className="mb-10">
                     <nav className="flex mb-6 text-base font-bold text-slate-400">
-                        <Link href="/jobs" className="hover:text-primary transition-colors">Job Search</Link>
+                        <Link href="/jobs" className="hover:text-primary transition-colors">Tìm kiếm việc làm</Link>
                         <span className="mx-2">/</span>
                         <span className="text-slate-600 dark:text-slate-300">{job.title}</span>
                     </nav>
@@ -43,11 +43,11 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                             <div className="flex flex-wrap items-center gap-3 mb-5">
                                 {job.verified && (
                                     <span className="px-4 py-1.5 bg-green-50 dark:bg-green-900/30 text-secondary text-sm font-black rounded-full border border-green-100 dark:border-green-800 flex items-center gap-2">
-                                        <span className="material-symbols-outlined text-lg">verified</span> Verified Contractor
+                                        <span className="material-symbols-outlined text-lg">verified</span> Nhà thầu đã xác minh
                                     </span>
                                 )}
                                 {job.urgent && (
-                                    <span className="px-4 py-1.5 bg-red-50 dark:bg-red-900/30 text-red-500 text-sm font-black rounded-full border border-red-100 dark:border-red-800">Urgent</span>
+                                    <span className="px-4 py-1.5 bg-red-50 dark:bg-red-900/30 text-red-500 text-sm font-black rounded-full border border-red-100 dark:border-red-800">Khẩn cấp</span>
                                 )}
                                 <span className="px-4 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-primary text-sm font-black rounded-full border border-blue-100 dark:border-blue-800">{job.type}</span>
                             </div>
@@ -57,18 +57,18 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                                     <span className="material-symbols-outlined">location_on</span> {job.location}
                                 </span>
                                 <span className="flex items-center gap-2">
-                                    <span className="material-symbols-outlined">calendar_today</span> Posted {job.postedAt}
+                                    <span className="material-symbols-outlined">calendar_today</span> Đã đăng {job.postedAt}
                                 </span>
                             </div>
                         </div>
 
                         <div className="bg-slate-50 dark:bg-slate-800/80 p-6 rounded-[2rem] border-2 border-slate-100 dark:border-slate-700 text-center lg:min-w-[240px]">
-                            <p className="text-sm font-black text-slate-400 uppercase tracking-widest mb-1">Hourly Pay Rate</p>
+                            <p className="text-sm font-black text-slate-400 uppercase tracking-widest mb-1">Mức lương theo giờ</p>
                             <p className="text-4xl md:text-5xl font-black text-secondary">
                                 {job.compensation.split('/')[0]}
-                                <span className="text-xl text-slate-400">/hr</span>
+                                <span className="text-xl text-slate-400">/giờ</span>
                             </p>
-                            <p className="mt-1 text-slate-500 font-bold text-sm">Weekly Pay Cycle</p>
+                            <p className="mt-1 text-slate-500 font-bold text-sm">Chu kỳ thanh toán hàng tuần</p>
                         </div>
                     </div>
                 </header>
@@ -77,14 +77,14 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                     {/* Main Content */}
                     <article className="flex-1 space-y-10">
                         <section className="prose-custom">
-                            <h2 className="text-2xl font-black mb-6 pb-3 border-b-4 border-primary/20 inline-block">Job Description</h2>
+                            <h2 className="text-2xl font-black mb-6 pb-3 border-b-4 border-primary/20 inline-block">Mô tả công việc</h2>
                             <p className="text-lg text-slate-600 dark:text-slate-400 mb-6 leading-relaxed">
                                 {job.description}
                             </p>
 
                             {job.responsibilities && (
                                 <>
-                                    <h3 className="text-2xl font-black mb-6">Key Responsibilities</h3>
+                                    <h3 className="text-2xl font-black mb-6">Trách nhiệm chính</h3>
                                     <ul className="text-lg text-slate-600 dark:text-slate-400 space-y-4">
                                         {job.responsibilities.map((item, idx) => (
                                             <li key={idx}>{item}</li>
@@ -96,7 +96,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
 
                         {job.requirements && (
                             <section className="prose-custom">
-                                <h2 className="text-3xl font-black mb-8 pb-4 border-b-4 border-secondary/20 inline-block text-secondary">Requirements</h2>
+                                <h2 className="text-3xl font-black mb-8 pb-4 border-b-4 border-secondary/20 inline-block text-secondary">Yêu cầu</h2>
                                 <ul className="text-lg text-slate-600 dark:text-slate-400 space-y-4">
                                     {job.requirements.map((item, idx) => (
                                         <li key={idx}>{item}</li>
@@ -107,7 +107,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
 
                         {job.benefits && (
                             <section className="prose-custom">
-                                <h2 className="text-2xl font-black mb-6 pb-3 border-b-4 border-primary/20 inline-block">Benefits</h2>
+                                <h2 className="text-2xl font-black mb-6 pb-3 border-b-4 border-primary/20 inline-block">Quyền lợi</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {job.benefits.map((benefit, idx) => (
                                         <div key={idx} className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 p-5 rounded-xl">
@@ -129,18 +129,18 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                                 </div>
                                 <div>
                                     <h4 className="text-xl font-black">{job.contractor?.name || job.company}</h4>
-                                    <p className="text-slate-500 font-bold text-sm">{job.contractor?.type || 'Top Tier Contractor'}</p>
+                                    <p className="text-slate-500 font-bold text-sm">{job.contractor?.type || 'Nhà thầu hàng đầu'}</p>
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4 mb-8">
                                 <div className="bg-green-50 dark:bg-green-900/10 p-5 rounded-2xl border border-green-100 dark:border-green-800 text-center">
                                     <p className="text-2xl font-black text-secondary">{job.contractor?.onTimeRate || '100%'}</p>
-                                    <p className="text-xs font-black text-slate-500 uppercase tracking-tighter">On-Time Payment</p>
+                                    <p className="text-xs font-black text-slate-500 uppercase tracking-tighter">Thanh toán đúng hạn</p>
                                 </div>
                                 <div className="bg-yellow-50 dark:bg-yellow-900/10 p-5 rounded-2xl border border-yellow-100 dark:border-yellow-800 text-center">
                                     <p className="text-2xl font-black text-yellow-600">{job.contractor?.rating || '4.9 / 5.0'}</p>
-                                    <p className="text-xs font-black text-slate-500 uppercase tracking-tighter">Worker Rating</p>
+                                    <p className="text-xs font-black text-slate-500 uppercase tracking-tighter">Đánh giá của thợ</p>
                                 </div>
                             </div>
 
@@ -159,21 +159,21 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                             </div>
 
                             <button className="w-full bg-[#EF4444] text-white py-6 rounded-2xl font-black text-2xl hover:bg-red-600 transition-all shadow-xl shadow-red-500/20 active:scale-[0.98] mb-4">
-                                Apply Now
+                                Ứng tuyển ngay
                             </button>
-                            <p className="text-center text-sm font-bold text-slate-400">Application takes approx. 3 minutes</p>
+                            <p className="text-center text-sm font-bold text-slate-400">Ứng tuyển mất khoảng 3 phút</p>
                         </div>
 
                         <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl border border-dashed border-slate-300 dark:border-slate-700">
-                            <h5 className="text-lg font-black mb-4">Why work here?</h5>
+                            <h5 className="text-lg font-black mb-4">Tại sao nên làm việc ở đây?</h5>
                             <div className="space-y-4">
                                 <div className="flex gap-4">
                                     <span className="material-symbols-outlined text-secondary">verified_user</span>
-                                    <p className="text-sm font-medium text-slate-600 dark:text-slate-400 leading-relaxed">All payments are held in escrow and released weekly upon milestone completion.</p>
+                                    <p className="text-sm font-medium text-slate-600 dark:text-slate-400 leading-relaxed">Mọi khoản thanh toán đều được ký quỹ và giải ngân hàng tuần sau khi hoàn thành cột mốc.</p>
                                 </div>
                                 <div className="flex gap-4">
                                     <span className="material-symbols-outlined text-primary">support_agent</span>
-                                    <p className="text-sm font-medium text-slate-600 dark:text-slate-400 leading-relaxed">24/7 Support line available for all on-site workers.</p>
+                                    <p className="text-sm font-medium text-slate-600 dark:text-slate-400 leading-relaxed">Đường dây hỗ trợ 24/7 luôn sẵn sàng cho tất cả công nhân tại công trình.</p>
                                 </div>
                             </div>
                         </div>
@@ -188,9 +188,9 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                                 <span className="material-symbols-outlined text-5xl">gpp_good</span>
                             </div>
                             <div>
-                                <h4 className="text-3xl font-black mb-4">Safety Standards</h4>
+                                <h4 className="text-3xl font-black mb-4">Tiêu chuẩn an toàn</h4>
                                 <p className="text-xl text-slate-600 dark:text-slate-400 leading-relaxed">
-                                    This contractor is &quot;Safety First&quot; certified. They undergo bi-monthly site inspections and provide all necessary PPE on day one. Your safety is our primary metric for contractor evaluation.
+                                    Nhà thầu này đã đạt chứng chỉ &quot;An toàn là trên hết&quot;. Họ trải qua các đợt kiểm tra công trường hai tháng một lần và cung cấp đầy đủ bảo hộ lao động (PPE) ngay ngày đầu tiên. Sự an toàn của bạn là thước đo chính của chúng tôi để đánh giá nhà thầu.
                                 </p>
                             </div>
                         </div>
@@ -199,9 +199,9 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                                 <span className="material-symbols-outlined text-5xl">payments</span>
                             </div>
                             <div>
-                                <h4 className="text-3xl font-black mb-4">Payment Security</h4>
+                                <h4 className="text-3xl font-black mb-4">Bảo mật thanh toán</h4>
                                 <p className="text-xl text-slate-600 dark:text-slate-400 leading-relaxed">
-                                    Workforce Connection guarantees that funds for this position are pre-deposited. We ensure 100% on-time payment release directly to your preferred bank account or digital wallet.
+                                    BuildForce đảm bảo rằng ngân sách cho vị trí này đã được ký quỹ trước. Chúng tôi đảm bảo giải ngân thanh toán chính xác 100% trực tiếp vào tài khoản ngân hàng hoặc ví điện tử ưa thích của bạn.
                                 </p>
                             </div>
                         </div>
@@ -210,9 +210,9 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                     {/* Similar Jobs */}
                     <div className="space-y-12">
                         <div className="flex items-center justify-between">
-                            <h3 className="text-4xl font-black tracking-tight">Similar Job Opportunities</h3>
+                            <h3 className="text-4xl font-black tracking-tight">Cơ hội việc làm tương tự</h3>
                             <Link href="/jobs" className="text-primary font-bold text-lg hover:underline flex items-center gap-2">
-                                View all jobs <span className="material-symbols-outlined text-xl">arrow_forward</span>
+                                Xem tất cả công việc <span className="material-symbols-outlined text-xl">arrow_forward</span>
                             </Link>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

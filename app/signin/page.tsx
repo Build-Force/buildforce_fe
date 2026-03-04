@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "../../utils/api";
@@ -11,6 +11,15 @@ export default function AuthPage() {
     const [isLogin, setIsLogin] = useState(true);
     const [showPassword, setShowPassword] = useState(false);
     const [userType, setUserType] = useState<"worker" | "contractor">("worker");
+
+    // Auto-switch to register if redirected from /signup
+    useEffect(() => {
+        const mode = sessionStorage.getItem("authMode");
+        if (mode === "register") {
+            setIsLogin(false);
+            sessionStorage.removeItem("authMode");
+        }
+    }, []);
 
     const [showVerifyDialog, setShowVerifyDialog] = useState(false);
     const [registeredEmail, setRegisteredEmail] = useState("");
@@ -60,7 +69,7 @@ export default function AuthPage() {
                     const res = await api.post('/api/auth/check-verification', { email: registeredEmail });
                     if (res.data.success && res.data.verified) {
                         setShowVerifyDialog(false);
-                        setSuccessMsg("Account verified successfully! You can now log in.");
+                        setSuccessMsg("Xác minh tài khoản thành công! Bạn có thể đăng nhập ngay.");
                         setTimeout(() => {
                             toggleAuthMode();
                         }, 2000);
@@ -90,7 +99,7 @@ export default function AuthPage() {
             });
 
             if (response.data.success) {
-                setSuccessMsg("Login successful! Redirecting...");
+                setSuccessMsg("Đăng nhập thành công! Đang chuyển hướng...");
                 // Store token
                 localStorage.setItem('token', response.data.data.token);
                 // Fire custom event so Header updates immediately
@@ -101,7 +110,21 @@ export default function AuthPage() {
                 }, 1000);
             }
         } catch (error: any) {
-            setErrorMsg(error.response?.data?.message || "An error occurred during sign in.");
+            // Log for debugging (remove in production)
+            console.error("Login attempt failed:", error.response?.data);
+
+            const backendMsg = error.response?.data?.message;
+            if (backendMsg === "Invalid credentials") {
+                setErrorMsg("Email/Số điện thoại hoặc mật khẩu không chính xác.");
+            } else if (backendMsg === "Account has been suspended or is inactive") {
+                setErrorMsg("Tài khoản của bạn đã bị khóa hoặc chưa được kích hoạt.");
+            } else if (backendMsg === "Validation failed") {
+                // If there are specific error details from express-validator
+                const specificError = error.response?.data?.errors?.[0]?.msg;
+                setErrorMsg(specificError || "Vui lòng nhập đầy đủ thông tin đăng nhập.");
+            } else {
+                setErrorMsg(backendMsg || "Đã xảy ra lỗi trong quá trình đăng nhập. Vui lòng thử lại sau.");
+            }
         } finally {
             setIsLoading(false);
         }
@@ -113,7 +136,7 @@ export default function AuthPage() {
         setSuccessMsg("");
 
         if (password !== confirmPassword) {
-            setErrorMsg("Passwords do not match.");
+            setErrorMsg("Mật khẩu không khớp.");
             return;
         }
 
@@ -122,11 +145,10 @@ export default function AuthPage() {
         // Split fullname into first and last name
         const nameParts = fullName.trim().split(" ");
         const firstName = nameParts[0] || "";
-        const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "User";
+        const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "Người dùng";
 
         try {
             const response = await api.post('/api/auth/register', {
-                username,
                 email: email || `${phone}@temp.com`, // Adjust this based on your reality
                 password,
                 firstName,
@@ -147,7 +169,18 @@ export default function AuthPage() {
                 setShowVerifyDialog(true);
             }
         } catch (error: any) {
-            setErrorMsg(error.response?.data?.message || error.response?.data?.errors?.[0]?.msg || "Failed to create account.");
+            console.error("Registration error:", error.response?.data);
+            const backendMsg = error.response?.data?.message;
+            if (backendMsg === "Email already exists") {
+                setErrorMsg("Email này đã được đăng ký. Vui lòng sử dụng email khác hoặc đăng nhập.");
+            } else if (backendMsg === "Phone already exists") {
+                setErrorMsg("Số điện thoại này đã được đăng ký.");
+            } else if (backendMsg === "Validation failed") {
+                const specificError = error.response?.data?.errors?.[0]?.msg;
+                setErrorMsg(specificError || "Vui lòng kiểm tra lại thông tin đăng ký.");
+            } else {
+                setErrorMsg(backendMsg || error.response?.data?.errors?.[0]?.msg || "Không thể tạo tài khoản. Vui lòng thử lại sau.");
+            }
         } finally {
             setIsLoading(false);
         }
@@ -180,9 +213,9 @@ export default function AuthPage() {
                     >
                         <h1 className="font-display text-5xl font-bold leading-tight mb-12">
                             {isLogin ? (
-                                <>Connecting skilled hands with <span className="text-sky-300">trusted projects.</span></>
+                                <>Kết nối những bàn tay lành nghề với <span className="text-sky-300">các dự án tin cậy.</span></>
                             ) : (
-                                <>Your Next Project <br />Starts Here.</>
+                                <>Dự án tiếp theo của bạn <br />Bắt đầu từ đây.</>
                             )}
                         </h1>
 
@@ -194,8 +227,8 @@ export default function AuthPage() {
                                             <span className="material-symbols-outlined text-white text-3xl">verified_user</span>
                                         </div>
                                         <div>
-                                            <p className="text-xl font-bold mb-1">Verified Contractors</p>
-                                            <p className="text-slate-200">We thoroughly vet every partner joining the system.</p>
+                                            <p className="text-xl font-bold mb-1">Nhà thầu uy tín</p>
+                                            <p className="text-slate-200">Chúng tôi kiểm tra kỹ lưỡng mọi đối tác tham gia hệ thống.</p>
                                         </div>
                                     </div>
                                     <div className="flex items-start gap-6">
@@ -203,8 +236,8 @@ export default function AuthPage() {
                                             <span className="material-symbols-outlined text-white text-3xl">payments</span>
                                         </div>
                                         <div>
-                                            <p className="text-xl font-bold mb-1">On-time Payments</p>
-                                            <p className="text-slate-200">Ensuring financial rights for all workers and engineers.</p>
+                                            <p className="text-xl font-bold mb-1">Thanh toán đúng hạn</p>
+                                            <p className="text-slate-200">Đảm bảo quyền lợi tài chính cho tất cả công nhân và kỹ sư.</p>
                                         </div>
                                     </div>
                                 </>
@@ -215,8 +248,8 @@ export default function AuthPage() {
                                             <span className="material-symbols-outlined text-white text-3xl">check_circle</span>
                                         </div>
                                         <div>
-                                            <h3 className="text-white text-2xl font-bold mb-1">Free for workers</h3>
-                                            <p className="text-white/80 text-lg">No hidden fees, no subscriptions. Keep what you earn.</p>
+                                            <h3 className="text-white text-2xl font-bold mb-1">Miễn phí cho công nhân</h3>
+                                            <p className="text-white/80 text-lg">Không phí ẩn, không phí duy trì. Giữ trọn số tiền bạn kiếm được.</p>
                                         </div>
                                     </div>
                                     <div className="flex items-start gap-6">
@@ -224,8 +257,8 @@ export default function AuthPage() {
                                             <span className="material-symbols-outlined text-white text-3xl">verified</span>
                                         </div>
                                         <div>
-                                            <h3 className="text-white text-2xl font-bold mb-1">Verified Jobs</h3>
-                                            <p className="text-white/80 text-lg">Every contractor is vetted for payment reliability.</p>
+                                            <h3 className="text-white text-2xl font-bold mb-1">Việc làm đã xác minh</h3>
+                                            <p className="text-white/80 text-lg">Mọi nhà thầu đều được kiểm tra về khả năng thanh toán.</p>
                                         </div>
                                     </div>
                                     <div className="flex items-start gap-6">
@@ -233,8 +266,8 @@ export default function AuthPage() {
                                             <span className="material-symbols-outlined text-white text-3xl">security</span>
                                         </div>
                                         <div>
-                                            <h3 className="text-white text-2xl font-bold mb-1">Skill Protection</h3>
-                                            <p className="text-white/80 text-lg">Digital safety records and certification storage.</p>
+                                            <h3 className="text-white text-2xl font-bold mb-1">Bảo vệ kỹ năng</h3>
+                                            <p className="text-white/80 text-lg">Lưu trữ hồ sơ an toàn kỹ thuật số và chứng chỉ nghề nghiệp.</p>
                                         </div>
                                     </div>
                                 </>
@@ -243,7 +276,7 @@ export default function AuthPage() {
 
                         {!isLogin && (
                             <div className="mt-20">
-                                <p className="text-white/60 text-sm font-medium italic">&quot;The most transparent way to find construction work locally.&quot;</p>
+                                <p className="text-white/60 text-sm font-medium italic">&quot;Cách minh bạch nhất để tìm kiếm công việc xây dựng tại địa phương.&quot;</p>
                             </div>
                         )}
                     </motion.div>
@@ -267,8 +300,8 @@ export default function AuthPage() {
                                 transition={{ duration: 0.4 }}
                             >
                                 <div className="mb-10 text-center lg:text-left">
-                                    <h2 className="text-4xl font-display font-bold text-slate-900 dark:text-white mb-4">Welcome Back</h2>
-                                    <p className="text-slate-500 dark:text-slate-400 text-lg font-medium">Please sign in to continue your work.</p>
+                                    <h2 className="text-4xl font-display font-bold text-slate-900 dark:text-white mb-4">Chào mừng trở lại</h2>
+                                    <p className="text-slate-500 dark:text-slate-400 text-lg font-medium">Vui lòng đăng nhập để tiếp tục công việc của bạn.</p>
                                 </div>
 
                                 {errorMsg && <div className="mb-4 p-4 bg-red-50 text-red-600 rounded-xl text-center font-medium">{errorMsg}</div>}
@@ -277,14 +310,14 @@ export default function AuthPage() {
                                 <form className="space-y-6" onSubmit={handleLoginSubmit}>
                                     <div>
                                         <label className="block text-lg font-bold text-slate-700 dark:text-slate-300 mb-2" htmlFor="account">
-                                            Username, Email or Phone Number
+                                            Email hoặc Số điện thoại
                                         </label>
                                         <div className="relative">
                                             <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">person</span>
                                             <input
                                                 className="w-full pl-12 pr-4 py-5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl text-lg font-medium focus:outline-none transition-all placeholder:text-slate-400"
                                                 id="account"
-                                                placeholder="e.g., 0912345678 or user123"
+                                                placeholder="VD: 0912345678"
                                                 type="text"
                                                 value={identifier}
                                                 onChange={(e) => setIdentifier(e.target.value)}
@@ -296,10 +329,10 @@ export default function AuthPage() {
                                     <div>
                                         <div className="flex justify-between items-center mb-2">
                                             <label className="block text-lg font-bold text-slate-700 dark:text-slate-300" htmlFor="password">
-                                                Password
+                                                Mật khẩu
                                             </label>
                                             <Link href="/forgot-password" className="text-primary font-bold text-base hover:underline">
-                                                Forgot password?
+                                                Quên mật khẩu?
                                             </Link>
                                         </div>
                                         <div className="relative">
@@ -307,7 +340,7 @@ export default function AuthPage() {
                                             <input
                                                 className="w-full pl-12 pr-12 py-5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl text-lg font-medium focus:outline-none transition-all placeholder:text-slate-400"
                                                 id="password"
-                                                placeholder="Enter your password"
+                                                placeholder="Nhập mật khẩu của bạn"
                                                 type={showPassword ? "text" : "password"}
                                                 value={password}
                                                 onChange={(e) => setPassword(e.target.value)}
@@ -325,11 +358,11 @@ export default function AuthPage() {
 
                                     <div className="pt-4">
                                         <button disabled={isLoading} className="w-full bg-primary hover:bg-sky-600 text-white py-5 rounded-2xl font-black text-xl shadow-xl shadow-sky-500/20 transition-all transform active:scale-[0.98] disabled:opacity-50">
-                                            {isLoading ? "Signing In..." : "Sign In"}
+                                            {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
                                         </button>
                                         <div className="mt-4 flex items-center justify-center gap-2 text-slate-500">
                                             <span className="material-symbols-outlined text-secondary text-xl">shield_with_heart</span>
-                                            <p className="text-sm font-bold uppercase tracking-widest text-[#10B981]">SECURE AND TRANSPARENT</p>
+                                            <p className="text-sm font-bold uppercase tracking-widest text-[#10B981]">AN TOÀN VÀ MINH BẠCH</p>
                                         </div>
                                     </div>
                                 </form>
@@ -337,7 +370,7 @@ export default function AuthPage() {
                                 <div className="mt-12">
                                     <div className="relative flex items-center mb-10">
                                         <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
-                                        <span className="flex-shrink mx-4 text-slate-400 font-bold text-sm uppercase tracking-widest whitespace-nowrap">OR CONTINUE WITH</span>
+                                        <span className="flex-shrink mx-4 text-slate-400 font-bold text-sm uppercase tracking-widest whitespace-nowrap">HOẶC TIẾP TỤC VỚI</span>
                                         <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
@@ -354,9 +387,9 @@ export default function AuthPage() {
 
                                 <div className="mt-12 text-center">
                                     <p className="text-slate-500 dark:text-slate-400 font-medium text-lg">
-                                        Don&apos;t have an account?
+                                        Chưa có tài khoản?
                                         <button onClick={toggleAuthMode} className="text-primary font-black ml-1 hover:underline">
-                                            Sign up now
+                                            Đăng ký ngay
                                         </button>
                                     </p>
                                 </div>
@@ -371,8 +404,8 @@ export default function AuthPage() {
                                 transition={{ duration: 0.4 }}
                             >
                                 <div className="mb-12">
-                                    <h2 className="text-4xl font-display font-bold text-slate-900 dark:text-white mb-4 text-center lg:text-left">Create your account</h2>
-                                    <p className="text-xl text-slate-500 font-medium text-center lg:text-left">Join our network of skilled professionals today.</p>
+                                    <h2 className="text-4xl font-display font-bold text-slate-900 dark:text-white mb-4 text-center lg:text-left">Tạo tài khoản của bạn</h2>
+                                    <p className="text-xl text-slate-500 font-medium text-center lg:text-left">Gia nhập mạng lưới các chuyên gia lành nghề ngay hôm nay.</p>
                                 </div>
 
                                 {errorMsg && <div className="mb-4 p-4 bg-red-50 text-red-600 rounded-xl text-center font-medium">{errorMsg}</div>}
@@ -388,38 +421,34 @@ export default function AuthPage() {
                                         className={`relative z-10 flex-1 py-4 px-6 rounded-xl font-bold text-lg transition-colors duration-300 ${userType === "worker" ? "text-primary" : "text-slate-500 dark:text-slate-400"}`}
                                         onClick={() => setUserType("worker")}
                                     >
-                                        Worker/Individual
+                                        Công nhân/Cá nhân
                                     </button>
                                     <button
                                         type="button"
                                         className={`relative z-10 flex-1 py-4 px-6 rounded-xl font-bold text-lg transition-colors duration-300 ${userType === "contractor" ? "text-primary" : "text-slate-500 dark:text-slate-400"}`}
                                         onClick={() => setUserType("contractor")}
                                     >
-                                        Contractor/Company
+                                        Nhà thầu/Công ty
                                     </button>
                                 </div>
 
                                 <form className="space-y-6" onSubmit={handleRegisterSubmit}>
                                     <div>
-                                        <label className="block text-lg font-bold text-slate-700 dark:text-slate-300 mb-2" htmlFor="fullname">Full Name</label>
-                                        <input value={fullName} onChange={e => setFullName(e.target.value)} required className="w-full h-16 px-6 rounded-2xl border-2 border-slate-100 dark:border-slate-700 dark:bg-slate-800 text-xl font-medium focus:outline-none custom-focus transition-all" id="fullname" placeholder="Enter your full name" type="text" />
-                                    </div>
-                                    <div>
-                                        <label className="block text-lg font-bold text-slate-700 dark:text-slate-300 mb-2" htmlFor="username">Username</label>
-                                        <input value={username} onChange={e => setUsername(e.target.value)} required className="w-full h-16 px-6 rounded-2xl border-2 border-slate-100 dark:border-slate-700 dark:bg-slate-800 text-xl font-medium focus:outline-none custom-focus transition-all" id="username" placeholder="Choose a username" type="text" />
+                                        <label className="block text-lg font-bold text-slate-700 dark:text-slate-300 mb-2" htmlFor="fullname">Họ và tên</label>
+                                        <input value={fullName} onChange={e => setFullName(e.target.value)} required className="w-full h-16 px-6 rounded-2xl border-2 border-slate-100 dark:border-slate-700 dark:bg-slate-800 text-xl font-medium focus:outline-none custom-focus transition-all" id="fullname" placeholder="Nhập họ và tên của bạn" type="text" />
                                     </div>
                                     <div>
                                         <label className="block text-lg font-bold text-slate-700 dark:text-slate-300 mb-2" htmlFor="email">Email</label>
                                         <input value={email} onChange={e => setEmail(e.target.value)} required className="w-full h-16 px-6 rounded-2xl border-2 border-slate-100 dark:border-slate-700 dark:bg-slate-800 text-xl font-medium focus:outline-none custom-focus transition-all" id="email" placeholder="example@email.com" type="email" />
                                     </div>
                                     <div>
-                                        <label className="block text-lg font-bold text-slate-700 dark:text-slate-300 mb-2" htmlFor="phone">Phone Number</label>
-                                        <input value={phone} onChange={e => setPhone(e.target.value)} className="w-full h-16 px-6 rounded-2xl border-2 border-slate-100 dark:border-slate-700 dark:bg-slate-800 text-xl font-medium focus:outline-none custom-focus transition-all" id="phone" placeholder="(555) 000-0000" type="tel" />
+                                        <label className="block text-lg font-bold text-slate-700 dark:text-slate-300 mb-2" htmlFor="phone">Số điện thoại</label>
+                                        <input value={phone} onChange={e => setPhone(e.target.value)} className="w-full h-16 px-6 rounded-2xl border-2 border-slate-100 dark:border-slate-700 dark:bg-slate-800 text-xl font-medium focus:outline-none custom-focus transition-all" id="phone" placeholder="0912 345 678" type="tel" />
                                     </div>
                                     <div>
-                                        <label className="block text-lg font-bold text-slate-700 dark:text-slate-300 mb-2" htmlFor="r-password">Password</label>
+                                        <label className="block text-lg font-bold text-slate-700 dark:text-slate-300 mb-2" htmlFor="r-password">Mật khẩu</label>
                                         <div className="relative">
-                                            <input value={password} onChange={e => setPassword(e.target.value)} required minLength={6} className="w-full h-16 px-6 rounded-2xl border-2 border-slate-100 dark:border-slate-700 dark:bg-slate-800 text-xl font-medium focus:outline-none custom-focus transition-all pr-16" id="r-password" placeholder="Create a strong password" type={showPassword ? "text" : "password"} />
+                                            <input value={password} onChange={e => setPassword(e.target.value)} required minLength={6} className="w-full h-16 px-6 rounded-2xl border-2 border-slate-100 dark:border-slate-700 dark:bg-slate-800 text-xl font-medium focus:outline-none custom-focus transition-all pr-16" id="r-password" placeholder="Tạo mật khẩu mạnh" type={showPassword ? "text" : "password"} />
                                             <button
                                                 className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                                                 type="button"
@@ -432,9 +461,9 @@ export default function AuthPage() {
                                         {password && (
                                             <div className="mt-2 px-2">
                                                 <div className="flex justify-between mb-1.5">
-                                                    <span className="text-xs font-bold text-slate-500">Password Strength:</span>
+                                                    <span className="text-xs font-bold text-slate-500">Độ mạnh mật khẩu:</span>
                                                     <span className={`text-xs font-bold ${calculatePasswordStrength(password) <= 2 ? 'text-red-500' : calculatePasswordStrength(password) === 3 ? 'text-amber-500' : 'text-green-500'}`}>
-                                                        {calculatePasswordStrength(password) <= 2 ? 'Weak' : calculatePasswordStrength(password) === 3 ? 'Good' : 'Strong'}
+                                                        {calculatePasswordStrength(password) <= 2 ? 'Yếu' : calculatePasswordStrength(password) === 3 ? 'Khá' : 'Mạnh'}
                                                     </span>
                                                 </div>
                                                 <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden flex gap-1">
@@ -447,31 +476,31 @@ export default function AuthPage() {
                                         )}
                                     </div>
                                     <div>
-                                        <label className="block text-lg font-bold text-slate-700 dark:text-slate-300 mb-2" htmlFor="r-confirm-password">Confirm Password</label>
+                                        <label className="block text-lg font-bold text-slate-700 dark:text-slate-300 mb-2" htmlFor="r-confirm-password">Xác nhận mật khẩu</label>
                                         <div className="relative">
-                                            <input value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required minLength={6} className="w-full h-16 px-6 rounded-2xl border-2 border-slate-100 dark:border-slate-700 dark:bg-slate-800 text-xl font-medium focus:outline-none custom-focus transition-all pr-16" id="r-confirm-password" placeholder="Confirm your password" type={showPassword ? "text" : "password"} />
+                                            <input value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required minLength={6} className="w-full h-16 px-6 rounded-2xl border-2 border-slate-100 dark:border-slate-700 dark:bg-slate-800 text-xl font-medium focus:outline-none custom-focus transition-all pr-16" id="r-confirm-password" placeholder="Xác nhận mật khẩu của bạn" type={showPassword ? "text" : "password"} />
                                         </div>
                                     </div>
 
                                     <div className="flex items-start gap-4 pt-4">
                                         <input required className="w-6 h-6 mt-1 rounded border-2 border-slate-300 text-primary focus:ring-primary cursor-pointer" id="terms" type="checkbox" />
                                         <label className="text-base text-slate-600 dark:text-slate-400 leading-relaxed cursor-pointer" htmlFor="terms">
-                                            I agree to the <Link className="text-primary font-bold hover:underline" href="#">Terms of Service</Link> and <Link className="text-primary font-bold hover:underline" href="#">Privacy Policy</Link>.
+                                            Tôi đồng ý với <Link className="text-primary font-bold hover:underline" href="/terms">Điều khoản dịch vụ</Link> và <Link className="text-primary font-bold hover:underline" href="/privacy">Chính sách bảo mật</Link>.
                                         </label>
                                     </div>
 
                                     <div className="pt-6">
                                         <button disabled={isLoading} className="w-full py-6 bg-primary hover:bg-sky-600 text-white rounded-2xl font-black text-2xl shadow-xl shadow-sky-500/20 transition-all transform hover:-translate-y-1 active:translate-y-0 shadow-lg active:scale-95 disabled:opacity-50 disabled:transform-none">
-                                            {isLoading ? "Creating..." : "Create Account"}
+                                            {isLoading ? "Đang tạo hồ sơ..." : "Tạo tài khoản"}
                                         </button>
                                     </div>
                                 </form>
 
                                 <div className="mt-12 text-center">
                                     <p className="text-lg font-medium text-slate-500">
-                                        Already have an account?
+                                        Đã có tài khoản?
                                         <button onClick={toggleAuthMode} className="text-primary font-bold hover:underline ml-2">
-                                            Sign In
+                                            Đăng nhập ngay
                                         </button>
                                     </p>
                                 </div>
@@ -496,28 +525,28 @@ export default function AuthPage() {
                             </span>
                         </div>
                         <h3 className="text-2xl font-black text-slate-800 dark:text-white mb-4">
-                            Check Your Email
+                            Kiểm tra Email của bạn
                         </h3>
                         <p className="text-slate-600 dark:text-slate-400 mb-6 leading-relaxed">
-                            We&apos;ve sent a verification link to <span className="font-bold text-slate-800 dark:text-slate-200">{registeredEmail}</span>. Please click the link to activate your account.
+                            Chúng tôi đã gửi một liên kết xác minh đến <span className="font-bold text-slate-800 dark:text-slate-200">{registeredEmail}</span>. Vui lòng nhấp vào liên kết để kích hoạt tài khoản của bạn.
                         </p>
 
                         <div className="flex items-center justify-center gap-3 text-sm text-slate-500 mb-6 border border-slate-200 dark:border-slate-700 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50">
                             <span className="material-symbols-outlined animate-spin text-primary">
                                 progress_activity
                             </span>
-                            Waiting for verification...
+                            Đang chờ xác minh...
                         </div>
 
                         {devVerifyUrl && (
                             <div className="mb-8 p-3 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 rounded-xl text-center">
-                                <p className="text-xs font-bold text-red-600 dark:text-red-400 mb-2 uppercase tracking-wider">🚧 Local Dev Mode 🚧</p>
+                                <p className="text-xs font-bold text-red-600 dark:text-red-400 mb-2 uppercase tracking-wider">🚧 Chế độ thử nghiệm 🚧</p>
                                 <a
                                     href={devVerifyUrl}
                                     target="_blank"
                                     className="text-sm text-sky-600 dark:text-sky-400 hover:underline font-medium break-all block"
                                 >
-                                    Click here to simulate verifying email
+                                    Nhấp vào đây để mô phỏng xác minh email
                                 </a>
                             </div>
                         )}
@@ -526,7 +555,7 @@ export default function AuthPage() {
                             onClick={() => setShowVerifyDialog(false)}
                             className="w-full py-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold transition-colors"
                         >
-                            Close & Verify Later
+                            Đóng & Xác minh sau
                         </button>
                     </motion.div>
                 </div>

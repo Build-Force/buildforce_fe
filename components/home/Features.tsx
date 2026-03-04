@@ -14,21 +14,21 @@ export const Features = () => {
                         whileInView={{ opacity: 1 }}
                         className="text-secondary font-bold uppercase tracking-[0.2em] text-base block mb-4"
                     >
-                        Transparency First
+                        Minh bạch hàng đầu
                     </motion.span>
                     <motion.h2
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         className="text-4xl md:text-5xl font-display font-bold text-slate-900 dark:text-white mb-6"
                     >
-                        HR Metrics You Can Trust
+                        Chỉ số nhân sự đáng tin cậy
                     </motion.h2>
                     <motion.p
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         className="text-slate-600 dark:text-slate-400 text-xl max-w-2xl mx-auto leading-relaxed"
                     >
-                        We monitor reliability, payment punctuality, and skill proficiency for every member of our network.
+                        Chúng tôi giám sát độ uy tín, tính đúng hạn của thanh toán và trình độ chuyên môn của mọi thành viên trong mạng lưới.
                     </motion.p>
                 </div>
 
@@ -88,7 +88,7 @@ export const Features = () => {
 
                 <div className="mt-16 text-center">
                     <a className="inline-flex items-center gap-3 text-primary font-bold text-xl hover:underline underline-offset-8 group" href="#">
-                        How we verify
+                        Cách chúng tôi xác minh
                         <span className="material-symbols-outlined transition-transform group-hover:translate-x-1 group-hover:-translate-y-1">arrow_outward</span>
                     </a>
                 </div>

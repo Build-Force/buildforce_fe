@@ -52,12 +52,12 @@ export const JobCard: React.FC<JobCardProps> = ({ job, index = 0, variant = "exp
                         <div className="flex items-center gap-3 mb-3">
                             {job.verified && (
                                 <span className="px-4 py-1.5 bg-green-50 dark:bg-green-900/30 text-secondary text-sm font-black rounded-full border border-green-100 dark:border-green-800 flex items-center gap-1">
-                                    <span className="material-symbols-outlined text-base">verified</span> Verified Contractor
+                                    <span className="material-symbols-outlined text-base">verified</span> Nhà thầu đã xác minh
                                 </span>
                             )}
                             {job.urgent && (
                                 <span className="px-4 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-primary text-sm font-black rounded-full border border-blue-100 dark:border-blue-800 flex items-center gap-1">
-                                    <span className="material-symbols-outlined text-base">bolt</span> Urgent
+                                    <span className="material-symbols-outlined text-base">bolt</span> Khẩn cấp
                                 </span>
                             )}
                         </div>
@@ -66,7 +66,7 @@ export const JobCard: React.FC<JobCardProps> = ({ job, index = 0, variant = "exp
                     </div>
 
                     <div className="bg-slate-50 dark:bg-slate-800/80 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 text-center min-w-[150px]">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Pay Rate</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Mức lương</p>
                         <p className={`${isExpanded ? "text-3xl" : "text-2xl"} font-black text-secondary`}>{job.compensation}</p>
                     </div>
                 </div>
@@ -78,7 +78,7 @@ export const JobCard: React.FC<JobCardProps> = ({ job, index = 0, variant = "exp
                             <span className="material-symbols-outlined text-2xl">location_on</span>
                         </div>
                         <div>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Location</p>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Địa điểm</p>
                             <p className="text-lg font-bold">{job.location}</p>
                         </div>
                     </div>
@@ -87,8 +87,8 @@ export const JobCard: React.FC<JobCardProps> = ({ job, index = 0, variant = "exp
                             <span className="material-symbols-outlined text-2xl">history</span>
                         </div>
                         <div>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Payment History</p>
-                            <p className="text-lg font-bold text-primary">{job.onTimePayment ? "100% On-Time" : "98% On-Time"}</p>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lịch sử thanh toán</p>
+                            <p className="text-lg font-bold text-primary">{job.onTimePayment ? "100% Đúng hạn" : "98% Đúng hạn"}</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
@@ -96,7 +96,7 @@ export const JobCard: React.FC<JobCardProps> = ({ job, index = 0, variant = "exp
                             <span className="material-symbols-outlined text-2xl">star</span>
                         </div>
                         <div>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Worker Rating</p>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Đánh giá của thợ</p>
                             <p className="text-lg font-bold">4.9/5.0</p>
                         </div>
                     </div>
@@ -114,11 +114,11 @@ export const JobCard: React.FC<JobCardProps> = ({ job, index = 0, variant = "exp
                                 +{job.applicants}
                             </div>
                         </div>
-                        <span className="text-slate-500 font-bold text-sm">People applied</span>
+                        <span className="text-slate-500 font-bold text-sm">Người đã ứng tuyển</span>
                     </div>
 
                     <Link href={`/jobs/${job.id}`} className="w-full sm:w-auto bg-primary text-white px-8 py-4 rounded-xl font-black text-lg hover:bg-sky-600 transition-all shadow-xl shadow-sky-500/20 active:scale-95 text-center relative z-20">
-                        Details & Apply
+                        Chi tiết & Ứng tuyển
                     </Link>
                 </div>
             </div>

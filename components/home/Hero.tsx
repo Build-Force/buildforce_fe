@@ -1,9 +1,37 @@
 "use client";
 
 import React from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
+import api from "@/utils/api";
+import { SurveyWizard } from "./SurveyWizard";
 
 export const Hero = () => {
+    const router = useRouter();
+    const [isSurveyOpen, setIsSurveyOpen] = React.useState(false);
+    const [isLoggedIn, setIsLoggedIn] = React.useState(false);
+    const [isHR, setIsHR] = React.useState(false);
+
+    React.useEffect(() => {
+        const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+        if (!token) return;
+
+        setIsLoggedIn(true);
+
+        const fetchProfile = async () => {
+            try {
+                const res = await api.get("/api/auth/profile");
+                if (res.data?.success && res.data?.data?.role) {
+                    setIsHR(res.data.data.role === "hr");
+                }
+            } catch (err) {
+                console.error("Failed to fetch profile for hero:", err);
+            }
+        };
+
+        fetchProfile();
+    }, []);
+
     return (
         <section className="relative min-h-[850px] flex items-center justify-center overflow-hidden pt-12 pb-24">
             <img
@@ -20,8 +48,8 @@ export const Hero = () => {
                     transition={{ duration: 0.8 }}
                     className="font-display text-5xl md:text-7xl font-bold text-white mb-8 leading-tight"
                 >
-                    Connecting Skilled Hands to <br />
-                    <span className="text-primary">Reliable Projects.</span>
+                    Kết nối những đôi tay lành nghề với <br />
+                    <span className="text-primary">Các dự án đáng tin cậy.</span>
                 </motion.h1>
 
                 <motion.p
@@ -30,7 +58,7 @@ export const Hero = () => {
                     transition={{ duration: 0.8, delay: 0.2 }}
                     className="text-xl md:text-2xl text-slate-200 mb-6 max-w-3xl mx-auto font-medium"
                 >
-                    Answer a short 2-minute survey to see the best-matched projects for you.
+                    Trả lời khảo sát ngắn 2 phút để xem các dự án phù hợp nhất với bạn.
                 </motion.p>
 
                 <motion.div
@@ -39,19 +67,39 @@ export const Hero = () => {
                     transition={{ duration: 0.5, delay: 0.4 }}
                     className="flex flex-col gap-5 max-w-md mx-auto mb-8"
                 >
-                    <button className="bg-primary hover:bg-sky-600 text-white px-10 py-6 rounded-2xl font-bold text-xl shadow-2xl transition-all transform hover:scale-105 active:scale-95">
-                        Start 2-Minute Survey
+                    <button
+                        onClick={() => setIsSurveyOpen(true)}
+                        className="bg-primary hover:bg-sky-600 text-white px-10 py-6 rounded-2xl font-bold text-xl shadow-2xl transition-all transform hover:scale-105 active:scale-95"
+                    >
+                        Bắt đầu khảo sát 2 phút
                     </button>
-                    <button className="bg-white text-slate-900 px-10 py-6 rounded-2xl font-bold text-xl shadow-xl hover:bg-slate-100 transition-all active:scale-95">
-                        Find Work
+                    <button
+                        onClick={() => router.push("/jobs")}
+                        className="bg-white text-slate-900 px-10 py-6 rounded-2xl font-bold text-xl shadow-xl hover:bg-slate-100 transition-all active:scale-95"
+                    >
+                        Tìm việc
                     </button>
-                    <button className="border-2 border-white/40 backdrop-blur-md text-white px-10 py-6 rounded-2xl font-bold text-xl hover:bg-white/10 transition-all active:scale-95">
-                        Post a Job
-                    </button>
+                    {isHR && (
+                        <button
+                            onClick={() => router.push("/post-job")}
+                            className="border-2 border-white/40 backdrop-blur-md text-white px-10 py-6 rounded-2xl font-bold text-xl hover:bg-white/10 transition-all active:scale-95"
+                        >
+                            Đăng việc
+                        </button>
+                    )}
                 </motion.div>
 
+                <AnimatePresence>
+                    {isSurveyOpen && (
+                        <SurveyWizard
+                            isOpen={isSurveyOpen}
+                            onClose={() => setIsSurveyOpen(false)}
+                        />
+                    )}
+                </AnimatePresence>
+
                 <p className="text-slate-300 text-lg font-medium mb-12">
-                    No fees for workers. Verified contractors only.
+                    Không thu phí người lao động. Chỉ nhà thầu đã xác minh.
                 </p>
 
                 <motion.div
@@ -66,7 +114,7 @@ export const Hero = () => {
                             <div className="w-full text-left">
                                 <input
                                     className="w-full bg-transparent border-none focus:ring-0 text-xl text-slate-800 dark:text-white placeholder-slate-500 font-medium py-2"
-                                    placeholder="Job title or trade (e.g. Electrician)"
+                                    placeholder="Chức danh công việc hoặc ngành nghề (ví dụ: Thợ điện)"
                                     type="text"
                                 />
                             </div>
@@ -76,17 +124,17 @@ export const Hero = () => {
                             <div className="w-full text-left">
                                 <input
                                     className="w-full bg-transparent border-none focus:ring-0 text-xl text-slate-800 dark:text-white placeholder-slate-500 font-medium py-2"
-                                    placeholder="City or province"
+                                    placeholder="Thành phố hoặc tỉnh thành"
                                     type="text"
                                 />
                             </div>
                         </div>
                         <button className="bg-slate-900 dark:bg-primary hover:opacity-90 text-white px-10 py-5 rounded-2xl font-bold text-xl transition-all whitespace-nowrap">
-                            Search Jobs
+                            Tìm việc làm
                         </button>
                     </div>
                     <p className="mt-4 text-slate-500 dark:text-slate-400 text-base font-medium">
-                        Results are personalized based on your survey and preferences.
+                        Kết quả được cá nhân hóa dựa trên khảo sát và sở thích của bạn.
                     </p>
                 </motion.div>
             </div>

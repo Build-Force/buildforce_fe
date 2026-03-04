@@ -120,7 +120,7 @@ export const Header = () => {
                             <span className="material-symbols-outlined text-white text-3xl">construction</span>
                         </div>
                         <span className="font-display font-bold text-2xl tracking-tight text-slate-800 dark:text-white">
-                            Workforce<span className="text-primary">Connection</span>
+                            Build<span className="text-primary">Force</span>
                         </span>
                     </Link>
 
@@ -136,10 +136,30 @@ export const Header = () => {
                         ))}
                         <div className="h-6 w-px bg-slate-200 dark:bg-slate-700"></div>
 
+                        {/* HR quick actions */}
+                        {isLoggedIn && userProfile?.role === "hr" && (
+                            <div className="flex items-center space-x-3">
+                                <button
+                                    onClick={() => router.push("/post-job")}
+                                    className="h-10 px-4 rounded-full bg-primary text-white text-sm font-bold flex items-center gap-1 shadow-md hover:bg-primary/90 transition-all"
+                                >
+                                    <span className="material-symbols-outlined text-base">add</span>
+                                    Đăng tin
+                                </button>
+                                <button
+                                    onClick={() => router.push("/hr-dashboard")}
+                                    className="h-10 px-4 rounded-full bg-slate-900 text-white text-sm font-bold flex items-center gap-1 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200/60 dark:border-slate-700 transition-all"
+                                >
+                                    <span className="material-symbols-outlined text-base">dashboard</span>
+                                    HR Dashboard
+                                </button>
+                            </div>
+                        )}
+
                         <button
                             onClick={toggleDarkMode}
                             className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                            title="Toggle Dark Mode"
+                            title="Chuyển chế độ sáng/tối"
                         >
                             <span className="material-symbols-outlined text-slate-600 dark:text-slate-400">
                                 {isDarkMode ? "light_mode" : "dark_mode"}
@@ -165,7 +185,7 @@ export const Header = () => {
                                     <div className="absolute right-0 mt-3 w-48 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 overflow-hidden py-2 animate-in fade-in slide-in-from-top-2">
                                         <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700 mb-2">
                                             <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                                                {userProfile?.firstName ? `${userProfile.firstName} ${userProfile.lastName}` : "User"}
+                                                {userProfile?.firstName ? `${userProfile.firstName} ${userProfile.lastName}` : "Người dùng"}
                                             </p>
                                             <p className="text-xs text-slate-500 truncate">
                                                 {userProfile?.email}
@@ -177,7 +197,7 @@ export const Header = () => {
                                             className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-primary transition-colors"
                                         >
                                             <span className="material-symbols-outlined text-[20px]">person</span>
-                                            My Profile
+                                            Hồ sơ của tôi
                                         </Link>
                                         <Link
                                             href="/settings"
@@ -185,7 +205,7 @@ export const Header = () => {
                                             className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-primary transition-colors"
                                         >
                                             <span className="material-symbols-outlined text-[20px]">settings</span>
-                                            Settings
+                                            Cài đặt
                                         </Link>
                                         <div className="h-px bg-slate-100 dark:bg-slate-700 my-2"></div>
                                         <button
@@ -193,7 +213,7 @@ export const Header = () => {
                                             className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors text-left"
                                         >
                                             <span className="material-symbols-outlined text-[20px]">logout</span>
-                                            Sign Out
+                                            Đăng xuất
                                         </button>
                                     </div>
                                 )}
@@ -201,11 +221,11 @@ export const Header = () => {
                         ) : (
                             <>
                                 <Link href="/signin" className="text-base font-semibold text-slate-600 dark:text-slate-400 hover:text-primary transition-colors">
-                                    Log In
+                                    Đăng nhập
                                 </Link>
-                                <button className="bg-primary hover:bg-sky-600 text-white px-8 py-3 rounded-full text-base font-bold transition-all transform hover:scale-105 shadow-lg active:scale-95">
-                                    Join Platform
-                                </button>
+                                <Link href="/signup" className="bg-primary hover:bg-sky-600 text-white px-8 py-3 rounded-full text-base font-bold transition-all transform hover:scale-105 shadow-lg active:scale-95 inline-block">
+                                    Tham gia ngay
+                                </Link>
                             </>
                         )}
                     </div>
@@ -217,7 +237,15 @@ export const Header = () => {
                             </span>
                         </button>
 
-                        {isLoggedIn ? (
+                        {isLoggedIn && userProfile?.role === "hr" ? (
+                            <button
+                                onClick={() => router.push("/post-job")}
+                                className="h-9 px-3 rounded-full bg-primary text-white text-xs font-bold flex items-center gap-1 shadow-md"
+                            >
+                                <span className="material-symbols-outlined text-base">add</span>
+                                Đăng tin
+                            </button>
+                        ) : isLoggedIn ? (
                             <Link href="/profile" className="flex items-center">
                                 <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold overflow-hidden border-2 border-white dark:border-slate-800 shadow-md">
                                     {getAvatarContent()}
