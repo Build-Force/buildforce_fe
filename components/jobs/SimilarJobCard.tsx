@@ -41,9 +41,9 @@ export const SimilarJobCard: React.FC<SimilarJobCardProps> = ({ job, index = 0 }
                 />
                 <div className="absolute top-4 left-4">
                     {job.urgent ? (
-                        <span className="bg-red-500/90 backdrop-blur-md text-white text-sm font-black px-4 py-2 rounded-full">Urgent</span>
+                        <span className="bg-red-500/90 backdrop-blur-md text-white text-sm font-black px-4 py-2 rounded-full">Khẩn cấp</span>
                     ) : isNew ? (
-                        <span className="bg-primary/90 backdrop-blur-md text-white text-sm font-black px-4 py-2 rounded-full">New</span>
+                        <span className="bg-primary/90 backdrop-blur-md text-white text-sm font-black px-4 py-2 rounded-full">Mới</span>
                     ) : null}
                 </div>
             </div>
@@ -67,7 +67,7 @@ export const SimilarJobCard: React.FC<SimilarJobCardProps> = ({ job, index = 0 }
                     href={`/jobs/${job.id}`}
                     className="mt-auto w-full py-3 border-2 border-primary text-primary hover:bg-primary hover:text-white rounded-xl font-black text-base transition-all text-center"
                 >
-                    View Details
+                    Xem chi tiết
                 </Link>
             </div>
         </motion.div>

@@ -21,17 +21,17 @@ export const CTA = () => {
                     </div>
                     <div className="relative z-10 px-10 py-24 md:p-24 flex flex-col items-center text-center">
                         <h2 className="text-4xl md:text-6xl font-display font-bold text-white mb-8 leading-tight max-w-4xl">
-                            Build your workforce or find your next project with confidence
+                            Xây dựng đội ngũ hoặc tìm dự án tiếp theo một cách tự tin
                         </h2>
                         <p className="text-slate-300 text-xl md:text-2xl mb-12 max-w-2xl font-medium">
-                            Transparent ratings. Verified payments. Real projects.
+                            Đánh giá minh bạch. Thanh toán đảm bảo. Dự án thực tế.
                         </p>
                         <div className="flex flex-col sm:flex-row gap-6 w-full max-w-md">
                             <button className="flex-1 bg-primary text-white px-12 py-6 rounded-2xl font-black text-2xl hover:bg-sky-600 transition-all shadow-2xl shadow-sky-500/20 active:scale-95">
-                                Find Work
+                                Tìm việc
                             </button>
                             <button className="flex-1 bg-white/10 text-white border-2 border-white/20 backdrop-blur-md px-12 py-6 rounded-2xl font-black text-2xl hover:bg-white/20 transition-all active:scale-95">
-                                Hire Talent
+                                Tuyển dụng
                             </button>
                         </div>
                     </div>
