@@ -21,6 +21,7 @@ export default function AuthPage() {
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [fullName, setFullName] = useState("");
+    const [username, setUsername] = useState("");
     const [phone, setPhone] = useState("");
     const [email, setEmail] = useState("");
 
@@ -46,6 +47,7 @@ export default function AuthPage() {
         setSuccessMsg("");
         setPassword("");
         setConfirmPassword("");
+        setUsername("");
         setShowVerifyDialog(false);
     };
 
@@ -124,6 +126,7 @@ export default function AuthPage() {
 
         try {
             const response = await api.post('/api/auth/register', {
+                username,
                 email: email || `${phone}@temp.com`, // Adjust this based on your reality
                 password,
                 firstName,
@@ -274,14 +277,14 @@ export default function AuthPage() {
                                 <form className="space-y-6" onSubmit={handleLoginSubmit}>
                                     <div>
                                         <label className="block text-lg font-bold text-slate-700 dark:text-slate-300 mb-2" htmlFor="account">
-                                            Email or Phone Number
+                                            Username, Email or Phone Number
                                         </label>
                                         <div className="relative">
                                             <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">person</span>
                                             <input
                                                 className="w-full pl-12 pr-4 py-5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl text-lg font-medium focus:outline-none transition-all placeholder:text-slate-400"
                                                 id="account"
-                                                placeholder="e.g., 0912345678"
+                                                placeholder="e.g., 0912345678 or user123"
                                                 type="text"
                                                 value={identifier}
                                                 onChange={(e) => setIdentifier(e.target.value)}
@@ -400,6 +403,10 @@ export default function AuthPage() {
                                     <div>
                                         <label className="block text-lg font-bold text-slate-700 dark:text-slate-300 mb-2" htmlFor="fullname">Full Name</label>
                                         <input value={fullName} onChange={e => setFullName(e.target.value)} required className="w-full h-16 px-6 rounded-2xl border-2 border-slate-100 dark:border-slate-700 dark:bg-slate-800 text-xl font-medium focus:outline-none custom-focus transition-all" id="fullname" placeholder="Enter your full name" type="text" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-lg font-bold text-slate-700 dark:text-slate-300 mb-2" htmlFor="username">Username</label>
+                                        <input value={username} onChange={e => setUsername(e.target.value)} required className="w-full h-16 px-6 rounded-2xl border-2 border-slate-100 dark:border-slate-700 dark:bg-slate-800 text-xl font-medium focus:outline-none custom-focus transition-all" id="username" placeholder="Choose a username" type="text" />
                                     </div>
                                     <div>
                                         <label className="block text-lg font-bold text-slate-700 dark:text-slate-300 mb-2" htmlFor="email">Email</label>

@@ -12,7 +12,8 @@ export default function ForgotPasswordPage() {
     // Steps: 1 (Email), 2 (OTP), 3 (New Password)
     const [step, setStep] = useState<1 | 2 | 3>(1);
 
-    const [email, setEmail] = useState("");
+    const [identifier, setIdentifier] = useState("");
+    const [sentToEmail, setSentToEmail] = useState("");
     const [otp, setOtp] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
@@ -33,9 +34,10 @@ export default function ForgotPasswordPage() {
         setIsLoading(true);
 
         try {
-            const response = await api.post('/api/auth/forgot-password', { email });
+            const response = await api.post('/api/auth/forgot-password', { identifier });
             if (response.data.success) {
                 setTempToken(response.data.tempToken);
+                setSentToEmail(response.data.email || ""); // Ensure we grab email from backend
                 setSuccessMsg("OTP sent to your email!");
                 setStep(2);
             }
@@ -97,8 +99,8 @@ export default function ForgotPasswordPage() {
                         {step === 3 && "New Password"}
                     </h2>
                     <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                        {step === 1 && "Enter your email to receive a reset code."}
-                        {step === 2 && `We sent a 6-digit code to ${email}.`}
+                        {step === 1 && "Enter your username, email, or phone number to receive a reset code."}
+                        {step === 2 && `We sent a 6-digit code to ${sentToEmail}.`}
                         {step === 3 && "Please create a strong new password."}
                     </p>
                 </div>
@@ -125,16 +127,16 @@ export default function ForgotPasswordPage() {
                             onSubmit={handleSendOTP}
                         >
                             <div>
-                                <label htmlFor="email" className="sr-only">Email address</label>
+                                <label htmlFor="identifier" className="sr-only">Username, Email, or Phone</label>
                                 <input
-                                    id="email"
-                                    name="email"
-                                    type="email"
+                                    id="identifier"
+                                    name="identifier"
+                                    type="text"
                                     required
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
+                                    value={identifier}
+                                    onChange={(e) => setIdentifier(e.target.value)}
                                     className="relative block w-full rounded-2xl border-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-6 py-4 text-slate-900 dark:text-white placeholder-slate-500 focus:outline-none custom-focus transition-all sm:text-lg font-medium"
-                                    placeholder="Enter your email"
+                                    placeholder="Enter username, email, or phone"
                                 />
                             </div>
                             <button
