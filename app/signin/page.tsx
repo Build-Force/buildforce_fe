@@ -30,6 +30,7 @@ export default function AuthPage() {
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [fullName, setFullName] = useState("");
+    const [username, setUsername] = useState("");
     const [phone, setPhone] = useState("");
     const [email, setEmail] = useState("");
 
@@ -55,6 +56,7 @@ export default function AuthPage() {
         setSuccessMsg("");
         setPassword("");
         setConfirmPassword("");
+        setUsername("");
         setShowVerifyDialog(false);
     };
 

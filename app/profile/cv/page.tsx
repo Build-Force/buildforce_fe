@@ -12,34 +12,49 @@ const INITIAL_CV_DATA = {
         email: "thi.nguyen@example.com",
         phone: "0901 234 567",
         address: "Sơn Trà, Đà Nẵng",
-        website: "vn.linkedin.com/in/nguyendinhthi"
+        website: "vn.linkedin.com/in/nguyendinhthi",
+        avatar: ""
     },
-    summary: "Kỹ sư kết cấu tận tâm với hơn 6 năm kinh nghiệm trong lĩnh vực xây dựng dân dụng và công nghiệp. Chuyên môn sâu rộng trong thiết kế, giám sát, và quản lý chất lượng công trình hạ tầng phức tạp.",
+    summary: "Kỹ sư kết cấu tận tâm với hơn 6 năm kinh nghiệm thực chiến trong các dự án nhà cao tầng, khu đô thị và công trình công nghiệp. Am hiểu toàn bộ vòng đời dự án từ bóc tách khối lượng, thiết kế biện pháp thi công, tổ chức nhân lực đến kiểm soát chất lượng và an toàn lao động. Luôn theo đuổi tiêu chuẩn thi công chính xác, tiến độ ổn định và chi phí tối ưu cho chủ đầu tư.",
     experiences: [
         {
             id: "1",
             role: "Kỹ sư kết cấu chính",
             company: "Delta Group - Đà Nẵng",
             duration: "01/2021 - Hiện tại",
-            description: "Chỉ đạo thiết kế kết cấu cho 5 dự án cao tầng với tổng mức đầu tư trên 1000 tỷ VNĐ. Tối ưu hóa 15% vật liệu thép. Giám sát an toàn và tiến độ công trình thi công."
+            description: "Chỉ đạo thiết kế, kiểm tra và hiệu chỉnh phương án kết cấu cho 5 dự án nhà cao tầng và tổ hợp thương mại với tổng mức đầu tư trên 1000 tỷ VNĐ. Tổ chức phối hợp giữa bộ phận thiết kế – thi công – giám sát hiện trường để xử lý kịp thời các xung đột bản vẽ. Tối ưu hóa khoảng 10–15% khối lượng thép và vật liệu hoàn thiện mà vẫn đảm bảo tiêu chuẩn an toàn. Quản lý nhóm 10–15 kỹ sư/đội trưởng thi công, lập kế hoạch tiến độ tuần/tháng và báo cáo trực tiếp cho chỉ huy trưởng công trình."
         },
         {
             id: "2",
             role: "Kỹ sư giám sát",
             company: "Coteccons - Quảng Nam",
             duration: "06/2018 - 12/2020",
-            description: "Giám sát thi công khu đô thị Smart City Zone A. Đảm bảo chất lượng cấu kiện bê tông cốt thép khối lớn."
+            description: "Giám sát thi công hạ tầng và phần kết cấu khu đô thị Smart City Zone A, trực tiếp theo dõi các hạng mục móng, cọc, sàn và hệ tường vách. Thiết lập quy trình kiểm tra cốt thép, cốp pha, cấp phối bê tông và nghiệm thu cùng tư vấn giám sát. Phối hợp với nhà thầu phụ xử lý các lỗi hiện trường, hạn chế tối đa phát sinh chi phí và thời gian."
         }
     ],
     education: [
         {
             id: "1",
-            degree: "Cử nhân Kỹ thuật Xây dựng",
+            degree: "Cử nhân Kỹ thuật Xây dựng – Kết cấu công trình",
             school: "Đại học Bách Khoa Đà Nẵng",
             duration: "2014 - 2018"
+        },
+        {
+            id: "2",
+            degree: "Chứng chỉ An toàn lao động & Chỉ huy trưởng công trình",
+            school: "Bộ Xây dựng / Bộ Lao động – Thương binh & Xã hội",
+            duration: "2019 - 2022"
         }
     ],
-    skills: ["AutoCAD", "SAP2000", "ETABS", "Quản lý dự án", "Tiếng Anh chuyên ngành", "BIM (Revit)"]
+    skills: [
+        "Thiết kế & kiểm tra kết cấu (SAP2000, ETABS)",
+        "Triển khai bản vẽ thi công chi tiết (AutoCAD, Revit/BIM cơ bản)",
+        "Lập và kiểm soát tiến độ thi công (MS Project / Excel)",
+        "Quản lý chất lượng & hồ sơ nghiệm thu",
+        "Tổ chức, phân công và hướng dẫn đội nhóm thi công",
+        "Giao tiếp & làm việc với chủ đầu tư, tư vấn giám sát",
+        "Tiếng Anh chuyên ngành kỹ thuật ở mức khá"
+    ]
 };
 
 export default function CVBuilderPage() {
@@ -47,6 +62,16 @@ export default function CVBuilderPage() {
     const [cvData, setCvData] = useState(INITIAL_CV_DATA);
     const [activeSection, setActiveSection] = useState("personalInfo");
     const [mounted, setMounted] = useState(false);
+    const avatarInputRef = useRef<HTMLInputElement | null>(null);
+
+    const getInitials = (name: string) => {
+        if (!name) return "ND";
+        const parts = name.trim().split(" ").filter(Boolean);
+        if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+        const first = parts[0][0] || "";
+        const last = parts[parts.length - 1][0] || "";
+        return (first + last).toUpperCase();
+    };
 
     useEffect(() => {
         setMounted(true);
@@ -67,6 +92,26 @@ export default function CVBuilderPage() {
             localStorage.setItem("buildforce_cv_data", JSON.stringify(cvData));
         }
     }, [cvData, mounted]);
+
+    const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            const result = reader.result;
+            if (typeof result === "string") {
+                setCvData(prev => ({
+                    ...prev,
+                    personalInfo: {
+                        ...prev.personalInfo,
+                        avatar: result
+                    }
+                }));
+            }
+        };
+        reader.readAsDataURL(file);
+    };
 
     const handlePrint = () => {
         window.print();
@@ -182,6 +227,36 @@ export default function CVBuilderPage() {
                         {/* PERSONAL INFO FORM */}
                         {activeSection === "personalInfo" && (
                             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+                                <div className="flex items-center gap-4 mb-2">
+                                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-sky-500 via-blue-600 to-indigo-700 flex items-center justify-center text-white font-black text-xl shrink-0 overflow-hidden">
+                                        {cvData.personalInfo.avatar ? (
+                                            <img src={cvData.personalInfo.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <span>{getInitials(cvData.personalInfo.name)}</span>
+                                        )}
+                                    </div>
+                                    <div className="flex flex-col gap-1">
+                                        <button
+                                            type="button"
+                                            onClick={() => avatarInputRef.current?.click()}
+                                            className="inline-flex items-center justify-center px-3 py-2 rounded-full text-xs font-bold bg-slate-900 text-white hover:bg-slate-800 transition-colors"
+                                        >
+                                            <span className="material-symbols-outlined text-[16px] mr-1">photo_camera</span>
+                                            Tải ảnh đại diện
+                                        </button>
+                                        <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                                            Nên dùng ảnh vuông, nền sáng, rõ khuôn mặt.
+                                        </span>
+                                        <input
+                                            ref={avatarInputRef}
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleAvatarUpload}
+                                            className="hidden"
+                                        />
+                                    </div>
+                                </div>
+
                                 <div>
                                     <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">Họ và Tên</label>
                                     <input value={cvData.personalInfo.name} onChange={e => updatePersonalInfo("name", e.target.value)} type="text" className="w-full h-11 px-4 rounded-xl bg-slate-50 dark:bg-slate-800 border-none text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/50 transition-all font-medium" placeholder="Nguyễn Văn A" />
@@ -298,37 +373,54 @@ export default function CVBuilderPage() {
                         <div className="p-[12mm]">
 
                             {/* Header Section */}
-                            <div className="border-b-2 border-slate-900 pb-6 mb-6">
-                                <h1 className="text-4xl font-black uppercase text-slate-900 tracking-tighter" style={{ fontFamily: "Inter, sans-serif" }}>
-                                    {cvData.personalInfo.name || "Họ và Tên"}
-                                </h1>
-                                <h2 className="text-xl font-medium text-slate-600 tracking-wide mt-1 uppercase">
-                                    {cvData.personalInfo.title || "Chức danh nghiệp vụ"}
-                                </h2>
+                            <div className="border-b-2 border-slate-900 pb-6 mb-6 flex items-start justify-between gap-6">
+                                <div className="flex-1 min-w-0">
+                                    <h1 className="text-4xl font-black uppercase text-slate-900 tracking-tighter" style={{ fontFamily: "Inter, sans-serif" }}>
+                                        {cvData.personalInfo.name || "Họ và Tên"}
+                                    </h1>
+                                    <h2 className="text-xl font-medium text-slate-600 tracking-wide mt-1 uppercase">
+                                        {cvData.personalInfo.title || "Chức danh nghiệp vụ"}
+                                    </h2>
 
-                                <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-700">
-                                    {cvData.personalInfo.email && (
-                                        <div className="flex items-center gap-2">
-                                            <span className="material-symbols-outlined text-[16px]">mail</span>
-                                            {cvData.personalInfo.email}
-                                        </div>
-                                    )}
-                                    {cvData.personalInfo.phone && (
-                                        <div className="flex items-center gap-2">
-                                            <span className="material-symbols-outlined text-[16px]">call</span>
-                                            {cvData.personalInfo.phone}
-                                        </div>
-                                    )}
-                                    {cvData.personalInfo.address && (
-                                        <div className="flex items-center gap-2">
-                                            <span className="material-symbols-outlined text-[16px]">location_on</span>
-                                            {cvData.personalInfo.address}
-                                        </div>
-                                    )}
-                                    {cvData.personalInfo.website && (
-                                        <div className="flex items-center gap-2">
-                                            <span className="material-symbols-outlined text-[16px]">language</span>
-                                            {cvData.personalInfo.website}
+                                    <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-700">
+                                        {cvData.personalInfo.email && (
+                                            <div className="flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-[16px]">mail</span>
+                                                {cvData.personalInfo.email}
+                                            </div>
+                                        )}
+                                        {cvData.personalInfo.phone && (
+                                            <div className="flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-[16px]">call</span>
+                                                {cvData.personalInfo.phone}
+                                            </div>
+                                        )}
+                                        {cvData.personalInfo.address && (
+                                            <div className="flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-[16px]">location_on</span>
+                                                {cvData.personalInfo.address}
+                                            </div>
+                                        )}
+                                        {cvData.personalInfo.website && (
+                                            <div className="flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-[16px]">language</span>
+                                                {cvData.personalInfo.website}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Avatar block */}
+                                <div className="w-[90px] h-[90px] rounded-full border border-slate-300 flex items-center justify-center overflow-hidden">
+                                    {cvData.personalInfo.avatar ? (
+                                        <img
+                                            src={cvData.personalInfo.avatar}
+                                            alt="Avatar"
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full bg-gradient-to-br from-sky-500 via-blue-600 to-indigo-700 flex items-center justify-center text-white font-black text-2xl tracking-tight">
+                                            {getInitials(cvData.personalInfo.name || "")}
                                         </div>
                                     )}
                                 </div>
