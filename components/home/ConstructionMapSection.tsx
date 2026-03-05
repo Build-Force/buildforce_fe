@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
-import { motion } from "framer-motion";
+import React, { useMemo, useState, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import Map, {
   Marker,
   Popup,
   NavigationControl,
   FullscreenControl,
+  MapRef,
 } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 
@@ -97,9 +98,158 @@ const MOCK_SITES: Site[] = [
   },
 ];
 
+// Reusable Custom Marker Component
+const ConstructionMarker = ({
+  site,
+  isActive,
+  onClick
+}: {
+  site: Site;
+  isActive: boolean;
+  onClick: (e: any) => void
+}) => {
+  const [isHovered, setIsHovered] = useState(false);
+
+  return (
+    <Marker
+      longitude={site.lng}
+      latitude={site.lat}
+      anchor="bottom"
+      onClick={onClick}
+    >
+      <div
+        className="relative flex flex-col items-center group cursor-pointer"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        {/* Tooltip on hover */}
+        <AnimatePresence>
+          {isHovered && !isActive && (
+            <motion.div
+              initial={{ opacity: 0, y: 10, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.9 }}
+              className="absolute bottom-full mb-3 px-3 py-1.5 bg-slate-800 text-white text-xs font-bold rounded-lg shadow-xl whitespace-nowrap border border-slate-700 z-10"
+            >
+              {site.name}
+              <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800" />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Pulse effect for active site */}
+        {isActive && (
+          <div className="absolute inset-0 -translate-y-3">
+            <div className="absolute inset-x-0 top-0 w-10 h-10 -translate-x-1/2 bg-secondary/40 rounded-full animate-ping" />
+          </div>
+        )}
+
+        {/* Main Marker Circle */}
+        <motion.div
+          animate={{
+            scale: isActive || isHovered ? 1.25 : 1,
+            filter: `brightness(${isHovered ? 1.3 : 1}) drop-shadow(0 0 8px ${isActive ? 'rgba(74, 188, 198, 0.4)' : 'rgba(0,0,0,0.3)'})`
+          }}
+          className={`relative w-11 h-11 rounded-full flex items-center justify-center transition-all duration-500 border-2 ${isActive
+              ? "bg-secondary border-white shadow-[0_0_20px_rgba(74,188,198,0.6)]"
+              : "bg-slate-800 border-white/20 group-hover:border-white/40 shadow-xl"
+            }`}
+        >
+          <span className={`material-symbols-outlined text-xl ${isActive ? "text-slate-900" : "text-white"}`}>
+            apartment
+          </span>
+
+          {/* Progress label badge */}
+          <div className={`absolute -right-2 -top-2 px-1.5 py-0.5 rounded-full text-[8px] font-black shadow-lg ${isActive ? "bg-white text-secondary" : "bg-secondary text-slate-900"
+            }`}>
+            {site.progress}%
+          </div>
+        </motion.div>
+
+        {/* Pointer shadow */}
+        <div className="w-1.5 h-1.5 bg-white/20 rounded-full blur-[1px] mt-1" />
+      </div>
+    </Marker>
+  );
+};
+
+// Reusable Popup Card Component
+const SitePopupCard = ({ site, onClose }: { site: Site; onClose: () => void }) => {
+  return (
+    <Popup
+      longitude={site.lng}
+      latitude={site.lat}
+      anchor="top"
+      closeButton={false}
+      onClose={onClose}
+      offset={15}
+      maxWidth="300px"
+      className="custom-popup"
+    >
+      <div className="p-5 bg-slate-950/90 backdrop-blur-2xl text-white rounded-[2rem] border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] min-w-[280px]">
+        <div className="flex items-center gap-4 mb-4">
+          <div className="w-12 h-12 rounded-2xl bg-secondary shadow-[0_0_15px_rgba(74,188,198,0.3)] flex items-center justify-center shrink-0">
+            <span className="material-symbols-outlined text-slate-900 text-2xl">apartment</span>
+          </div>
+          <div className="min-w-0">
+            <h4 className="font-black text-base leading-tight text-white truncate">
+              {site.name}
+            </h4>
+            <p className="text-[11px] text-slate-400 font-bold flex items-center gap-1 opacity-80">
+              <span className="material-symbols-outlined text-sm">location_on</span>
+              {site.address}
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="bg-slate-900/50 p-3 rounded-2xl border border-white/5 space-y-2">
+            <div className="flex items-center justify-between text-[11px] font-black">
+              <span className="text-slate-500 uppercase tracking-widest">Construction Progress</span>
+              <span className="text-secondary">{site.progress}%</span>
+            </div>
+            <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${site.progress}%` }}
+                transition={{ duration: 1, ease: "easeOut" }}
+                className="h-full bg-secondary shadow-[0_0_12px_rgba(74,188,198,0.5)]"
+              />
+            </div>
+          </div>
+
+          <button className="w-full py-3.5 bg-white text-slate-950 hover:bg-secondary hover:text-slate-900 text-[11px] font-black uppercase tracking-[0.15em] rounded-2xl transition-all shadow-xl active:scale-95">
+            View Project Details
+          </button>
+        </div>
+      </div>
+    </Popup>
+  );
+};
+
 export const ConstructionMapSection = () => {
   const [selectedSite, setSelectedSite] = useState<Site | null>(null);
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
+  const mapRef = useRef<MapRef>(null);
+  const modalMapRef = useRef<MapRef>(null);
+
+  const handleSiteSelect = (site: Site | null, isModal: boolean = false) => {
+    const prevSiteId = selectedSite?.id;
+    setSelectedSite(site);
+
+    if (site && site.id !== prevSiteId) {
+      const currentMapRef = isModal ? modalMapRef : mapRef;
+      currentMapRef.current?.flyTo({
+        center: [site.lng, site.lat],
+        zoom: 16.5,
+        pitch: 60,
+        bearing: 25,
+        duration: 2200,
+        essential: true,
+        padding: { top: 0, bottom: 0, left: 0, right: 0 }
+      });
+    }
+  };
 
   const initialViewState = useMemo(() => {
     if (!MOCK_SITES.length) {
@@ -109,11 +259,8 @@ export const ConstructionMapSection = () => {
         zoom: 11,
       };
     }
-
-    const centerLat =
-      MOCK_SITES.reduce((sum, s) => sum + s.lat, 0) / MOCK_SITES.length;
-    const centerLng =
-      MOCK_SITES.reduce((sum, s) => sum + s.lng, 0) / MOCK_SITES.length;
+    const centerLat = MOCK_SITES.reduce((sum, s) => sum + s.lat, 0) / MOCK_SITES.length;
+    const centerLng = MOCK_SITES.reduce((sum, s) => sum + s.lng, 0) / MOCK_SITES.length;
 
     return {
       longitude: centerLng,
@@ -123,84 +270,71 @@ export const ConstructionMapSection = () => {
   }, []);
 
   return (
-    <section className="py-28 bg-slate-900 text-white">
+    <section className="py-28 bg-slate-900 border-t border-white/5">
       <div className="max-w-7xl mx-auto px-6">
-        <div className="flex flex-col lg:flex-row items-start gap-12 mb-14">
-          <div className="flex-1">
+        <div className="flex flex-col lg:flex-row items-stretch gap-12 mb-14">
+          {/* Content Left */}
+          <div className="lg:w-1/3 flex flex-col shrink-0">
             <motion.span
-              initial={{ opacity: 0, y: 10 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0, x: -10 }}
+              whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              className="text-secondary font-bold uppercase tracking-[0.25em] text-xs md:text-sm block mb-4"
+              className="text-secondary font-black uppercase tracking-[0.3em] text-xs block mb-4"
             >
-              Bản đồ công trình
+              Network Overview
             </motion.span>
             <motion.h2
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="text-3xl md:text-4xl lg:text-5xl font-display font-bold mb-4"
+              className="text-4xl md:text-5xl font-display font-black text-white mb-6 leading-tight"
             >
-              Các công trình đang{" "}
-              <span className="text-secondary">thi công tích cực</span>
+              Bản đồ <span className="text-secondary">việc làm</span> tại hiện trường
             </motion.h2>
             <motion.p
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="text-slate-300 text-lg leading-relaxed mb-6"
+              className="text-slate-400 text-lg leading-relaxed mb-10"
             >
-              Vị trí mock data minh họa các dự án BuildForce đang theo dõi quanh
-              Đà Nẵng, giúp bạn hình dung nhanh nơi mình có thể làm việc.
+              Khám phá các dự án đang thi công tích cực. Chúng tôi kết nối bạn với những công trình gần nhất, tối ưu hóa thời gian di chuyển.
             </motion.p>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="space-y-4"
-            >
+
+            <div className="space-y-3 overflow-y-auto max-h-[460px] pr-2 py-4 px-1 custom-scrollbar">
               {MOCK_SITES.map((site) => {
                 const isActive = selectedSite?.id === site.id;
                 return (
                   <button
                     key={site.id}
-                    type="button"
-                    onClick={() =>
-                      setSelectedSite((prev) =>
-                        prev?.id === site.id ? null : site
-                      )
-                    }
-                    className={`w-full text-left flex items-start gap-4 rounded-2xl p-4 transition-all border ${
-                      isActive
-                        ? "bg-slate-800 border-secondary shadow-lg shadow-secondary/30"
-                        : "bg-slate-800/60 border-slate-700 hover:border-secondary/60 hover:bg-slate-800"
-                    }`}
+                    onClick={() => handleSiteSelect(isActive ? null : site)}
+                    className={`w-full text-left flex items-start gap-4 rounded-3xl p-5 transition-all duration-500 border group ${isActive
+                      ? "bg-slate-800 border-secondary/50 shadow-2xl ring-1 ring-secondary/20 -translate-y-1"
+                      : "bg-slate-800/40 border-white/5 hover:border-white/10 hover:bg-slate-800/60"
+                      }`}
                   >
-                    <div className="w-10 h-10 rounded-2xl bg-secondary/20 flex items-center justify-center shrink-0">
-                      <span className="material-symbols-outlined text-secondary">
-                        location_on
-                      </span>
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${isActive ? "bg-secondary text-slate-900" : "bg-slate-700/50 text-slate-400 group-hover:text-white"
+                      }`}>
+                      <span className="material-symbols-outlined">apartment</span>
                     </div>
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <p className="font-black text-base md:text-lg">
+                        <p className={`font-black text-base truncate transition-colors ${isActive ? "text-white" : "text-slate-200"}`}>
                           {site.name}
                         </p>
-                        <span className="px-2 py-0.5 rounded-full bg-slate-700 text-[10px] font-black uppercase tracking-widest">
-                          {site.city}
-                        </span>
                       </div>
-                      <p className="text-sm text-slate-300 font-medium mb-2">
+                      <p className="text-xs text-slate-400 font-medium mb-3 flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[14px]">location_on</span>
                         {site.address}
                       </p>
                       <div className="flex items-center gap-3">
-                        <div className="flex-1 h-2 rounded-full bg-slate-700 overflow-hidden">
-                          <div
-                            className="h-full bg-secondary"
-                            style={{ width: `${site.progress}%` }}
+                        <div className="flex-1 h-1.5 rounded-full bg-slate-900 overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${site.progress}%` }}
+                            className={`h-full ${isActive ? "bg-secondary" : "bg-slate-600"}`}
                           />
                         </div>
-                        <span className="text-xs font-black text-slate-200 whitespace-nowrap">
+                        <span className={`text-[10px] font-black whitespace-nowrap ${isActive ? "text-secondary" : "text-slate-500"}`}>
                           {site.progress}% hoàn thành
                         </span>
                       </div>
@@ -208,184 +342,206 @@ export const ConstructionMapSection = () => {
                   </button>
                 );
               })}
-            </motion.div>
+            </div>
           </div>
 
+          {/* Map Right */}
           <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, scale: 0.98 }}
+            whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
             className="flex-1 w-full"
           >
-            <div className="relative rounded-[2.5rem] overflow-hidden border border-slate-700 bg-slate-900 shadow-2xl h-[360px] md:h-[420px]">
-              {MAPBOX_TOKEN ? (
-                <Map
-                  initialViewState={initialViewState}
-                  mapStyle="mapbox://styles/mapbox/light-v11"
-                  mapboxAccessToken={MAPBOX_TOKEN}
-                  style={{ width: "100%", height: "100%" }}
-                  reuseMaps
-                  onClick={() => setSelectedSite(null)}
-                >
-                  <NavigationControl
-                    position="bottom-right"
-                    showCompass={false}
-                  />
-                  <FullscreenControl position="top-right" />
+            <div className="relative h-full min-h-[500px] lg:min-h-0 rounded-[3.5rem] overflow-hidden bg-slate-950 border border-white/10 shadow-[0_0_100px_-20px_rgba(0,0,0,0.8)] group">
+              <div className="absolute inset-0 rounded-[3.5rem] pointer-events-none ring-1 ring-inset ring-white/10 z-10" />
 
-                  {MOCK_SITES.map((site) => {
-                    const isActive = selectedSite?.id === site.id;
-                    return (
-                      <Marker
+              {MAPBOX_TOKEN ? (
+                <>
+                  <Map
+                    ref={mapRef}
+                    initialViewState={initialViewState}
+                    mapStyle="mapbox://styles/mapbox/navigation-night-v1"
+                    mapboxAccessToken={MAPBOX_TOKEN}
+                    style={{ width: "100%", height: "100%" }}
+                    reuseMaps
+                    onClick={() => handleSiteSelect(null)}
+                  >
+                    <NavigationControl position="top-right" showCompass={false} />
+
+                    {MOCK_SITES.map((site) => (
+                      <ConstructionMarker
                         key={site.id}
-                        longitude={site.lng}
-                        latitude={site.lat}
-                        anchor="bottom"
+                        site={site}
+                        isActive={selectedSite?.id === site.id}
                         onClick={(e) => {
                           e.originalEvent.stopPropagation();
-                          setSelectedSite(site);
+                          handleSiteSelect(site);
                         }}
-                      >
-                        <button
-                          type="button"
-                          className={`group flex flex-col items-center -translate-y-1 ${
-                            isActive ? "scale-110" : "scale-100"
-                          } transition-transform`}
-                        >
-                          <span
-                            className={`material-symbols-outlined text-3xl drop-shadow-md ${
-                              isActive ? "text-secondary" : "text-red-500"
-                            }`}
-                          >
-                            location_on
-                          </span>
-                          <span className="mt-0.5 text-[10px] font-black px-2 py-0.5 rounded-full bg-white/90 text-slate-800 shadow-sm whitespace-nowrap">
-                            {site.city}
-                          </span>
-                        </button>
-                      </Marker>
-                    );
-                  })}
+                      />
+                    ))}
 
-                  {selectedSite && (
-                    <Popup
-                      longitude={selectedSite.lng}
-                      latitude={selectedSite.lat}
-                      anchor="top"
-                      closeOnClick={false}
-                      focusAfterOpen={false}
-                      onClose={() => setSelectedSite(null)}
-                      offset={12}
+                    <AnimatePresence>
+                      {selectedSite && (
+                        <SitePopupCard
+                          site={selectedSite}
+                          onClose={() => handleSiteSelect(null)}
+                        />
+                      )}
+                    </AnimatePresence>
+                  </Map>
+
+                  {/* Enhanced Depth Overlays */}
+                  <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent pointer-events-none z-[5]" />
+                  <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-slate-950/60 to-transparent pointer-events-none z-[5]" />
+
+                  {/* Floating Overlay UI */}
+                  <div className="absolute top-8 left-8 pointer-events-none z-20">
+                    <motion.div
+                      initial={{ opacity: 0, y: -20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-slate-900/60 backdrop-blur-2xl px-6 py-4 rounded-[2rem] border border-white/10 shadow-2xl"
                     >
-                      <div className="min-w-[220px] max-w-xs">
-                        <p className="text-sm font-black text-slate-900 mb-1">
-                          {selectedSite.name}
-                        </p>
-                        <p className="text-xs font-medium text-slate-500 mb-2">
-                          {selectedSite.address}
-                        </p>
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="flex-1 h-1.5 rounded-full bg-slate-200 overflow-hidden">
-                            <div
-                              className="h-full bg-secondary"
-                              style={{ width: `${selectedSite.progress}%` }}
-                            />
-                          </div>
-                          <span className="text-[10px] font-black text-secondary">
-                            {selectedSite.progress}%
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-slate-500 font-medium">
-                          Vị trí minh họa (mock). Thực tế sẽ hiển thị theo dữ
-                          liệu công trình của bạn.
-                        </p>
+                      <p className="text-[11px] font-black text-white/90 flex items-center gap-3">
+                        <span className="text-secondary tracking-[0.2em] uppercase">Active Zone</span>
+                        <span className="w-1 h-1 bg-white/20 rounded-full" />
+                        <span className="flex items-center gap-1.5 opacity-80">
+                          <span className="material-symbols-outlined text-sm text-secondary">explore</span>
+                          Đà Nẵng & lân cận
+                        </span>
+                      </p>
+                    </motion.div>
+                  </div>
+
+                  {/* Dynamic Legend */}
+                  <div className="absolute bottom-10 left-8 pointer-events-none z-20">
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="bg-slate-900/40 backdrop-blur-xl px-4 py-2.5 rounded-2xl border border-white/10 shadow-xl flex items-center gap-4"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-secondary animate-pulse shadow-[0_0_15px_rgba(74,188,198,0.8)]" />
+                        <span className="text-[10px] font-black text-white/70 uppercase tracking-widest">In Progress</span>
                       </div>
-                    </Popup>
-                  )}
-                </Map>
+                      <div className="w-[1px] h-3 bg-white/10" />
+                      <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">{MOCK_SITES.length} Sites</span>
+                    </motion.div>
+                  </div>
+
+                  {/* Action UI */}
+                  <button
+                    type="button"
+                    onClick={() => setIsMapModalOpen(true)}
+                    className="absolute top-8 right-16 z-20 flex items-center gap-2 bg-white text-slate-950 text-[11px] font-black uppercase tracking-[0.15em] px-5 py-3.5 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.4)] hover:bg-secondary hover:text-slate-900 transition-all transform hover:-translate-y-1 active:scale-95"
+                  >
+                    <span className="material-symbols-outlined text-lg">fullscreen</span>
+                    Expand Network
+                  </button>
+                </>
               ) : (
-                <div className="h-full flex flex-col items-center justify-center px-8">
-                  <span className="material-symbols-outlined text-4xl text-slate-500 mb-3">
-                    map
-                  </span>
-                  <p className="text-sm text-slate-300 font-bold text-center mb-1">
-                    Chưa cấu hình Mapbox cho frontend
-                  </p>
-                  <p className="text-xs text-slate-500 font-medium text-center">
-                    Thêm <code className="font-mono">NEXT_PUBLIC_MAPBOX_TOKEN</code>{" "}
-                    vào file <code className="font-mono">.env.local</code> để
-                    hiển thị bản đồ tương tác với marker cho từng công trình.
+                <div className="h-full flex flex-col items-center justify-center px-12 text-center bg-slate-900">
+                  <div className="w-20 h-20 rounded-[2rem] bg-slate-800 flex items-center justify-center mb-6">
+                    <span className="material-symbols-outlined text-4xl text-slate-600">map</span>
+                  </div>
+                  <h3 className="text-xl font-black text-white mb-2">Cấu hình Mapbox yêu cầu</h3>
+                  <p className="text-slate-500 text-sm max-w-xs leading-relaxed">
+                    Vui lòng thêm <code className="text-secondary bg-secondary/10 px-1.5 py-0.5 rounded">NEXT_PUBLIC_MAPBOX_TOKEN</code> vào file <code className="text-white">.env.local</code> để kích hoạt giao diện bản đồ cao cấp.
                   </p>
                 </div>
               )}
-
-              <div className="pointer-events-none absolute inset-0 flex flex-col justify-between">
-                <div className="flex justify-between p-4">
-                  <div className="bg-slate-900/80 backdrop-blur-md px-4 py-2 rounded-2xl border border-slate-700">
-                    <p className="text-xs font-black text-slate-300">
-                      📍 Đà Nẵng & khu vực lân cận
-                    </p>
-                  </div>
-                  {MAPBOX_TOKEN && (
-                    <button
-                      type="button"
-                      onClick={() => setIsMapModalOpen(true)}
-                      className="pointer-events-auto flex items-center gap-1 bg-slate-900/80 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full shadow-lg hover:bg-slate-900"
-                    >
-                      <span className="material-symbols-outlined text-xs">
-                        fullscreen
-                      </span>
-                      Xem bản đồ lớn
-                    </button>
-                  )}
-                </div>
-              </div>
             </div>
           </motion.div>
         </div>
       </div>
 
-      {MAPBOX_TOKEN && isMapModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="relative w-full max-w-5xl mx-4">
-            <div className="bg-slate-900 rounded-[2.5rem] border border-slate-700 overflow-hidden shadow-2xl h-[70vh]">
-              <Map
-                initialViewState={initialViewState}
-                mapStyle="mapbox://styles/mapbox/light-v11"
-                mapboxAccessToken={MAPBOX_TOKEN}
-                style={{ width: "100%", height: "100%" }}
-                reuseMaps
-              >
-                <NavigationControl
-                  position="bottom-right"
-                  showCompass={false}
-                />
-                <FullscreenControl position="top-right" />
-
-                {MOCK_SITES.map((site) => (
-                  <Marker
-                    key={site.id}
-                    longitude={site.lng}
-                    latitude={site.lat}
-                    anchor="bottom"
-                  >
-                    <span className="material-symbols-outlined text-3xl text-red-500 drop-shadow-md">
-                      location_on
-                    </span>
-                  </Marker>
-                ))}
-              </Map>
-            </div>
-            <button
-              type="button"
-              onClick={() => setIsMapModalOpen(false)}
-              className="absolute -top-4 right-6 w-10 h-10 rounded-2xl bg-white text-slate-900 flex items-center justify-center shadow-lg border border-slate-200"
+      {/* Modern Modal Map */}
+      <AnimatePresence>
+        {MAPBOX_TOKEN && isMapModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/90 backdrop-blur-xl p-6 md:p-12"
+            onClick={() => setIsMapModalOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="relative w-full h-full max-w-7xl"
+              onClick={(e) => e.stopPropagation()}
             >
-              <span className="material-symbols-outlined text-xl">close</span>
-            </button>
-          </div>
-        </div>
-      )}
+              <div className="bg-slate-900 rounded-[3.5rem] border border-white/10 overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)] h-full relative group">
+                <Map
+                  ref={modalMapRef}
+                  initialViewState={initialViewState}
+                  mapStyle="mapbox://styles/mapbox/navigation-night-v1"
+                  mapboxAccessToken={MAPBOX_TOKEN}
+                  style={{ width: "100%", height: "100%" }}
+                  reuseMaps
+                  onClick={() => handleSiteSelect(null, true)}
+                >
+                  <NavigationControl position="top-right" showCompass={false} />
+
+                  {MOCK_SITES.map((site) => (
+                    <ConstructionMarker
+                      key={site.id}
+                      site={site}
+                      isActive={selectedSite?.id === site.id}
+                      onClick={(e) => {
+                        e.originalEvent.stopPropagation();
+                        handleSiteSelect(site, true);
+                      }}
+                    />
+                  ))}
+
+                  <AnimatePresence>
+                    {selectedSite && (
+                      <SitePopupCard
+                        site={selectedSite}
+                        onClose={() => handleSiteSelect(null, true)}
+                      />
+                    )}
+                  </AnimatePresence>
+                </Map>
+                <button
+                  type="button"
+                  onClick={() => setIsMapModalOpen(false)}
+                  className="absolute top-8 right-16 w-12 h-12 rounded-2xl bg-white text-slate-900 flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all z-20"
+                >
+                  <span className="material-symbols-outlined font-black">close</span>
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <style jsx global>{`
+        .custom-popup .mapboxgl-popup-content {
+          background: transparent !important;
+          padding: 0 !important;
+          box-shadow: none !important;
+          border: none !important;
+        }
+        .custom-popup .mapboxgl-popup-tip {
+          display: none !important;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.2);
+        }
+      `}</style>
     </section>
   );
 };
