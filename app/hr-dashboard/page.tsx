@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import api from "@/utils/api";
 
 const JOB_POSTS = [
     {
@@ -45,11 +46,11 @@ const JOB_POSTS = [
     },
 ];
 
-const STATS = [
-    { label: "Tổng tin đăng", value: "12", icon: "work", color: "text-primary", bg: "from-sky-500/10 to-blue-600/10", border: "border-sky-100 dark:border-sky-800/30" },
-    { label: "Đang tuyển", value: "4", icon: "pending_actions", color: "text-amber-500", bg: "from-amber-500/10 to-orange-500/10", border: "border-amber-100 dark:border-amber-800/30" },
-    { label: "Đã tuyển xong", value: "8", icon: "check_circle", color: "text-emerald-500", bg: "from-emerald-500/10 to-teal-500/10", border: "border-emerald-100 dark:border-emerald-800/30" },
-    { label: "Tổng lao động thuê", value: "47", icon: "group", color: "text-purple-500", bg: "from-purple-500/10 to-pink-500/10", border: "border-purple-100 dark:border-purple-800/30" },
+const BASE_STATS = [
+    { key: "package", label: "Gói dịch vụ", value: "Free", icon: "workspace_premium", color: "text-amber-500", bg: "from-amber-500/10 to-orange-500/10", border: "border-amber-100 dark:border-amber-800/30", link: "/hr-dashboard/packages" },
+    { key: "totalJobs", label: "Tổng tin đăng", value: "12", icon: "work", color: "text-primary", bg: "from-sky-500/10 to-blue-600/10", border: "border-sky-100 dark:border-sky-800/30" },
+    { key: "openJobs", label: "Đang tuyển", value: "4", icon: "pending_actions", color: "text-amber-500", bg: "from-amber-500/10 to-orange-500/10", border: "border-amber-100 dark:border-amber-800/30" },
+    { key: "totalWorkers", label: "Tổng lao động thuê", value: "47", icon: "group", color: "text-purple-500", bg: "from-purple-500/10 to-pink-500/10", border: "border-purple-100 dark:border-purple-800/30" },
 ];
 
 const STATUS_CONFIG = {
@@ -62,6 +63,43 @@ export default function HRDashboardPage() {
     const [activeTab, setActiveTab] = useState<"overview" | "jobs" | "workers">("overview");
     const [selectedJob, setSelectedJob] = useState<typeof JOB_POSTS[0] | null>(null);
     const [filterStatus, setFilterStatus] = useState("all");
+    const [stats, setStats] = useState(BASE_STATS);
+    const [packageBanner, setPackageBanner] = useState<{
+        packageName: string;
+        jobPostLimit: number;
+        jobPostUsed: number;
+        expiresAt: string;
+    } | null>(null);
+
+    useEffect(() => {
+        const fetchPackage = async () => {
+            try {
+                const res = await api.get("/api/payments/my-package");
+                const data = res.data?.data;
+                if (data) {
+                    setPackageBanner({
+                        packageName: data.packageName,
+                        jobPostLimit: data.jobPostLimit,
+                        jobPostUsed: data.jobPostUsed,
+                        expiresAt: data.expiresAt,
+                    });
+                    setStats(prev =>
+                        prev.map(s =>
+                            s.key === "package"
+                                ? {
+                                    ...s,
+                                    value: data.packageName,
+                                }
+                                : s
+                        )
+                    );
+                }
+            } catch {
+                // ignore, fallback to default stats
+            }
+        };
+        fetchPackage();
+    }, []);
 
     const filteredJobs = filterStatus === "all"
         ? JOB_POSTS
@@ -80,6 +118,10 @@ export default function HRDashboardPage() {
                             <p className="text-slate-500 dark:text-slate-400 font-bold mt-2">Coteccons Construction • Đà Nẵng</p>
                         </div>
                         <div className="flex gap-3">
+                            <a href="/hr-dashboard/packages" className="h-14 px-6 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-2xl font-black text-sm flex items-center gap-2 hover:from-amber-600 hover:to-orange-600 transition-all shadow-lg shadow-amber-500/30">
+                                <span className="material-symbols-outlined text-xl">workspace_premium</span>
+                                Nâng cấp gói
+                            </a>
                             <a href="/post-job" className="h-14 px-8 bg-primary text-white rounded-2xl font-black text-sm flex items-center gap-2 hover:bg-primary/90 transition-all shadow-lg shadow-primary/30">
                                 <span className="material-symbols-outlined text-xl">add</span>
                                 Đăng tin mới
@@ -119,23 +161,30 @@ export default function HRDashboardPage() {
 
                             {/* Stats Grid */}
                             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                                {STATS.map((stat, i) => (
-                                    <motion.div
-                                        key={stat.label}
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: i * 0.08 }}
-                                        className={`bg-gradient-to-br ${stat.bg} border ${stat.border} rounded-[2rem] p-6 flex flex-col gap-4`}
-                                    >
-                                        <div className={`w-12 h-12 bg-white dark:bg-slate-900 rounded-2xl flex items-center justify-center shadow-sm`}>
-                                            <span className={`material-symbols-outlined text-2xl ${stat.color}`}>{stat.icon}</span>
-                                        </div>
-                                        <div>
-                                            <p className={`text-4xl font-black ${stat.color}`}>{stat.value}</p>
-                                            <p className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-1">{stat.label}</p>
-                                        </div>
-                                    </motion.div>
-                                ))}
+                                {stats.map((stat, i) => {
+                                    const Wrapper = stat.link ? "a" : "div";
+                                    return (
+                                        <motion.div
+                                            key={stat.label}
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: i * 0.08 }}
+                                        >
+                                            <Wrapper
+                                                {...(stat.link ? { href: stat.link } : {})}
+                                                className={`bg-gradient-to-br ${stat.bg} border ${stat.border} rounded-[2rem] p-6 flex flex-col gap-4 ${stat.link ? "cursor-pointer hover:shadow-lg transition-shadow block" : ""}`}
+                                            >
+                                                <div className="w-12 h-12 bg-white dark:bg-slate-900 rounded-2xl flex items-center justify-center shadow-sm">
+                                                    <span className={`material-symbols-outlined text-2xl ${stat.color}`}>{stat.icon}</span>
+                                                </div>
+                                                <div>
+                                                    <p className={`text-4xl font-black ${stat.color}`}>{stat.value}</p>
+                                                    <p className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-1">{stat.label}</p>
+                                                </div>
+                                            </Wrapper>
+                                        </motion.div>
+                                    );
+                                })}
                             </div>
 
                             {/* Charts Row */}

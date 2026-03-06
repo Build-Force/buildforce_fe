@@ -16,6 +16,8 @@ export const Header = () => {
     const [userProfile, setUserProfile] = useState<any>(null);
     const [showDropdown, setShowDropdown] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
+  const [currentPackageName, setCurrentPackageName] = useState<string | null>(null);
+  const [currentPackageLevel, setCurrentPackageLevel] = useState<number | null>(null);
 
     useEffect(() => {
         const handleScroll = () => {
@@ -41,8 +43,14 @@ export const Header = () => {
             checkAuthStatus();
         };
 
+        const handleLogoutEvent = () => {
+            setIsLoggedIn(false);
+            setUserProfile(null);
+        };
+
         window.addEventListener("storage", handleStorageChange);
         window.addEventListener("userLoggedIn", handleLoginEvent);
+        window.addEventListener("userLoggedOut", handleLogoutEvent);
 
         const handleClickOutside = (event: MouseEvent) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -55,6 +63,7 @@ export const Header = () => {
             window.removeEventListener("scroll", handleScroll);
             window.removeEventListener("storage", handleStorageChange);
             window.removeEventListener("userLoggedIn", handleLoginEvent);
+            window.removeEventListener("userLoggedOut", handleLogoutEvent);
             document.removeEventListener("mousedown", handleClickOutside);
         };
     }, []);
@@ -68,6 +77,25 @@ export const Header = () => {
                 const response = await api.get('/api/auth/profile');
                 if (response.data.success) {
                     setUserProfile(response.data.data);
+          if (response.data.data.role === "hr") {
+            try {
+              const pkgRes = await api.get('/api/payments/my-package');
+              const pkg = pkgRes.data?.data;
+              if (pkg) {
+                setCurrentPackageName(pkg.packageName || null);
+                setCurrentPackageLevel(typeof pkg.priorityLevel === "number" ? pkg.priorityLevel : null);
+              } else {
+                setCurrentPackageName(null);
+                setCurrentPackageLevel(null);
+              }
+            } catch {
+              setCurrentPackageName(null);
+              setCurrentPackageLevel(null);
+            }
+          } else {
+            setCurrentPackageName(null);
+            setCurrentPackageLevel(null);
+          }
                 }
             } catch (error) {
                 console.error("Failed to fetch user profile for header:", error);
@@ -78,6 +106,8 @@ export const Header = () => {
         } else {
             setIsLoggedIn(false);
             setUserProfile(null);
+      setCurrentPackageName(null);
+      setCurrentPackageLevel(null);
         }
     };
 
@@ -107,6 +137,22 @@ export const Header = () => {
         }
         return <span className="material-symbols-outlined text-white">person</span>;
     };
+
+  const packageNameLower = currentPackageName?.toLowerCase() || "";
+  let packageBadgeLabel: string | null = null;
+  let packageBadgeClass = "";
+  if (currentPackageName) {
+    if (packageNameLower.includes("enterprise")) {
+      packageBadgeLabel = "ENT";
+      packageBadgeClass = "bg-amber-500";
+    } else if (packageNameLower.includes("pro")) {
+      packageBadgeLabel = "PRO";
+      packageBadgeClass = "bg-sky-500";
+    } else {
+      packageBadgeLabel = "FREE";
+      packageBadgeClass = "bg-slate-400";
+    }
+  }
 
     return (
         <nav className={`fixed top-0 z-50 w-full border-b transition-all duration-300 glass ${isScrolled
@@ -172,9 +218,18 @@ export const Header = () => {
                                     onClick={() => setShowDropdown(!showDropdown)}
                                     className="flex items-center gap-2 hover:opacity-80 transition-opacity"
                                 >
-                                    <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold overflow-hidden border-2 border-white dark:border-slate-800 shadow-md">
-                                        {getAvatarContent()}
-                                    </div>
+                              <div className="relative">
+                                <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold overflow-hidden border-2 border-white dark:border-slate-800 shadow-md">
+                                  {getAvatarContent()}
+                                </div>
+                                {packageBadgeLabel && (
+                                  <div
+                                    className={`absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded-full text-[9px] font-black text-white border border-white dark:border-slate-900 ${packageBadgeClass}`}
+                                  >
+                                    {packageBadgeLabel}
+                                  </div>
+                                )}
+                              </div>
                                     <span className="material-symbols-outlined text-slate-600 dark:text-slate-400 text-sm">
                                         expand_more
                                     </span>

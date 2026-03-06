@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import api from "@/utils/api";
 import Map, {
     NavigationControl,
     FullscreenControl,
@@ -24,6 +25,13 @@ export default function PostJobPage() {
     const [step, setStep] = useState(1);
     const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
     const [submitted, setSubmitted] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
+    const [quotaInfo, setQuotaInfo] = useState<{
+        packageName: string;
+        jobPostLimit: number;
+        jobPostUsed: number;
+    } | null>(null);
     const [isMapLoading, setIsMapLoading] = useState(false);
     const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
     const [isMapModalOpen, setIsMapModalOpen] = useState(false);
@@ -47,7 +55,58 @@ export default function PostJobPage() {
         );
     };
 
-    const handleSubmit = () => setSubmitted(true);
+    useEffect(() => {
+        const fetchQuota = async () => {
+            try {
+                const res = await api.get("/api/payments/my-package");
+                const data = res.data?.data;
+                if (data) {
+                    setQuotaInfo({
+                        packageName: data.packageName,
+                        jobPostLimit: data.jobPostLimit,
+                        jobPostUsed: data.jobPostUsed,
+                    });
+                }
+            } catch {
+                // ignore, will rely on backend error if quota exceeded
+            }
+        };
+        fetchQuota();
+    }, []);
+
+    const handleSubmit = async () => {
+        setErrorMsg(null);
+        setSubmitting(true);
+        try {
+            const payload = {
+                title: form.title,
+                description: form.description,
+                requirements: form.requirements,
+                jobType: form.jobType,
+                workers: Number(form.workers),
+                province: form.province,
+                address: form.address,
+                salary: Number(form.salary),
+                salaryType: form.salaryType,
+                startDate: form.startDate || undefined,
+                endDate: form.endDate || undefined,
+            };
+            const res = await api.post("/api/jobs", payload);
+            if (res.data?.success) {
+                setSubmitted(true);
+            }
+        } catch (err: any) {
+            const code = err.response?.data?.code;
+            const msg = err.response?.data?.message;
+            if (code === "PACKAGE_QUOTA_EXCEEDED") {
+                setErrorMsg(msg || "Gói hiện tại đã hết lượt đăng tin. Vui lòng nâng cấp gói.");
+            } else {
+                setErrorMsg(msg || "Không thể đăng tin. Vui lòng thử lại.");
+            }
+        } finally {
+            setSubmitting(false);
+        }
+    };
 
     // Cập nhật static map từ Mapbox theo địa chỉ/province
     useEffect(() => {
@@ -125,7 +184,7 @@ export default function PostJobPage() {
                     </div>
                     <h1 className="text-5xl font-black text-slate-900 dark:text-white mb-4 tracking-tight">Đăng tin thành công!</h1>
                     <p className="text-xl text-slate-500 dark:text-slate-400 mb-4">
-                        Tin tuyển dụng <strong className="text-slate-900 dark:text-white">"{form.title || 'Thợ xây nhà phố'}"</strong> đã được đăng.
+                        Tin tuyển dụng <strong className="text-slate-900 dark:text-white">&quot;{form.title || 'Thợ xây nhà phố'}&quot;</strong> đã được đăng.
                     </p>
                     <div className="bg-sky-50 dark:bg-sky-900/20 rounded-3xl p-6 mb-10 border border-sky-100 dark:border-sky-800/40">
                         <p className="text-sky-600 dark:text-sky-400 font-bold text-sm">
@@ -181,6 +240,36 @@ export default function PostJobPage() {
                         Kết nối với hàng nghìn lao động lành nghề được xác minh trong khu vực của bạn
                     </p>
                 </motion.div>
+
+                {quotaInfo && (
+                    <div className="mb-8 ml-[72px]">
+                        <div className="inline-flex items-center gap-3 px-4 py-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-sm">
+                            <span className="material-symbols-outlined text-amber-500">workspace_premium</span>
+                            <div>
+                                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Gói hiện tại</p>
+                                <p className="text-sm font-black text-slate-900 dark:text-white">
+                                    {quotaInfo.packageName} • Đã dùng {quotaInfo.jobPostUsed}/{quotaInfo.jobPostLimit === -1 ? "∞" : quotaInfo.jobPostLimit} tin
+                                </p>
+                            </div>
+                            {quotaInfo.jobPostLimit !== -1 && quotaInfo.jobPostUsed >= quotaInfo.jobPostLimit && (
+                                <a
+                                    href="/hr-dashboard/packages"
+                                    className="ml-4 text-xs font-black text-primary hover:underline"
+                                >
+                                    Hết lượt • Nâng cấp gói →
+                                </a>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {errorMsg && (
+                    <div className="mb-6 ml-[72px] max-w-xl">
+                        <div className="p-4 rounded-2xl bg-red-50 text-red-600 border border-red-200 text-sm font-medium">
+                            {errorMsg}
+                        </div>
+                    </div>
+                )}
 
                 {/* Step Indicator */}
                 <div className="flex items-center gap-3 mb-12">
@@ -558,10 +647,20 @@ export default function PostJobPage() {
                                 <button
                                     id="submit-job-btn"
                                     onClick={handleSubmit}
-                                    className="flex-1 h-16 bg-gradient-to-r from-primary to-indigo-600 text-white rounded-2xl font-black text-xl hover:opacity-90 transition-all shadow-xl shadow-primary/40 flex items-center justify-center gap-3"
+                                    disabled={submitting}
+                                    className="flex-1 h-16 bg-gradient-to-r from-primary to-indigo-600 text-white rounded-2xl font-black text-xl hover:opacity-90 transition-all shadow-xl shadow-primary/40 flex items-center justify-center gap-3 disabled:opacity-60 disabled:cursor-not-allowed"
                                 >
-                                    <span className="material-symbols-outlined text-2xl">rocket_launch</span>
-                                    Đăng tin ngay
+                                    {submitting ? (
+                                        <>
+                                            <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                                            Đang đăng tin...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span className="material-symbols-outlined text-2xl">rocket_launch</span>
+                                            Đăng tin ngay
+                                        </>
+                                    )}
                                 </button>
                             </div>
                         </motion.div>
