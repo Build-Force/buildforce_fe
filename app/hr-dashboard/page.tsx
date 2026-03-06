@@ -1,49 +1,34 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import api from "@/utils/api";
 
-const JOB_POSTS = [
-    {
-        id: 1, title: "Thợ Điện Công Trình – The Ocean View",
-        status: "active", applicants: 12, needed: 3, accepted: 1,
-        location: "Sơn Trà, Đà Nẵng", salary: "500k/ngày",
-        startDate: "15/06/2026", urgent: true, views: 248,
-        skill: "Thợ điện",
-        applicantList: [
-            { id: 1, name: "Nguyễn Văn Bình", skill: "Thợ điện", experience: 6, distance: 1.2, rating: 4.8, matchScore: 97, status: "accepted", initials: "NB" },
-            { id: 2, name: "Hoàng Đức Nam", skill: "Thợ điện", experience: 3, distance: 4.5, rating: 4.5, matchScore: 79, status: "pending", initials: "HN" },
-            { id: 3, name: "Lê Văn Phúc", skill: "Thợ điện", experience: 5, distance: 2.8, rating: 4.6, matchScore: 88, status: "pending", initials: "LP" },
-        ]
-    },
-    {
-        id: 2, title: "Thợ Xây Kết Cấu – Smart City Zone A",
-        status: "active", applicants: 8, needed: 5, accepted: 3,
-        location: "Quảng Nam", salary: "450k/ngày",
-        startDate: "20/06/2026", urgent: false, views: 176,
-        skill: "Thợ xây",
-        applicantList: [
-            { id: 4, name: "Trần Văn Cường", skill: "Thợ xây", experience: 8, distance: 2.3, rating: 4.6, matchScore: 93, status: "accepted", initials: "TC" },
-            { id: 5, name: "Vũ Quang Minh", skill: "Thợ xây", experience: 6, distance: 3.5, rating: 4.4, matchScore: 85, status: "accepted", initials: "VM" },
-        ]
-    },
-    {
-        id: 3, title: "Kỹ Sư Hiện Trường – Khu Đô Thị Mới",
-        status: "closed", applicants: 5, needed: 1, accepted: 1,
-        location: "Hòa Vang, Đà Nẵng", salary: "1.2tr/ngày",
-        startDate: "01/05/2026", urgent: false, views: 421,
-        skill: "Kỹ sư",
-        applicantList: []
-    },
-    {
-        id: 4, title: "Thợ Hàn Argon – Nhà Máy CN Liên Chiểu",
-        status: "draft", applicants: 0, needed: 2, accepted: 0,
-        location: "Liên Chiểu, Đà Nẵng", salary: "600k/ngày",
-        startDate: "01/07/2026", urgent: false, views: 0,
-        skill: "Thợ hàn",
-        applicantList: []
-    },
-];
+type UiJob = {
+    id: string;
+    title: string;
+    status: "active" | "closed" | "draft";
+    applicants: number;
+    needed: number;
+    accepted: number;
+    location: string;
+    salary: string;
+    startDate: string;
+    urgent: boolean;
+    views: number;
+    skill?: string;
+};
+
+type UiApplicant = {
+    id: string;
+    name: string;
+    skill?: string;
+    experience?: number;
+    rating?: number;
+    status: "pending" | "accepted" | "rejected" | "hired" | "completed";
+    initials: string;
+    rawStatus: string;
+};
 
 const STATS = [
     { label: "Tổng tin đăng", value: "12", icon: "work", color: "text-primary", bg: "from-sky-500/10 to-blue-600/10", border: "border-sky-100 dark:border-sky-800/30" },
@@ -60,12 +45,147 @@ const STATUS_CONFIG = {
 
 export default function HRDashboardPage() {
     const [activeTab, setActiveTab] = useState<"overview" | "jobs" | "workers">("overview");
-    const [selectedJob, setSelectedJob] = useState<typeof JOB_POSTS[0] | null>(null);
+    const [selectedJob, setSelectedJob] = useState<UiJob | null>(null);
     const [filterStatus, setFilterStatus] = useState("all");
+    const [jobPosts, setJobPosts] = useState<UiJob[]>([]);
+    const [loadingJobs, setLoadingJobs] = useState(true);
+    const [applicantsByJob, setApplicantsByJob] = useState<Record<string, UiApplicant[]>>({});
+    const [loadingApplicants, setLoadingApplicants] = useState<Record<string, boolean>>({});
 
-    const filteredJobs = filterStatus === "all"
-        ? JOB_POSTS
-        : JOB_POSTS.filter(j => j.status === filterStatus);
+    const formatSalary = (salary: any) => {
+        if (!salary?.amount) return "Thỏa thuận";
+        const unit = salary.unit === "day" ? "ngày" : salary.unit === "month" ? "tháng" : salary.unit === "hour" ? "giờ" : "dự án";
+        const amount = Number(salary.amount);
+        const pretty = amount >= 1_000_000 ? `${Math.round(amount / 1_000_000)}tr` : `${Math.round(amount / 1_000)}k`;
+        return `${pretty}/${unit}`;
+    };
+
+    const mapStatus = (status: string): UiJob["status"] => {
+        if (status === "APPROVED") return "active";
+        if (status === "DRAFT" || status === "PENDING" || status === "REJECTED") return "draft";
+        return "closed";
+    };
+
+    useEffect(() => {
+        const loadJobs = async () => {
+            setLoadingJobs(true);
+            try {
+                const res = await api.get("/api/hr/jobs");
+                if (res.data.success) {
+                    const mapped: UiJob[] = (res.data.data || []).map((j: any) => ({
+                        id: j._id,
+                        title: j.title,
+                        status: mapStatus(j.status),
+                        applicants: j.applicantsCount || 0,
+                        needed: j.workersNeeded || 0,
+                        accepted: j.workersHired || 0,
+                        location: j.location?.province || "Việt Nam",
+                        salary: formatSalary(j.salary),
+                        startDate: j.startDate ? new Date(j.startDate).toLocaleDateString("vi-VN") : "—",
+                        urgent: false,
+                        views: 0,
+                        skill: Array.isArray(j.skills) && j.skills.length > 0 ? j.skills[0] : undefined,
+                    }));
+                    setJobPosts(mapped);
+                }
+            } catch (err) {
+                console.error("Failed to load HR jobs", err);
+            } finally {
+                setLoadingJobs(false);
+            }
+        };
+        loadJobs();
+    }, []);
+
+    const loadApplicants = async (jobId: string) => {
+        if (loadingApplicants[jobId]) return;
+        setLoadingApplicants((p) => ({ ...p, [jobId]: true }));
+        try {
+            const res = await api.get(`/api/jobs/${jobId}/applicants`);
+            if (res.data.success) {
+                const mapped: UiApplicant[] = (res.data.data || []).map((a: any) => {
+                    const w = a.workerId;
+                    const name = w ? `${w.firstName} ${w.lastName}` : "Ứng viên";
+                    const initials = name.split(" ").slice(0, 2).map((x: string) => x.charAt(0)).join("").toUpperCase();
+                    const rawStatus = a.status;
+                    const status: UiApplicant["status"] =
+                        rawStatus === "APPLIED" ? "pending" :
+                        rawStatus === "ACCEPTED" ? "accepted" :
+                        rawStatus === "REJECTED" ? "rejected" :
+                        rawStatus === "HIRED" || rawStatus === "COMPLETION_PENDING" ? "hired" :
+                        "completed";
+                    return {
+                        id: a._id,
+                        name,
+                        skill: Array.isArray(w?.skills) && w.skills.length ? w.skills[0] : undefined,
+                        experience: w?.experienceYears ? Number(w.experienceYears) : undefined,
+                        rating: undefined,
+                        status,
+                        initials,
+                        rawStatus,
+                    };
+                });
+                setApplicantsByJob((p) => ({ ...p, [jobId]: mapped }));
+            }
+        } catch (err) {
+            console.error("Failed to load applicants", err);
+        } finally {
+            setLoadingApplicants((p) => ({ ...p, [jobId]: false }));
+        }
+    };
+
+    const updateApplicant = (jobId: string, applicationId: string, updater: (a: UiApplicant) => UiApplicant) => {
+        setApplicantsByJob((prev) => ({
+            ...prev,
+            [jobId]: (prev[jobId] || []).map((a) => (a.id === applicationId ? updater(a) : a)),
+        }));
+    };
+
+    const acceptReject = async (jobId: string, applicationId: string, action: "accept" | "reject") => {
+        try {
+            await api.put(`/api/jobs/${jobId}/applicants/${applicationId}`, { action });
+            updateApplicant(jobId, applicationId, (a) => ({
+                ...a,
+                rawStatus: action === "accept" ? "ACCEPTED" : "REJECTED",
+                status: action === "accept" ? "accepted" : "rejected",
+            }));
+        } catch (err) {
+            console.error("Failed to update applicant", err);
+        }
+    };
+
+    const confirmHire = async (jobId: string, applicationId: string) => {
+        try {
+            await api.put(`/api/jobs/${jobId}/applicants/${applicationId}/confirm-hire`);
+            updateApplicant(jobId, applicationId, (a) => ({ ...a, rawStatus: "HIRED", status: "hired" }));
+            // Refresh jobs list counts
+            const res = await api.get("/api/hr/jobs");
+            if (res.data.success) {
+                const mapped: UiJob[] = (res.data.data || []).map((j: any) => ({
+                    id: j._id,
+                    title: j.title,
+                    status: mapStatus(j.status),
+                    applicants: j.applicantsCount || 0,
+                    needed: j.workersNeeded || 0,
+                    accepted: j.workersHired || 0,
+                    location: j.location?.province || "Việt Nam",
+                    salary: formatSalary(j.salary),
+                    startDate: j.startDate ? new Date(j.startDate).toLocaleDateString("vi-VN") : "—",
+                    urgent: false,
+                    views: 0,
+                    skill: Array.isArray(j.skills) && j.skills.length > 0 ? j.skills[0] : undefined,
+                }));
+                setJobPosts(mapped);
+            }
+        } catch (err) {
+            console.error("Failed to confirm hire", err);
+        }
+    };
+
+    const filteredJobs = useMemo(() => {
+        if (filterStatus === "all") return jobPosts;
+        return jobPosts.filter((j) => j.status === filterStatus);
+    }, [filterStatus, jobPosts]);
 
     return (
         <div className="min-h-screen bg-[#f0f4ff] dark:bg-[#040816] pt-24 pb-24 transition-all duration-500">
@@ -222,7 +342,7 @@ export default function HRDashboardPage() {
                                     <button onClick={() => setActiveTab("jobs")} className="text-primary font-black text-sm hover:underline">Xem tất cả →</button>
                                 </div>
                                 <div className="space-y-4">
-                                    {JOB_POSTS.slice(0, 3).map(job => {
+                                    {jobPosts.slice(0, 3).map(job => {
                                         const cfg = STATUS_CONFIG[job.status as keyof typeof STATUS_CONFIG];
                                         return (
                                             <div key={job.id} className="flex items-center gap-4 p-4 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer"
@@ -265,7 +385,11 @@ export default function HRDashboardPage() {
                             </div>
 
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                                {filteredJobs.map((job, idx) => {
+                                {loadingJobs ? (
+                                    <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-7 border-2 border-slate-100 dark:border-slate-800">
+                                        <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+                                    </div>
+                                ) : filteredJobs.map((job, idx) => {
                                     const cfg = STATUS_CONFIG[job.status as keyof typeof STATUS_CONFIG];
                                     const progress = Math.round((job.accepted / job.needed) * 100);
                                     return (
@@ -274,7 +398,11 @@ export default function HRDashboardPage() {
                                             initial={{ opacity: 0, y: 20 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: idx * 0.06 }}
-                                            onClick={() => setSelectedJob(selectedJob?.id === job.id ? null : job)}
+                                            onClick={() => {
+                                                const next = selectedJob?.id === job.id ? null : job;
+                                                setSelectedJob(next);
+                                                if (next) loadApplicants(next.id);
+                                            }}
                                             className={`bg-white dark:bg-slate-900 rounded-[2.5rem] p-7 border-2 cursor-pointer transition-all hover:shadow-xl ${selectedJob?.id === job.id ? "border-primary shadow-lg" : "border-slate-100 dark:border-slate-800"
                                                 }`}
                                         >
@@ -321,7 +449,7 @@ export default function HRDashboardPage() {
 
                                             {/* Expandable applicant list */}
                                             <AnimatePresence>
-                                                {selectedJob?.id === job.id && job.applicantList.length > 0 && (
+                                                {selectedJob?.id === job.id && (
                                                     <motion.div
                                                         initial={{ height: 0, opacity: 0 }}
                                                         animate={{ height: "auto", opacity: 1 }}
@@ -330,22 +458,57 @@ export default function HRDashboardPage() {
                                                     >
                                                         <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800 space-y-3">
                                                             <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Danh sách ứng viên</p>
-                                                            {job.applicantList.map(ap => (
+                                                            {loadingApplicants[job.id] ? (
+                                                                <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800">
+                                                                    <div className="animate-spin w-5 h-5 border-2 border-primary border-t-transparent rounded-full" />
+                                                                    <p className="text-sm font-bold text-slate-500">Đang tải ứng viên...</p>
+                                                                </div>
+                                                            ) : (applicantsByJob[job.id] || []).length === 0 ? (
+                                                                <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800">
+                                                                    <p className="text-sm font-bold text-slate-500">Chưa có ứng viên.</p>
+                                                                </div>
+                                                            ) : (applicantsByJob[job.id] || []).map(ap => (
                                                                 <div key={ap.id} className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800">
                                                                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center text-white font-black text-xs">
                                                                         {ap.initials}
                                                                     </div>
                                                                     <div className="flex-1">
                                                                         <p className="font-black text-sm text-slate-900 dark:text-white">{ap.name}</p>
-                                                                        <p className="text-xs text-slate-400 font-bold">{ap.distance}km • ⭐{ap.rating} • {ap.experience}năm KN</p>
+                                                                        <p className="text-xs text-slate-400 font-bold">{ap.skill || "—"} {ap.experience ? `• ${ap.experience} năm KN` : ""}</p>
                                                                     </div>
                                                                     <div className="flex items-center gap-2">
-                                                                        <span className={`px-3 py-1 rounded-full text-xs font-black ${ap.status === "accepted"
-                                                                                ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
-                                                                                : "bg-slate-100 text-slate-500 dark:bg-slate-700"
-                                                                            }`}>
-                                                                            {ap.status === "accepted" ? "✓ Chấp nhận" : "Chờ xét"}
-                                                                        </span>
+                                                                        {ap.rawStatus === "APPLIED" && (
+                                                                            <>
+                                                                                <button
+                                                                                    onClick={(e) => { e.stopPropagation(); acceptReject(job.id, ap.id, "accept"); }}
+                                                                                    className="px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 hover:opacity-90"
+                                                                                >
+                                                                                    Accept
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={(e) => { e.stopPropagation(); acceptReject(job.id, ap.id, "reject"); }}
+                                                                                    className="px-3 py-1 rounded-full text-xs font-black bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 hover:opacity-90"
+                                                                                >
+                                                                                    Reject
+                                                                                </button>
+                                                                            </>
+                                                                        )}
+                                                                        {ap.rawStatus === "ACCEPTED" && (
+                                                                            <button
+                                                                                onClick={(e) => { e.stopPropagation(); confirmHire(job.id, ap.id); }}
+                                                                                className="px-3 py-1 rounded-full text-xs font-black bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors"
+                                                                            >
+                                                                                Confirm hire
+                                                                            </button>
+                                                                        )}
+                                                                        {ap.rawStatus !== "APPLIED" && ap.rawStatus !== "ACCEPTED" && (
+                                                                            <span className={`px-3 py-1 rounded-full text-xs font-black ${ap.rawStatus === "REJECTED"
+                                                                                    ? "bg-slate-100 text-slate-500 dark:bg-slate-700"
+                                                                                    : "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
+                                                                                }`}>
+                                                                                {ap.rawStatus}
+                                                                            </span>
+                                                                        )}
                                                                     </div>
                                                                 </div>
                                                             ))}

@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import api from "@/utils/api";
 
 const SKILL_OPTIONS = [
     "Thợ xây", "Thợ điện", "Thợ hàn", "Thợ mộc", "Thợ ống nước",
@@ -16,6 +17,9 @@ export default function PostJobPage() {
     const [step, setStep] = useState(1);
     const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
     const [submitted, setSubmitted] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState<string | null>(null);
+    const [createdJobId, setCreatedJobId] = useState<string | null>(null);
     const [form, setForm] = useState({
         title: "",
         jobType: "full-time",
@@ -36,7 +40,53 @@ export default function PostJobPage() {
         );
     };
 
-    const handleSubmit = () => setSubmitted(true);
+    const handleSubmit = async () => {
+        if (submitting) return;
+        setSubmitting(true);
+        setSubmitError(null);
+
+        try {
+            const salaryNumber = Number(form.salary || 0);
+            const amountVnd = form.salaryType === "month" ? salaryNumber * 1_000_000 : salaryNumber * 1_000;
+
+            const createRes = await api.post("/api/jobs", {
+                title: form.title,
+                description: form.description,
+                requirements: form.requirements,
+                skills: selectedSkills,
+                location: {
+                    province: form.province,
+                    city: form.province,
+                    address: form.address,
+                },
+                salary: {
+                    amount: amountVnd,
+                    unit: form.salaryType,
+                    currency: "VND",
+                },
+                workersNeeded: Number(form.workers),
+                startDate: form.startDate ? new Date(form.startDate).toISOString() : undefined,
+                endDate: form.endDate ? new Date(form.endDate).toISOString() : undefined,
+            });
+
+            const jobId = createRes.data?.data?._id;
+            setCreatedJobId(jobId);
+
+            await api.post(`/api/jobs/${jobId}/submit`);
+
+            setSubmitted(true);
+        } catch (err: any) {
+            const status = err?.response?.status;
+            const msg =
+                err?.response?.data?.message ||
+                (status === 403
+                    ? "Gói đăng tin chưa được kích hoạt. Vui lòng mua/kích hoạt gói để gửi duyệt."
+                    : "Đăng tin thất bại. Vui lòng thử lại.");
+            setSubmitError(msg);
+        } finally {
+            setSubmitting(false);
+        }
+    };
 
     if (submitted) {
         return (
@@ -54,9 +104,14 @@ export default function PostJobPage() {
                     <p className="text-xl text-slate-500 dark:text-slate-400 mb-4">
                         Tin tuyển dụng <strong className="text-slate-900 dark:text-white">"{form.title || 'Thợ xây nhà phố'}"</strong> đã được đăng.
                     </p>
+                    {createdJobId && (
+                        <p className="text-xs text-slate-400 font-bold mb-6">
+                            Mã tin: <span className="font-black">{createdJobId}</span>
+                        </p>
+                    )}
                     <div className="bg-sky-50 dark:bg-sky-900/20 rounded-3xl p-6 mb-10 border border-sky-100 dark:border-sky-800/40">
                         <p className="text-sky-600 dark:text-sky-400 font-bold text-sm">
-                            🤖 Hệ thống AI đang ghép nối lao động phù hợp trong bán kính 10km từ công trình của bạn...
+                            Tin đã được gửi duyệt. Admin sẽ kiểm tra và duyệt để hiển thị công khai.
                         </p>
                     </div>
                     <div className="grid grid-cols-2 gap-4 mb-10">
@@ -421,12 +476,18 @@ export default function PostJobPage() {
                                 <button
                                     id="submit-job-btn"
                                     onClick={handleSubmit}
-                                    className="flex-1 h-16 bg-gradient-to-r from-primary to-indigo-600 text-white rounded-2xl font-black text-xl hover:opacity-90 transition-all shadow-xl shadow-primary/40 flex items-center justify-center gap-3"
+                                    disabled={submitting}
+                                    className="flex-1 h-16 bg-gradient-to-r from-primary to-indigo-600 text-white rounded-2xl font-black text-xl hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-xl shadow-primary/40 flex items-center justify-center gap-3"
                                 >
                                     <span className="material-symbols-outlined text-2xl">rocket_launch</span>
-                                    Đăng tin ngay
+                                    {submitting ? "Đang gửi..." : "Đăng tin ngay"}
                                 </button>
                             </div>
+                            {submitError && (
+                                <div className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/40 rounded-2xl p-4">
+                                    <p className="text-sm font-bold text-red-600 dark:text-red-400">{submitError}</p>
+                                </div>
+                            )}
                         </motion.div>
                     )}
                 </AnimatePresence>

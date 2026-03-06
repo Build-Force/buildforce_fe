@@ -228,6 +228,7 @@ export default function ForgotPasswordPage() {
                                 >
                                     {isLoading ? "Đang đặt lại..." : "Đặt lại mật khẩu"}
                                 </button>
+                            </div>
                         </motion.form>
                     )}
                 </AnimatePresence>
