@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AdminErrorBanner } from "@/components/admin/AdminErrorBanner";
 import { AdminLoadingState } from "@/components/admin/AdminLoadingState";
 import { AdminToast } from "@/components/admin/AdminToast";
@@ -50,7 +50,7 @@ export default function AdminUsersPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState>(null);
 
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     setIsLoading(true);
     setErrorMessage(null);
 
@@ -80,11 +80,11 @@ export default function AdminUsersPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [roleFilter, search, statusFilter]);
 
   useEffect(() => {
     loadUsers().catch(() => null);
-  }, [search, roleFilter, statusFilter]);
+  }, [loadUsers]);
 
   useEffect(() => {
     if (!toast) return;

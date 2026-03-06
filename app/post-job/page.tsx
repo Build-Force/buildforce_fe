@@ -102,7 +102,11 @@ export default function PostJobPage() {
                     </div>
                     <h1 className="text-5xl font-black text-slate-900 dark:text-white mb-4 tracking-tight">Đăng tin thành công!</h1>
                     <p className="text-xl text-slate-500 dark:text-slate-400 mb-4">
-                        Tin tuyển dụng <strong className="text-slate-900 dark:text-white">"{form.title || 'Thợ xây nhà phố'}"</strong> đã được đăng.
+                        Tin tuyển dụng{" "}
+                        <strong className="text-slate-900 dark:text-white">
+                            &quot;{form.title || "Thợ xây nhà phố"}&quot;
+                        </strong>{" "}
+                        đã được đăng.
                     </p>
                     {createdJobId && (
                         <p className="text-xs text-slate-400 font-bold mb-6">
@@ -492,3 +496,6 @@ export default function PostJobPage() {
                     )}
                 </AnimatePresence>
             </div>
+        </div>
+    );
+}

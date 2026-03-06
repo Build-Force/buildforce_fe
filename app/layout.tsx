@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Barlow, Barlow_Condensed } from "next/font/google";
 import "./globals.css";
 import { RootFrame } from "@/components/layout/RootFrame";
@@ -30,7 +31,9 @@ export default function RootLayout({
   return (
     <html lang="vi" className="light">
       <body className={`${barlow.variable} ${barlowCondensed.variable}`}>
-        <PageTransitionLoader />
+        <Suspense fallback={null}>
+          <PageTransitionLoader />
+        </Suspense>
         <RootFrame>{children}</RootFrame>
         <ChatWidgetWrapper />
       </body>
