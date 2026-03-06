@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "../../utils/api";
@@ -68,6 +69,8 @@ export default function ProfilePage() {
     const [profileData, setProfileData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState("overview");
+    const [appliedLoading, setAppliedLoading] = useState(false);
+    const [appliedApplications, setAppliedApplications] = useState<any[]>([]);
 
     // Change Password state
     const [showPasswordForm, setShowPasswordForm] = useState(false);
@@ -132,6 +135,22 @@ export default function ProfilePage() {
         };
         fetchProfile();
     }, [router]);
+
+    useEffect(() => {
+        if (activeTab !== "applied") return;
+        const loadApplied = async () => {
+            setAppliedLoading(true);
+            try {
+                const res = await api.get("/api/users/jobs/applied");
+                if (res.data.success) setAppliedApplications(res.data.data || []);
+            } catch (err) {
+                console.error("Failed to load applied jobs", err);
+            } finally {
+                setAppliedLoading(false);
+            }
+        };
+        loadApplied();
+    }, [activeTab]);
 
     if (!mounted || loading) {
         return (
@@ -287,6 +306,7 @@ export default function ProfilePage() {
                                     { id: 'overview', label: 'Hồ sơ năng lực', icon: 'dna', desc: 'Chuyên môn & Khả năng' },
                                     { id: 'activity', label: 'Hoạt động', icon: 'auto_graph', desc: 'Dự án & Danh tiếng' },
                                     { id: 'history', label: 'Lịch sử xây dựng', icon: 'history_edu', desc: 'Nhật ký dự án & Chứng chỉ' },
+                                    { id: 'applied', label: 'Việc đã ứng tuyển', icon: 'send', desc: 'Theo dõi trạng thái' },
                                     { id: 'account', label: 'Bảo mật tài khoản', icon: 'fingerprint', desc: 'Truy cập & Tài sản' }
                                 ].map(tab => (
                                     <button
@@ -515,6 +535,85 @@ export default function ProfilePage() {
                                                 </div>
                                             ))}
                                         </div>
+                                    </div>
+                                </motion.div>
+                            )}
+
+                            {/* APPLIED JOBS TAB */}
+                            {activeTab === 'applied' && (
+                                <motion.div
+                                    key="applied"
+                                    initial={{ opacity: 0, y: 30 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0 }}
+                                    className="space-y-8"
+                                >
+                                    <div className={cardStyle}>
+                                        <div className="flex items-center justify-between mb-5">
+                                            <div>
+                                                <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Việc đã ứng tuyển</h2>
+                                                <p className="text-slate-400 font-bold uppercase text-[9px] tracking-[0.3em] mt-1">Theo dõi trạng thái ứng tuyển</p>
+                                            </div>
+                                            <span className="px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-full text-xs font-black text-slate-500">
+                                                {appliedApplications.length} hồ sơ
+                                            </span>
+                                        </div>
+
+                                        {appliedLoading ? (
+                                            <div className="flex items-center gap-3 text-slate-500 font-bold">
+                                                <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+                                                Đang tải...
+                                            </div>
+                                        ) : appliedApplications.length === 0 ? (
+                                            <div className="p-6 bg-slate-50 dark:bg-slate-800/20 rounded-2xl border border-slate-100 dark:border-slate-800/40 text-center">
+                                                <p className="text-slate-500 font-bold">Bạn chưa ứng tuyển công việc nào.</p>
+                                                <Link href="/jobs" className="inline-block mt-3 text-primary font-black text-sm hover:underline">
+                                                    Tìm việc ngay →
+                                                </Link>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-4">
+                                                {appliedApplications.map((app: any) => {
+                                                    const j = app.jobId;
+                                                    const hr = j?.hrId;
+                                                    const company = hr?.companyName || (hr?.firstName ? `${hr.firstName} ${hr.lastName || ""}`.trim() : "Nhà tuyển dụng");
+                                                    const location = j?.location?.province || "Việt Nam";
+                                                    return (
+                                                        <div
+                                                            key={app._id}
+                                                            className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/20 border border-slate-100 dark:border-slate-800/40 hover:bg-white dark:hover:bg-slate-800/30 transition-all"
+                                                        >
+                                                            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                                                                <div className="min-w-0">
+                                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                                                                        {company} • {location}
+                                                                    </p>
+                                                                    <p className="text-base font-black text-slate-900 dark:text-white truncate">
+                                                                        {j?.title || "Công việc"}
+                                                                    </p>
+                                                                    <p className="text-xs font-bold text-slate-400 mt-1">
+                                                                        Ứng tuyển: {app.appliedAt ? new Date(app.appliedAt).toLocaleDateString("vi-VN") : "—"}
+                                                                    </p>
+                                                                </div>
+                                                                <div className="flex items-center gap-3">
+                                                                    <span className="px-4 py-2 rounded-full text-xs font-black bg-primary/10 text-primary">
+                                                                        {app.status}
+                                                                    </span>
+                                                                    {j?._id && (
+                                                                        <Link
+                                                                            href={`/jobs/${j._id}`}
+                                                                            className="px-4 py-2 rounded-full text-xs font-black bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:opacity-90 transition-all"
+                                                                        >
+                                                                            Xem job
+                                                                        </Link>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
                                     </div>
                                 </motion.div>
                             )}

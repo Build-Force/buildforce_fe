@@ -21,6 +21,28 @@ export default function AuthPage() {
         }
     }, []);
 
+    // If already logged in, route based on role (admin -> /admin)
+    useEffect(() => {
+        const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+        if (!token) return;
+
+        const run = async () => {
+            try {
+                const res = await api.get("/api/auth/profile");
+                const role = String(res.data?.data?.role || "");
+                if (role.toUpperCase() === "ADMIN") {
+                    router.replace("/admin");
+                } else {
+                    router.replace("/");
+                }
+            } catch {
+                // ignore (invalid token, offline, etc.)
+            }
+        };
+
+        run();
+    }, [router]);
+
     const [showVerifyDialog, setShowVerifyDialog] = useState(false);
     const [registeredEmail, setRegisteredEmail] = useState("");
     const [devVerifyUrl, setDevVerifyUrl] = useState("");
@@ -105,8 +127,10 @@ export default function AuthPage() {
                 // Fire custom event so Header updates immediately
                 window.dispatchEvent(new Event('userLoggedIn'));
                 // Redirect user
+                const role = String(response.data?.data?.user?.role || "");
+                const redirectTo = role.toUpperCase() === "ADMIN" ? "/admin" : "/";
                 setTimeout(() => {
-                    router.push('/');
+                    router.replace(redirectTo);
                 }, 1000);
             }
         } catch (error: any) {
