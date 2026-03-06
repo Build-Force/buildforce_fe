@@ -492,6 +492,3 @@ export default function PostJobPage() {
                     )}
                 </AnimatePresence>
             </div>
-        </div>
-    );
-}

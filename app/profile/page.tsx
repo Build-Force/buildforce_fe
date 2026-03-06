@@ -71,6 +71,23 @@ export default function ProfilePage() {
     const [appliedLoading, setAppliedLoading] = useState(false);
     const [appliedApplications, setAppliedApplications] = useState<any[]>([]);
 
+    // Change Password state
+    const [showPasswordForm, setShowPasswordForm] = useState(false);
+    const [pwForm, setPwForm] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
+    const [pwLoading, setPwLoading] = useState(false);
+    const [pwError, setPwError] = useState('');
+    const [pwSuccess, setPwSuccess] = useState('');
+
+    // Edit Profile state
+    const [editForm, setEditForm] = useState({ firstName: '', lastName: '', phone: '', companyName: '', taxCode: '' });
+    const [editLoading, setEditLoading] = useState(false);
+    const [editError, setEditError] = useState('');
+    const [editSuccess, setEditSuccess] = useState('');
+
+    // Avatar upload state
+    const [avatarUploading, setAvatarUploading] = useState(false);
+    const [avatarError, setAvatarError] = useState('');
+    const avatarInputRef = React.useRef<HTMLInputElement>(null);
     const calculateStrength = () => {
         if (!profileData) return 90; // Fallback for demo
         let score = 0;
@@ -94,6 +111,14 @@ export default function ProfilePage() {
                 const response = await api.get('/api/auth/profile');
                 if (response.data.success) {
                     setProfileData(response.data.data);
+                    const d = response.data.data;
+                    setEditForm({
+                        firstName: d.firstName || '',
+                        lastName: d.lastName || '',
+                        phone: d.phone || '',
+                        companyName: d.companyName || '',
+                        taxCode: d.taxCode || '',
+                    });
                 } else {
                     router.push('/signin');
                 }
@@ -139,9 +164,9 @@ export default function ProfilePage() {
     const strength = calculateStrength();
 
     return (
-        <div className="bg-[#fcfdff] dark:bg-[#040816] min-h-screen pt-14 pb-8 transition-all duration-1000 selection:bg-primary/20">
+        <div className="bg-[#fcfdff] dark:bg-[#040816] min-h-screen pt-6 md:pt-10 lg:pt-14 pb-6 md:pb-8 transition-all duration-1000 selection:bg-primary/20">
             {/* --- HERO: IMMERSIVE BRANDING --- */}
-            <section className="relative w-full h-[18rem] flex flex-col items-center justify-end overflow-hidden pb-6">
+            <section className="relative w-full min-h-[12rem] md:min-h-[16rem] lg:min-h-[18rem] flex flex-col items-center justify-end md:justify-center lg:justify-end overflow-hidden pb-4 md:pb-6">
                 <div className="absolute inset-0 z-0">
                     <img
                         src="https://images.unsplash.com/photo-1541888946425-d81bb19480c5?q=80&w=2070"
@@ -151,7 +176,7 @@ export default function ProfilePage() {
                     <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#fcfdff] dark:to-[#040816] z-10" />
                 </div>
 
-                <div className="max-w-7xl w-full mx-auto px-6 relative z-10">
+                <div className="w-full max-w-5xl lg:max-w-6xl xl:max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
                     <div className="flex flex-col lg:flex-row items-center lg:items-end gap-6">
                         {/* Avatar Showcase */}
                         <motion.div
@@ -202,7 +227,7 @@ export default function ProfilePage() {
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 transition={{ delay: 0.5 }}
-                                className="flex flex-wrap justify-center lg:justify-start items-center gap-5"
+                                className="flex flex-wrap justify-center lg:justify-start items-center gap-5 lg:gap-6"
                             >
                                 <div className="flex items-center gap-3">
                                     <span className="material-symbols-outlined text-amber-500 text-xl fill-1">star</span>
@@ -223,6 +248,15 @@ export default function ProfilePage() {
                                     <div>
                                         <p className="text-base font-black text-slate-900 dark:text-white leading-none">{MOCK_WORKER_STATS.location}</p>
                                         <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Khu vực hiện tại</p>
+                                    </div>
+                                </div>
+
+                                {/* Verified Workforce badge moved from sidebar */}
+                                <div className="flex items-center gap-3 bg-emerald-500/10 dark:bg-emerald-500/5 rounded-2xl px-4 py-3 border border-emerald-500/20">
+                                    <span className="material-symbols-outlined text-emerald-500 text-2xl">verified_user</span>
+                                    <div>
+                                        <p className="text-emerald-500 font-black text-xs uppercase tracking-tight">Verified Workforce</p>
+                                        <p className="text-emerald-600/60 dark:text-emerald-400/50 text-[9px] font-bold leading-snug">Danh tính & lịch sử nghề nghiệp đã được xác minh.</p>
                                     </div>
                                 </div>
                             </motion.div>
@@ -258,11 +292,11 @@ export default function ProfilePage() {
             </section>
 
             {/* --- CORE CONTENT GRID --- */}
-            <div className="max-w-7xl mx-auto px-6 relative z-20">
-                <div className="flex flex-col lg:flex-row gap-6">
+            <div className="w-full max-w-5xl lg:max-w-6xl xl:max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20">
+                <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
 
                     {/* LEFT COLUMN: NAVIGATION TOOLS */}
-                    <aside className="lg:w-64 space-y-5">
+                    <aside className="w-full lg:w-64 xl:w-72 space-y-5 flex-shrink-0">
 
                         {/* Smooth Tab Nav */}
                         <div className={glassStyle + " rounded-2xl p-3 shadow-inner"}>
@@ -326,16 +360,10 @@ export default function ProfilePage() {
                             </div>
                         </div>
 
-                        {/* Quick Trust Status */}
-                        <div className="bg-emerald-500/10 dark:bg-emerald-500/5 rounded-2xl p-5 border border-emerald-500/20 text-center">
-                            <span className="material-symbols-outlined text-emerald-500 text-3xl mb-2">verified_user</span>
-                            <h4 className="text-emerald-500 font-black text-sm mb-1 uppercase tracking-tight">Verified Workforce</h4>
-                            <p className="text-emerald-600/60 dark:text-emerald-400/50 text-[10px] font-bold leading-relaxed">Identity and professional history have been cryptographically secured and verified by BuildForce Trust Engine.</p>
-                        </div>
                     </aside>
 
                     {/* RIGHT COLUMN: DYNAMIC DATA DISPLAY */}
-                    <main className="flex-grow">
+                    <main className="flex-grow min-w-0">
                         <AnimatePresence mode="wait">
                             {/* PROFESSIONAL INFO TAB */}
                             {activeTab === 'overview' && (

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import api from "@/utils/api";
 import { SimilarJobCard } from "@/components/jobs/SimilarJobCard";
+import { JOBS as MOCK_JOBS } from "@/data/mockData";
 
 interface JobDetailClientProps {
   jobId: string;
@@ -12,6 +13,8 @@ interface JobDetailClientProps {
 
 export const JobDetailClient: React.FC<JobDetailClientProps> = ({ jobId }) => {
   const router = useRouter();
+
+  const isMongoId = useMemo(() => /^[0-9a-fA-F]{24}$/.test(String(jobId || "")), [jobId]);
 
   const [job, setJob] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
@@ -28,6 +31,51 @@ export const JobDetailClient: React.FC<JobDetailClientProps> = ({ jobId }) => {
       setLoading(true);
       setError(null);
       try {
+        if (!isMongoId) {
+          const mock = (Array.isArray(MOCK_JOBS) ? MOCK_JOBS : []).find(
+            (j: any) => String(j?.id) === String(jobId)
+          );
+
+          if (mock) {
+            const mapped = {
+              _id: String(mock.id),
+              title: mock.title,
+              description: mock.description,
+              requirements: Array.isArray(mock.requirements)
+                ? mock.requirements.join("\n")
+                : mock.requirements || "",
+              createdAt: Date.now(),
+              workersNeeded: 1,
+              location: { province: mock.location },
+              salary: undefined,
+              skills: [],
+              hrId: {
+                companyName: mock.company,
+                avatar: undefined,
+                firstName: "",
+                lastName: "",
+              },
+            };
+
+            setJob(mapped);
+            setAllJobs(
+              (Array.isArray(MOCK_JOBS) ? MOCK_JOBS : []).map((j: any) => ({
+                _id: String(j.id),
+                title: j.title,
+                createdAt: Date.now(),
+                salary: undefined,
+                location: { province: j.location },
+                hrId: { companyName: j.company },
+              }))
+            );
+            setError(null);
+          } else {
+            setJob(null);
+            setError("Không thể tải công việc.");
+          }
+          return;
+        }
+
         const [detailRes, listRes] = await Promise.all([
           api.get(`/api/jobs/${jobId}`),
           api.get("/api/jobs"),
@@ -41,7 +89,7 @@ export const JobDetailClient: React.FC<JobDetailClientProps> = ({ jobId }) => {
       }
     };
     load();
-  }, [jobId]);
+  }, [jobId, isMongoId]);
 
   const formatSalary = (salary: any) => {
     if (!salary?.amount) return "Thỏa thuận";
@@ -85,6 +133,11 @@ export const JobDetailClient: React.FC<JobDetailClientProps> = ({ jobId }) => {
 
   const handleApply = async () => {
     if (applyLoading || !jobId) return;
+    if (!isMongoId) {
+      setApplyStatus("error");
+      setError("Tin demo (mock) không hỗ trợ ứng tuyển. Vui lòng chọn tin từ danh sách `/jobs`.");
+      return;
+    }
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
     if (!token) {
       setApplyStatus("login_required");

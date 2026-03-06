@@ -108,6 +108,8 @@ export const Header = () => {
         return <span className="material-symbols-outlined text-white">person</span>;
     };
 
+    const normalizedRole = String(userProfile?.role || "").toUpperCase();
+
     return (
         <nav className={`fixed top-0 z-50 w-full border-b transition-all duration-300 glass ${isScrolled
             ? "py-2 border-slate-200 dark:border-slate-800 shadow-lg bg-white/80 dark:bg-slate-900/80 backdrop-blur-md"
@@ -135,6 +137,26 @@ export const Header = () => {
                             </Link>
                         ))}
                         <div className="h-6 w-px bg-slate-200 dark:bg-slate-700"></div>
+
+                        {/* HR quick actions */}
+                        {isLoggedIn && normalizedRole === "HR" && (
+                            <div className="flex items-center space-x-3">
+                                <button
+                                    onClick={() => router.push("/post-job")}
+                                    className="h-10 px-4 rounded-full bg-primary text-white text-sm font-bold flex items-center gap-1 shadow-md hover:bg-primary/90 transition-all"
+                                >
+                                    <span className="material-symbols-outlined text-base">add</span>
+                                    Đăng tin
+                                </button>
+                                <button
+                                    onClick={() => router.push("/hr-dashboard")}
+                                    className="h-10 px-4 rounded-full bg-slate-900 text-white text-sm font-bold flex items-center gap-1 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200/60 dark:border-slate-700 transition-all"
+                                >
+                                    <span className="material-symbols-outlined text-base">dashboard</span>
+                                    HR Dashboard
+                                </button>
+                            </div>
+                        )}
 
                         <button
                             onClick={toggleDarkMode}
@@ -171,6 +193,25 @@ export const Header = () => {
                                                 {userProfile?.email}
                                             </p>
                                         </div>
+                                        {normalizedRole === "ADMIN" ? (
+                                            <Link
+                                                href="/admin"
+                                                onClick={() => setShowDropdown(false)}
+                                                className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-primary transition-colors"
+                                            >
+                                                <span className="material-symbols-outlined text-[20px]">dashboard</span>
+                                                Admin Dashboard
+                                            </Link>
+                                        ) : normalizedRole === "HR" ? (
+                                            <Link
+                                                href="/hr-dashboard"
+                                                onClick={() => setShowDropdown(false)}
+                                                className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-primary transition-colors"
+                                            >
+                                                <span className="material-symbols-outlined text-[20px]">dashboard</span>
+                                                HR Dashboard
+                                            </Link>
+                                        ) : null}
                                         <Link
                                             href="/profile"
                                             onClick={() => setShowDropdown(false)}
@@ -217,7 +258,15 @@ export const Header = () => {
                             </span>
                         </button>
 
-                        {isLoggedIn ? (
+                        {isLoggedIn && normalizedRole === "HR" ? (
+                            <button
+                                onClick={() => router.push("/post-job")}
+                                className="h-9 px-3 rounded-full bg-primary text-white text-xs font-bold flex items-center gap-1 shadow-md"
+                            >
+                                <span className="material-symbols-outlined text-base">add</span>
+                                Đăng tin
+                            </button>
+                        ) : isLoggedIn ? (
                             <Link href="/profile" className="flex items-center">
                                 <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold overflow-hidden border-2 border-white dark:border-slate-800 shadow-md">
                                     {getAvatarContent()}
