@@ -21,6 +21,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Việc làm", href: "/admin/jobs", icon: "work" },
   { label: "Thanh toán", href: "/admin/payments", icon: "payments" },
   { label: "Tranh chấp", href: "/admin/disputes", icon: "report_problem" },
+  { label: "Blog", href: "/admin/blogs", icon: "article" },
 ];
 
 const getErrorMessage = (error: unknown) => {

@@ -213,8 +213,8 @@ export default function CVBuilderPage() {
                                 key={tab.id}
                                 onClick={() => setActiveSection(tab.id)}
                                 className={`flex-1 min-w-[100px] flex flex-col items-center justify-center gap-1.5 py-4 px-2 text-xs font-bold transition-colors select-none ${activeSection === tab.id
-                                        ? "text-primary border-b-2 border-primary bg-primary/5"
-                                        : "text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                                    ? "text-primary border-b-2 border-primary bg-primary/5"
+                                    : "text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/50"
                                     }`}
                             >
                                 <span className="material-symbols-outlined text-[20px]">{tab.icon}</span>

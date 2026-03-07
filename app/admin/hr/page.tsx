@@ -20,6 +20,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Việc làm", href: "/admin/jobs", icon: "work" },
   { label: "Thanh toán", href: "/admin/payments", icon: "payments" },
   { label: "Tranh chấp", href: "/admin/disputes", icon: "report_problem" },
+  { label: "Blog", href: "/admin/blogs", icon: "article" },
 ];
 
 type PendingAction =
@@ -161,11 +162,11 @@ export default function HRManagementPage() {
 
   const actionText = pendingAction
     ? {
-        approve: { title: "Duyệt hồ sơ HR?", desc: `Xác nhận duyệt ${pendingAction.hr.companyName}.`, confirm: "Duyệt" },
-        reject: { title: "Từ chối hồ sơ HR?", desc: `Xác nhận từ chối ${pendingAction.hr.companyName}.`, confirm: "Từ chối" },
-        blacklist: { title: "Đưa vào blacklist?", desc: `HR ${pendingAction.hr.companyName} sẽ bị tạm khóa hoạt động trên hệ thống.`, confirm: "Blacklist" },
-        reactivate: { title: "Khôi phục HR?", desc: `Khôi phục hoạt động cho ${pendingAction.hr.companyName}.`, confirm: "Khôi phục" },
-      }[pendingAction.type]
+      approve: { title: "Duyệt hồ sơ HR?", desc: `Xác nhận duyệt ${pendingAction.hr.companyName}.`, confirm: "Duyệt" },
+      reject: { title: "Từ chối hồ sơ HR?", desc: `Xác nhận từ chối ${pendingAction.hr.companyName}.`, confirm: "Từ chối" },
+      blacklist: { title: "Đưa vào blacklist?", desc: `HR ${pendingAction.hr.companyName} sẽ bị tạm khóa hoạt động trên hệ thống.`, confirm: "Blacklist" },
+      reactivate: { title: "Khôi phục HR?", desc: `Khôi phục hoạt động cho ${pendingAction.hr.companyName}.`, confirm: "Khôi phục" },
+    }[pendingAction.type]
     : null;
 
   return (
