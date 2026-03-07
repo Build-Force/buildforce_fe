@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 
 interface SimilarJobCardProps {
     job: {
-        id: number;
+        id: string | number;
         title: string;
         company: string;
         location: string;

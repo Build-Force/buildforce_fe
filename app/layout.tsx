@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { RootFrame } from "@/components/layout/RootFrame";
 import { PageTransitionLoader } from "@/components/PageTransitionLoader";
+import { ChatWidgetWrapper } from "@/components/chat/ChatWidgetWrapper";
 
 const inter = Inter({
   subsets: ["latin", "vietnamese"],
@@ -25,6 +26,7 @@ export default function RootLayout({
       <body className={`${inter.variable} ${inter.className}`}>
         <PageTransitionLoader />
         <RootFrame>{children}</RootFrame>
+        <ChatWidgetWrapper />
       </body>
     </html>
   );

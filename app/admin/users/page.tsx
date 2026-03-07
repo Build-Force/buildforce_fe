@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AdminErrorBanner } from "@/components/admin/AdminErrorBanner";
 import { AdminLoadingState } from "@/components/admin/AdminLoadingState";
 import { AdminToast } from "@/components/admin/AdminToast";
@@ -19,6 +19,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Việc làm", href: "/admin/jobs", icon: "work" },
   { label: "Thanh toán", href: "/admin/payments", icon: "payments" },
   { label: "Tranh chấp", href: "/admin/disputes", icon: "report_problem" },
+  { label: "Blog", href: "/admin/blogs", icon: "article" },
 ];
 
 type PendingAction =
@@ -50,7 +51,7 @@ export default function AdminUsersPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState>(null);
 
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     setIsLoading(true);
     setErrorMessage(null);
 
@@ -80,11 +81,11 @@ export default function AdminUsersPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [roleFilter, search, statusFilter]);
 
   useEffect(() => {
     loadUsers().catch(() => null);
-  }, [search, roleFilter, statusFilter]);
+  }, [loadUsers]);
 
   useEffect(() => {
     if (!toast) return;
@@ -142,11 +143,11 @@ export default function AdminUsersPage() {
 
   const actionText = pendingAction
     ? {
-        suspend: { title: "Khóa người dùng?", desc: `Tạm khóa ${pendingAction.user.fullName}.`, confirm: "Khóa" },
-        reactivate: { title: "Kích hoạt lại?", desc: `Kích hoạt lại ${pendingAction.user.fullName}.`, confirm: "Kích hoạt" },
-        delete: { title: "Đánh dấu xóa?", desc: `Đánh dấu ${pendingAction.user.fullName} là DELETED.`, confirm: "Xóa" },
-        restore: { title: "Khôi phục?", desc: `Khôi phục ${pendingAction.user.fullName} về ACTIVE.`, confirm: "Khôi phục" },
-      }[pendingAction.type]
+      suspend: { title: "Khóa người dùng?", desc: `Tạm khóa ${pendingAction.user.fullName}.`, confirm: "Khóa" },
+      reactivate: { title: "Kích hoạt lại?", desc: `Kích hoạt lại ${pendingAction.user.fullName}.`, confirm: "Kích hoạt" },
+      delete: { title: "Đánh dấu xóa?", desc: `Đánh dấu ${pendingAction.user.fullName} là DELETED.`, confirm: "Xóa" },
+      restore: { title: "Khôi phục?", desc: `Khôi phục ${pendingAction.user.fullName} về ACTIVE.`, confirm: "Khôi phục" },
+    }[pendingAction.type]
     : null;
 
   return (

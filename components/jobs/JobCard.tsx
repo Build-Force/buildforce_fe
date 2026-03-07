@@ -7,7 +7,7 @@ import Link from "next/link";
 
 interface JobCardProps {
     job: {
-        id: number;
+        id: string | number;
         title: string;
         company: string;
         location: string;
@@ -107,7 +107,7 @@ export const JobCard: React.FC<JobCardProps> = ({ job, index = 0, variant = "exp
                         <div className="flex -space-x-3">
                             {[1, 2, 3].map((i) => (
                                 <div key={i} className="w-10 h-10 rounded-full border-2 border-white dark:border-slate-900 bg-slate-200 overflow-hidden">
-                                    <img src={`https://i.pravatar.cc/150?u=${job.id + i}`} alt="applicant" className="w-full h-full object-cover" />
+                                    <img src={`https://i.pravatar.cc/150?u=${String(job.id)}-${i}`} alt="applicant" className="w-full h-full object-cover" />
                                 </div>
                             ))}
                             <div className="w-10 h-10 rounded-full border-2 border-white dark:border-slate-900 bg-slate-800 flex items-center justify-center font-bold text-white text-xs">
