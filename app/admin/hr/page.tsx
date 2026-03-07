@@ -65,25 +65,30 @@ export default function HRManagementPage() {
       const items = res.data?.data?.data || [];
 
       setRows(
-        items.map((item: any) => ({
-          id: item._id,
-          companyName: item.companyName,
-          taxCode: item.taxCode,
-          region: item.address || "Việt Nam",
-          address: item.address || "--",
-          contactEmail: item.contactInfo || "--",
-          phone: "--",
-          verificationStatus: item.verificationStatus,
-          isBlacklisted: item.isBlacklisted,
-          completedProjects: item.totalJobsCompleted || 0,
-          workersHired: 0,
-          completionRate: 0,
-          avgRating: item.averageRating || 0,
-          reportCount: item.totalReports || 0,
-          popularPaymentMethod: "BANK_TRANSFER",
-          onTimePaymentRate: item.onTimePaymentRate || 0,
-          createdAt: item.createdAt,
-        })),
+        items.map((item: any) => {
+          const totalPosted = item.totalJobsPosted || 0;
+          const totalCompleted = item.totalJobsCompleted || 0;
+          const completionRate = totalPosted > 0 ? Math.round((totalCompleted / totalPosted) * 100) : 0;
+          return {
+            id: item._id,
+            companyName: item.companyName,
+            taxCode: item.taxCode,
+            region: item.address || "Việt Nam",
+            address: item.address || "--",
+            contactEmail: item.contactInfo || "--",
+            phone: item.contactInfo || "--",
+            verificationStatus: item.verificationStatus,
+            isBlacklisted: item.isBlacklisted,
+            completedProjects: totalCompleted,
+            workersHired: totalCompleted,
+            completionRate,
+            avgRating: item.averageRating ?? 0,
+            reportCount: item.totalReports ?? 0,
+            popularPaymentMethod: "BANK_TRANSFER" as const,
+            onTimePaymentRate: item.onTimePaymentRate ?? 0,
+            createdAt: item.createdAt,
+          };
+        }),
       );
     } catch (error) {
       setRows([]);

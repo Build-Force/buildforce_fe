@@ -58,15 +58,23 @@ export default function AdminDisputesPage() {
       const items = res.data?.data?.data || [];
 
       setCases(
-        items.map((item: any) => ({
-          id: item._id,
-          reporter: item.reporterId?.fullName || item.reporterId?.email || "Không rõ",
-          target: item.targetId?.fullName || item.targetId?.email || "Không rõ",
-          category: item.category || "Khác",
-          createdAt: item.createdAt,
-          priority: item.priority,
-          status: item.status,
-        })),
+        items.map((item: any) => {
+          const reporterName = item.reporterId
+            ? [item.reporterId.firstName, item.reporterId.lastName].filter(Boolean).join(" ") || item.reporterId.email
+            : "Không rõ";
+          const targetName = item.targetId
+            ? item.targetId.companyName || [item.targetId.firstName, item.targetId.lastName].filter(Boolean).join(" ") || item.targetId.email
+            : "Không rõ";
+          return {
+            id: item._id,
+            reporter: reporterName,
+            target: targetName,
+            category: item.category || "Khác",
+            createdAt: item.createdAt,
+            priority: item.priority,
+            status: item.status,
+          };
+        }),
       );
     } catch (error) {
       setCases([]);

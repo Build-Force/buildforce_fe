@@ -64,15 +64,18 @@ export default function AdminUsersPage() {
       const res = await adminApi.getUsers(params);
       const rows = res.data?.data?.data || [];
       setUsers(
-        rows.map((u: any) => ({
-          id: u._id,
-          fullName: u.email?.split("@")[0] || "Người dùng",
-          email: u.email,
-          avatar: `https://i.pravatar.cc/100?u=${u._id}`,
-          role: u.role,
-          status: u.status,
-          createdAt: u.createdAt,
-        })),
+        rows.map((u: any) => {
+          const fullName = [u.firstName, u.lastName].filter(Boolean).join(" ") || u.email?.split("@")[0] || "Người dùng";
+          return {
+            id: u._id,
+            fullName,
+            email: u.email || u.phone || "--",
+            avatar: u.avatar || `https://i.pravatar.cc/100?u=${u._id}`,
+            role: u.role,
+            status: u.status,
+            createdAt: u.createdAt,
+          };
+        }),
       );
     } catch (error) {
       setUsers([]);

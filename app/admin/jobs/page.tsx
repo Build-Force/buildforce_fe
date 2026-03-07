@@ -46,9 +46,16 @@ const getErrorMessage = (error: unknown) => {
 
 const mapStatus = (status: string): JobModerationStatus => {
   if (status === "APPROVED") return "active";
-  if (status === "PENDING_APPROVAL") return "pending";
+  if (status === "PENDING") return "pending";
   return "matched";
 };
+
+function formatSalary(salary: { amount?: number; unit?: string } | undefined): string {
+  if (!salary?.amount) return "—";
+  const n = new Intl.NumberFormat("vi-VN").format(salary.amount);
+  const u = salary.unit === "day" ? "ngày" : salary.unit === "month" ? "tháng" : salary.unit === "hour" ? "giờ" : salary.unit || "";
+  return `${n} VND/${u}`;
+}
 
 export default function AdminJobsPage() {
   const [rows, setRows] = useState<AdminJob[]>([]);
@@ -67,10 +74,10 @@ export default function AdminJobsPage() {
         items.map((j: any) => ({
           id: j._id,
           title: j.title,
-          company: j.hrProfileId?.companyName || "--",
-          region: j.region,
-          vacancies: j.quantity,
-          salaryRange: j.salary,
+          company: j.hrId?.companyName || [j.hrId?.firstName, j.hrId?.lastName].filter(Boolean).join(" ") || "—",
+          region: j.location?.province || j.location?.city || "—",
+          vacancies: j.workersNeeded ?? 0,
+          salaryRange: formatSalary(j.salary),
           postedAt: j.createdAt,
           status: mapStatus(j.status),
         })),
