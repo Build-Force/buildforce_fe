@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { NAV_LINKS } from "@/data/mockData";
 import api from "@/utils/api";
@@ -16,6 +17,28 @@ export const Header = () => {
     const [userProfile, setUserProfile] = useState<any>(null);
     const [showDropdown, setShowDropdown] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
+
+    const checkAuthStatus = React.useCallback(async () => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            setIsLoggedIn(true);
+            try {
+                // Token auto-attached via axios interceptor in utils/api.ts
+                const response = await api.get('/api/auth/profile');
+                if (response.data.success) {
+                    setUserProfile(response.data.data);
+                }
+            } catch (error) {
+                console.error("Failed to fetch user profile for header:", error);
+                if (error && (error as any).response?.status === 401) {
+                    handleSignOut();
+                }
+            }
+        } else {
+            setIsLoggedIn(false);
+            setUserProfile(null);
+        }
+    }, [router]); // handleSignOut uses router
 
     useEffect(() => {
         const handleScroll = () => {
@@ -57,29 +80,7 @@ export const Header = () => {
             window.removeEventListener("userLoggedIn", handleLoginEvent);
             document.removeEventListener("mousedown", handleClickOutside);
         };
-    }, []);
-
-    const checkAuthStatus = async () => {
-        const token = localStorage.getItem('token');
-        if (token) {
-            setIsLoggedIn(true);
-            try {
-                // Token auto-attached via axios interceptor in utils/api.ts
-                const response = await api.get('/api/auth/profile');
-                if (response.data.success) {
-                    setUserProfile(response.data.data);
-                }
-            } catch (error) {
-                console.error("Failed to fetch user profile for header:", error);
-                if (error && (error as any).response?.status === 401) {
-                    handleSignOut();
-                }
-            }
-        } else {
-            setIsLoggedIn(false);
-            setUserProfile(null);
-        }
-    };
+    }, [checkAuthStatus]);
 
     const toggleDarkMode = () => {
         document.documentElement.classList.toggle("dark");
@@ -97,7 +98,7 @@ export const Header = () => {
     // Construct Avatar text or image
     const getAvatarContent = () => {
         if (userProfile?.avatar) {
-            return <img src={userProfile.avatar} alt="Avatar" className="w-full h-full object-cover" />;
+            return <Image src={userProfile.avatar} alt="Avatar" width={40} height={40} className="w-full h-full object-cover" />;
         }
         if (userProfile?.firstName && userProfile?.lastName) {
             return `${userProfile.firstName.charAt(0)}${userProfile.lastName.charAt(0)}`.toUpperCase();

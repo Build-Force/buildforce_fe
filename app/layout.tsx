@@ -1,21 +1,15 @@
+import React from "react";
 import type { Metadata } from "next";
-import { Suspense } from "react";
-import { Barlow, Barlow_Condensed } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { RootFrame } from "@/components/layout/RootFrame";
 import { PageTransitionLoader } from "@/components/PageTransitionLoader";
 import { ChatWidgetWrapper } from "@/components/chat/ChatWidgetWrapper";
 
-const barlow = Barlow({
-  subsets: ["latin"],
-  variable: "--font-barlow",
-  weight: ["400", "500", "600", "700"],
-});
-
-const barlowCondensed = Barlow_Condensed({
-  subsets: ["latin"],
-  variable: "--font-barlow-condensed",
-  weight: ["400", "500", "600", "700"],
+const inter = Inter({
+  subsets: ["latin", "vietnamese"],
+  variable: "--font-inter",
+  weight: ["300", "400", "500", "600", "700", "800", "900"],
 });
 
 export const metadata: Metadata = {
@@ -30,10 +24,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="vi" className="light">
-      <body className={`${barlow.variable} ${barlowCondensed.variable}`}>
-        <Suspense fallback={null}>
+      <body className={`${inter.variable} ${inter.className}`}>
+        <React.Suspense fallback={null}>
           <PageTransitionLoader />
-        </Suspense>
+        </React.Suspense>
         <RootFrame>{children}</RootFrame>
         <ChatWidgetWrapper />
       </body>
