@@ -17,8 +17,9 @@ const config: Config = {
         "background-dark": "#0F172A",
       },
       fontFamily: {
-        display: ["Outfit", "sans-serif"],
-        sans: ["Inter", "sans-serif"],
+        display: ["var(--font-inter)", "Inter", "sans-serif"],
+        sans: ["var(--font-inter)", "Inter", "sans-serif"],
+        inter: ["var(--font-inter)", "sans-serif"],
       },
       borderRadius: {
         DEFAULT: "0.5rem",

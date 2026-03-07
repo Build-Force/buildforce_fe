@@ -1,19 +1,13 @@
 import type { Metadata } from "next";
-import { Barlow, Barlow_Condensed } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { RootFrame } from "@/components/layout/RootFrame";
 import { PageTransitionLoader } from "@/components/PageTransitionLoader";
 
-const barlow = Barlow({
-  subsets: ["latin"],
-  variable: "--font-barlow",
-  weight: ["400", "500", "600", "700"],
-});
-
-const barlowCondensed = Barlow_Condensed({
-  subsets: ["latin"],
-  variable: "--font-barlow-condensed",
-  weight: ["400", "500", "600", "700"],
+const inter = Inter({
+  subsets: ["latin", "vietnamese"],
+  variable: "--font-inter",
+  weight: ["300", "400", "500", "600", "700", "800", "900"],
 });
 
 export const metadata: Metadata = {
@@ -28,7 +22,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="vi" className="light">
-      <body className={`${barlow.variable} ${barlowCondensed.variable}`}>
+      <body className={`${inter.variable} ${inter.className}`}>
         <PageTransitionLoader />
         <RootFrame>{children}</RootFrame>
       </body>

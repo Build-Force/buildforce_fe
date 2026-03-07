@@ -139,15 +139,15 @@ function LoaderOverlay({ visible }: { visible: boolean }) {
         </svg>
         <span
           style={{
-            fontFamily: "'Barlow Condensed', 'Arial Narrow', sans-serif",
-            fontWeight: 700,
+            fontFamily: "var(--font-inter), sans-serif",
+            fontWeight: 800,
             fontSize: 22,
-            letterSpacing: '0.08em',
-            color: '#F1F5F9',
-            textTransform: 'uppercase',
+            letterSpacing: "-0.02em",
+            color: "#F1F5F9",
+            textTransform: "uppercase",
           }}
         >
-          Build<span style={{ color: '#3B82F6' }}>Force</span>
+          Build<span style={{ color: "#3B82F6" }}>Force</span>
         </span>
       </div>
 
@@ -156,10 +156,10 @@ function LoaderOverlay({ visible }: { visible: boolean }) {
       <p
         className="mt-5 text-xs uppercase tracking-widest"
         style={{
-          color: 'rgba(148,163,184,0.6)',
-          fontFamily: "'Barlow', sans-serif",
+          color: "rgba(148,163,184,0.6)",
+          fontFamily: "var(--font-inter), sans-serif",
           opacity: visible ? 1 : 0,
-          transition: 'opacity 0.4s ease 0.2s',
+          transition: "opacity 0.4s ease 0.2s",
         }}
       >
         Đang tải...
