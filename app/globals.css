@@ -1,33 +1,68 @@
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
+  --primary: #0EA5E9;
+  --secondary: #10B981;
+  --background-light: #F8FAFC;
+  --background-dark: #0F172A;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
+@layer base {
+  body {
+    @apply font-inter antialiased text-slate-900 bg-background-light dark:bg-background-dark dark:text-slate-100 transition-colors duration-300;
   }
 }
 
-body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+@layer components {
+  .glass {
+    @apply bg-white/30 backdrop-blur-xl dark:bg-slate-900/40;
+  }
+
+  .hero-gradient {
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.8));
+  }
+
+  .hero-overlay {
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.85) 0%, rgba(15, 23, 42, 0.9) 100%);
+  }
+
+  .section-spacing {
+    @apply py-32;
+  }
+
+  .card-shadow {
+    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.05);
+  }
+
+  .filter-section {
+    @apply mb-12 border-b border-slate-200 dark:border-slate-800 pb-8;
+  }
+
+  input[type="range"] {
+    @apply w-full h-3 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-primary;
+  }
+
+  .glass {
+    @apply bg-white/95 dark:bg-slate-900/90 backdrop-blur-md;
+  }
+
+  .prose-custom ul {
+    @apply space-y-4 list-none p-0;
+  }
+
+  .prose-custom li {
+    @apply flex items-start gap-3 before:content-[''] before:w-2 before:h-2 before:bg-primary before:rounded-full before:mt-3 before:shrink-0;
+  }
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+.material-symbols-outlined {
+  font-variation-settings:
+    'FILL' 0,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 24;
 }
