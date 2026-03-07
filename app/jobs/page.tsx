@@ -1,10 +1,57 @@
 "use client";
 
-import React from "react";
-import { JOBS, CONTRACTORS } from "@/data/mockData";
+import React, { useEffect, useMemo, useState } from "react";
+import { CONTRACTORS } from "@/data/mockData";
 import { JobCard } from "@/components/jobs/JobCard";
+import api from "@/utils/api";
 
 export default function JobsPage() {
+    const [jobs, setJobs] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const res = await api.get("/api/jobs");
+                if (res.data.success) setJobs(res.data.data);
+            } catch (err) {
+                console.error("Failed to load jobs", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        load();
+    }, []);
+
+    const mappedJobs = useMemo(() => {
+        const formatSalary = (salary: any) => {
+            if (!salary?.amount) return "Thỏa thuận";
+            const unit = salary.unit === "day" ? "ngày" : salary.unit === "month" ? "tháng" : salary.unit === "hour" ? "giờ" : "dự án";
+            const amount = Number(salary.amount);
+            const pretty = amount >= 1_000_000 ? `${Math.round(amount / 1_000_000)}tr` : `${Math.round(amount / 1_000)}k`;
+            return `${pretty}/${unit}`;
+        };
+
+        return jobs.map((j) => {
+            const hr = j.hrId;
+            const company = hr?.companyName || (hr?.firstName ? `${hr.firstName} ${hr.lastName || ""}`.trim() : "Nhà tuyển dụng");
+            const location = j.location?.province || j.location?.city || "Việt Nam";
+            return {
+                id: j._id,
+                title: j.title,
+                company,
+                location,
+                compensation: formatSalary(j.salary),
+                urgent: false,
+                postedAt: new Date(j.createdAt || Date.now()).toLocaleDateString("vi-VN"),
+                image: "https://images.unsplash.com/photo-1526772662000-3f88f10c053e?q=80&w=1600&auto=format&fit=crop",
+                applicants: 0,
+                verified: true,
+                onTimePayment: true,
+            };
+        });
+    }, [jobs]);
+
     return (
         <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-sans antialiased transition-colors duration-300">
             <main className="max-w-[1600px] mx-auto px-8 pt-12 pb-24">
@@ -86,7 +133,9 @@ export default function JobsPage() {
                     <section className="flex-1">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-16 gap-6">
                             <div>
-                                <h1 className="text-4xl font-black mb-3">Đã tìm thấy 1,240 công việc</h1>
+                                <h1 className="text-4xl font-black mb-3">
+                                    {loading ? "Đang tải công việc..." : `Đã tìm thấy ${mappedJobs.length} công việc`}
+                                </h1>
                                 <p className="text-slate-500 font-bold text-lg">Kết quả được cá nhân hóa dựa trên hồ sơ của bạn</p>
                             </div>
                             <div className="flex items-center gap-4 bg-white dark:bg-slate-900 px-6 py-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
@@ -100,9 +149,19 @@ export default function JobsPage() {
                         </div>
 
                         <div className="space-y-12">
-                            {JOBS.map((job, idx) => (
-                                <JobCard key={job.id} job={job} index={idx} variant="expanded" />
-                            ))}
+                            {loading ? (
+                                <div className="bg-white dark:bg-slate-900 p-10 rounded-3xl border border-slate-200 dark:border-slate-800">
+                                    <div className="animate-spin w-7 h-7 border-2 border-primary border-t-transparent rounded-full" />
+                                </div>
+                            ) : mappedJobs.length === 0 ? (
+                                <div className="bg-white dark:bg-slate-900 p-10 rounded-3xl border border-slate-200 dark:border-slate-800 text-center">
+                                    <p className="text-slate-500 font-bold">Chưa có công việc nào được duyệt.</p>
+                                </div>
+                            ) : (
+                                mappedJobs.map((job, idx) => (
+                                    <JobCard key={String(job.id)} job={job} index={idx} variant="expanded" />
+                                ))
+                            )}
                         </div>
 
                         {/* Pagination */}

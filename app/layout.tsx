@@ -1,7 +1,22 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
+import { Barlow, Barlow_Condensed } from "next/font/google";
 import "./globals.css";
-import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
+import { RootFrame } from "@/components/layout/RootFrame";
+import { PageTransitionLoader } from "@/components/PageTransitionLoader";
+import { ChatWidgetWrapper } from "@/components/chat/ChatWidgetWrapper";
+
+const barlow = Barlow({
+  subsets: ["latin"],
+  variable: "--font-barlow",
+  weight: ["400", "500", "600", "700"],
+});
+
+const barlowCondensed = Barlow_Condensed({
+  subsets: ["latin"],
+  variable: "--font-barlow-condensed",
+  weight: ["400", "500", "600", "700"],
+});
 
 export const metadata: Metadata = {
   title: "BuildForce | Nền tảng kết nối nhân lực xây dựng",
@@ -15,10 +30,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="vi" className="light">
-      <body>
-        <Header />
-        <main className="pt-28">{children}</main>
-        <Footer />
+      <body suppressHydrationWarning className={`${barlow.variable} ${barlowCondensed.variable}`}>
+        <Suspense fallback={null}>
+          <PageTransitionLoader />
+        </Suspense>
+        <RootFrame>{children}</RootFrame>
+        <ChatWidgetWrapper />
       </body>
     </html>
   );

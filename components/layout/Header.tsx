@@ -43,13 +43,20 @@ export const Header = () => {
             checkAuthStatus();
         };
 
+        const handlePackageUpdated = () => {
+            checkAuthStatus();
+        };
+
         const handleLogoutEvent = () => {
             setIsLoggedIn(false);
             setUserProfile(null);
+            setCurrentPackageName(null);
+            setCurrentPackageLevel(null);
         };
 
         window.addEventListener("storage", handleStorageChange);
         window.addEventListener("userLoggedIn", handleLoginEvent);
+        window.addEventListener("packageUpdated", handlePackageUpdated);
         window.addEventListener("userLoggedOut", handleLogoutEvent);
 
         const handleClickOutside = (event: MouseEvent) => {
@@ -63,6 +70,7 @@ export const Header = () => {
             window.removeEventListener("scroll", handleScroll);
             window.removeEventListener("storage", handleStorageChange);
             window.removeEventListener("userLoggedIn", handleLoginEvent);
+            window.removeEventListener("packageUpdated", handlePackageUpdated);
             window.removeEventListener("userLoggedOut", handleLogoutEvent);
             document.removeEventListener("mousedown", handleClickOutside);
         };
@@ -120,6 +128,8 @@ export const Header = () => {
         localStorage.removeItem('token');
         setIsLoggedIn(false);
         setUserProfile(null);
+        setCurrentPackageName(null);
+        setCurrentPackageLevel(null);
         setShowDropdown(false);
         router.push('/signin');
     };
@@ -139,28 +149,32 @@ export const Header = () => {
     };
 
   const packageNameLower = currentPackageName?.toLowerCase() || "";
-  let packageBadgeLabel: string | null = null;
-  let packageBadgeClass = "";
-  if (currentPackageName) {
-    if (packageNameLower.includes("enterprise")) {
-      packageBadgeLabel = "ENT";
-      packageBadgeClass = "bg-amber-500";
-    } else if (packageNameLower.includes("pro")) {
-      packageBadgeLabel = "PRO";
-      packageBadgeClass = "bg-sky-500";
-    } else {
-      packageBadgeLabel = "FREE";
-      packageBadgeClass = "bg-slate-400";
-    }
-  }
+  const normalizedRole = String(userProfile?.role || "").toUpperCase();
+  const effectivePackageLevel =
+    currentPackageLevel ??
+    (packageNameLower.includes("enterprise") ? 2 : packageNameLower.includes("pro") ? 1 : packageNameLower ? 0 : null);
+  const packageRingClass =
+    effectivePackageLevel === 2
+      ? "ring-[3px] ring-amber-400/95 shadow-[0_0_0_3px_rgba(251,191,36,0.22),0_0_24px_rgba(245,158,11,0.32)]"
+      : effectivePackageLevel === 1
+        ? "ring-[3px] ring-sky-400/95 shadow-[0_0_0_3px_rgba(96,165,250,0.2),0_0_22px_rgba(59,130,246,0.28)]"
+        : "";
+  const packageAuraClass =
+    effectivePackageLevel === 2
+      ? "from-amber-300 via-yellow-300 to-orange-400"
+      : effectivePackageLevel === 1
+        ? "from-sky-400 via-blue-500 to-indigo-500"
+        : "from-slate-300 via-slate-400 to-slate-500";
+  const packageIcon =
+    effectivePackageLevel === 2 ? "diamond" : effectivePackageLevel === 1 ? "workspace_premium" : "inventory_2";
 
     return (
-        <nav className={`fixed top-0 z-50 w-full border-b transition-all duration-300 glass ${isScrolled
+        <nav suppressHydrationWarning className={`fixed top-0 z-50 w-full border-b transition-all duration-300 glass ${isScrolled
             ? "py-2 border-slate-200 dark:border-slate-800 shadow-lg bg-white/80 dark:bg-slate-900/80 backdrop-blur-md"
             : "py-4 border-white/10 dark:border-slate-800/50"
             }`}>
-            <div className="max-w-7xl mx-auto px-6">
-                <div className="flex justify-between h-20 items-center">
+            <div suppressHydrationWarning className="max-w-7xl mx-auto px-6">
+                <div suppressHydrationWarning className="flex justify-between h-20 items-center">
                     <Link href="/" className="flex items-center gap-3 group">
                         <div className="bg-primary p-2 rounded-lg transition-transform group-hover:scale-110">
                             <span className="material-symbols-outlined text-white text-3xl">construction</span>
@@ -183,23 +197,14 @@ export const Header = () => {
                         <div className="h-6 w-px bg-slate-200 dark:bg-slate-700"></div>
 
                         {/* HR quick actions */}
-                        {isLoggedIn && userProfile?.role === "hr" && (
-                            <div className="flex items-center space-x-3">
-                                <button
-                                    onClick={() => router.push("/post-job")}
-                                    className="h-10 px-4 rounded-full bg-primary text-white text-sm font-bold flex items-center gap-1 shadow-md hover:bg-primary/90 transition-all"
-                                >
-                                    <span className="material-symbols-outlined text-base">add</span>
-                                    Đăng tin
-                                </button>
-                                <button
-                                    onClick={() => router.push("/hr-dashboard")}
-                                    className="h-10 px-4 rounded-full bg-slate-900 text-white text-sm font-bold flex items-center gap-1 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200/60 dark:border-slate-700 transition-all"
-                                >
-                                    <span className="material-symbols-outlined text-base">dashboard</span>
-                                    HR Dashboard
-                                </button>
-                            </div>
+                        {isLoggedIn && normalizedRole === "HR" && (
+                            <button
+                                onClick={() => router.push("/hr-dashboard")}
+                                className="h-10 px-4 rounded-full bg-slate-900 text-white text-sm font-bold flex items-center gap-1 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200/60 dark:border-slate-700 transition-all"
+                            >
+                                <span className="material-symbols-outlined text-base">dashboard</span>
+                                HR Dashboard
+                            </button>
                         )}
 
                         <button
@@ -219,14 +224,15 @@ export const Header = () => {
                                     className="flex items-center gap-2 hover:opacity-80 transition-opacity"
                                 >
                               <div className="relative">
-                                <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold overflow-hidden border-2 border-white dark:border-slate-800 shadow-md">
+                                <div className={`absolute inset-[-5px] rounded-full bg-gradient-to-br ${packageAuraClass} opacity-80 blur-[6px] ${effectivePackageLevel !== null ? "" : "hidden"}`} />
+                                <div className={`relative w-11 h-11 rounded-full bg-primary flex items-center justify-center text-white font-bold overflow-hidden border-[2.5px] border-white dark:border-slate-800 shadow-md ${packageRingClass}`}>
                                   {getAvatarContent()}
                                 </div>
-                                {packageBadgeLabel && (
-                                  <div
-                                    className={`absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded-full text-[9px] font-black text-white border border-white dark:border-slate-900 ${packageBadgeClass}`}
-                                  >
-                                    {packageBadgeLabel}
+                                {effectivePackageLevel !== null && (
+                                  <div className={`absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full border-2 border-white dark:border-slate-900 shadow-lg flex items-center justify-center ${effectivePackageLevel === 2 ? "bg-amber-500" : effectivePackageLevel === 1 ? "bg-sky-500" : "bg-slate-500"}`}>
+                                    <span className="material-symbols-outlined text-[13px] text-white">
+                                      {packageIcon}
+                                    </span>
                                   </div>
                                 )}
                               </div>
@@ -245,7 +251,34 @@ export const Header = () => {
                                             <p className="text-xs text-slate-500 truncate">
                                                 {userProfile?.email}
                                             </p>
+                                            {normalizedRole === "HR" && currentPackageName && (
+                                                <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-amber-600 dark:bg-amber-900/20 dark:text-amber-300">
+                                                    <span className="material-symbols-outlined text-[14px]">
+                                                        workspace_premium
+                                                    </span>
+                                                    {currentPackageName}
+                                                </div>
+                                            )}
                                         </div>
+                                        {normalizedRole === "ADMIN" ? (
+                                            <Link
+                                                href="/admin"
+                                                onClick={() => setShowDropdown(false)}
+                                                className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-primary transition-colors"
+                                            >
+                                                <span className="material-symbols-outlined text-[20px]">dashboard</span>
+                                                Admin Dashboard
+                                            </Link>
+                                        ) : normalizedRole === "HR" ? (
+                                            <Link
+                                                href="/hr-dashboard"
+                                                onClick={() => setShowDropdown(false)}
+                                                className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-primary transition-colors"
+                                            >
+                                                <span className="material-symbols-outlined text-[20px]">dashboard</span>
+                                                HR Dashboard
+                                            </Link>
+                                        ) : null}
                                         <Link
                                             href="/profile"
                                             onClick={() => setShowDropdown(false)}
@@ -292,15 +325,7 @@ export const Header = () => {
                             </span>
                         </button>
 
-                        {isLoggedIn && userProfile?.role === "hr" ? (
-                            <button
-                                onClick={() => router.push("/post-job")}
-                                className="h-9 px-3 rounded-full bg-primary text-white text-xs font-bold flex items-center gap-1 shadow-md"
-                            >
-                                <span className="material-symbols-outlined text-base">add</span>
-                                Đăng tin
-                            </button>
-                        ) : isLoggedIn ? (
+                        {isLoggedIn ? (
                             <Link href="/profile" className="flex items-center">
                                 <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold overflow-hidden border-2 border-white dark:border-slate-800 shadow-md">
                                     {getAvatarContent()}

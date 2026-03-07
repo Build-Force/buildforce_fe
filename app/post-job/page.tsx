@@ -35,6 +35,8 @@ export default function PostJobPage() {
     const [isMapLoading, setIsMapLoading] = useState(false);
     const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
     const [isMapModalOpen, setIsMapModalOpen] = useState(false);
+    const [submitError, setSubmitError] = useState<string | null>(null);
+    const [createdJobId, setCreatedJobId] = useState<string | null>(null);
     const [form, setForm] = useState({
         title: "",
         jobType: "full-time",
@@ -75,34 +77,50 @@ export default function PostJobPage() {
     }, []);
 
     const handleSubmit = async () => {
+        if (submitting) return;
         setErrorMsg(null);
         setSubmitting(true);
+        setSubmitError(null);
+
         try {
-            const payload = {
+            const salaryNumber = Number(form.salary || 0);
+            const amountVnd = form.salaryType === "month" ? salaryNumber * 1_000_000 : salaryNumber * 1_000;
+
+            const createRes = await api.post("/api/jobs", {
                 title: form.title,
                 description: form.description,
                 requirements: form.requirements,
-                jobType: form.jobType,
-                workers: Number(form.workers),
-                province: form.province,
-                address: form.address,
-                salary: Number(form.salary),
-                salaryType: form.salaryType,
-                startDate: form.startDate || undefined,
-                endDate: form.endDate || undefined,
-            };
-            const res = await api.post("/api/jobs", payload);
-            if (res.data?.success) {
-                setSubmitted(true);
-            }
+                skills: selectedSkills,
+                location: {
+                    province: form.province,
+                    city: form.province,
+                    address: form.address,
+                },
+                salary: {
+                    amount: amountVnd,
+                    unit: form.salaryType,
+                    currency: "VND",
+                },
+                workersNeeded: Number(form.workers),
+                startDate: form.startDate ? new Date(form.startDate).toISOString() : undefined,
+                endDate: form.endDate ? new Date(form.endDate).toISOString() : undefined,
+            });
+
+            const jobId = createRes.data?.data?._id;
+            setCreatedJobId(jobId);
+
+            await api.post(`/api/jobs/${jobId}/submit`);
+
+            setSubmitted(true);
         } catch (err: any) {
-            const code = err.response?.data?.code;
-            const msg = err.response?.data?.message;
-            if (code === "PACKAGE_QUOTA_EXCEEDED") {
-                setErrorMsg(msg || "Gói hiện tại đã hết lượt đăng tin. Vui lòng nâng cấp gói.");
-            } else {
-                setErrorMsg(msg || "Không thể đăng tin. Vui lòng thử lại.");
-            }
+            const status = err?.response?.status;
+            const msg =
+                err?.response?.data?.message ||
+                (status === 403
+                    ? "Gói đăng tin chưa được kích hoạt. Vui lòng mua/kích hoạt gói để gửi duyệt."
+                    : "Đăng tin thất bại. Vui lòng thử lại.");
+            setErrorMsg(msg);
+            setSubmitError(msg);
         } finally {
             setSubmitting(false);
         }

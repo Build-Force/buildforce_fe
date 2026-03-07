@@ -1,20 +1,23 @@
 "use client";
 
 import React, { Suspense, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import api from "../../../utils/api";
 
 function VerifyEmailContent() {
     const router = useRouter();
-    const searchParams = useSearchParams();
-    const token = searchParams.get("token");
 
     const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
     const [message, setMessage] = useState("Verifying your email...");
 
     useEffect(() => {
-        if (!token) {
+        const urlToken =
+            typeof window !== "undefined"
+                ? new URL(window.location.href).searchParams.get("token")
+                : null;
+
+        if (!urlToken) {
             setStatus("error");
             setMessage("No verification token found.");
             return;
@@ -22,7 +25,7 @@ function VerifyEmailContent() {
 
         const verifyEmail = async () => {
             try {
-                const response = await api.post('/api/auth/verify-link-email', { token });
+                const response = await api.post('/api/auth/verify-link-email', { token: urlToken });
                 if (response.data.success) {
                     setStatus("success");
                     setMessage("Email verified successfully! You can now sign in.");
@@ -37,7 +40,7 @@ function VerifyEmailContent() {
         };
 
         verifyEmail();
-    }, [token]);
+    }, []);
 
     return (
         <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-900 py-12 px-4 sm:px-6 lg:px-8">

@@ -177,6 +177,11 @@ export default function CheckoutPage() {
         };
     }, [paymentSession, status]);
 
+    useEffect(() => {
+        if (status !== "success" || typeof window === "undefined") return;
+        window.dispatchEvent(new Event("packageUpdated"));
+    }, [status]);
+
     const renderCountdown = () => {
         if (remainingMs === null || remainingMs <= 0 || status !== "pending") return null;
         const totalSeconds = Math.floor(remainingMs / 1000);
