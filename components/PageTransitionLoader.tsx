@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 
 interface Brick {
@@ -181,7 +181,7 @@ export function PageTransitionLoader() {
   const routeKey = `${pathname}?${searchParams.toString()}#${hash}`;
   const skipLoader = shouldSkipLoader(pathname);
 
-  const startLoading = () => {
+  const startLoading = useCallback(() => {
     if (skipLoader) {
       setLoading(false);
       return;
@@ -193,7 +193,7 @@ export function PageTransitionLoader() {
     hideTimerRef.current = setTimeout(() => {
       setLoading(false);
     }, LOADER_VISIBLE_TIME);
-  };
+  }, [skipLoader]);
 
   useEffect(() => {
     setHash(window.location.hash || '');
@@ -221,7 +221,7 @@ export function PageTransitionLoader() {
       setPrevRouteKey(routeKey);
       startLoading();
     }
-  }, [routeKey, prevRouteKey]);
+  }, [routeKey, prevRouteKey, startLoading]);
 
   useEffect(() => {
     return () => {

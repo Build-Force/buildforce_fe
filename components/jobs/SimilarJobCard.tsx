@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
 
 interface SimilarJobCardProps {
@@ -34,10 +35,12 @@ export const SimilarJobCard: React.FC<SimilarJobCardProps> = ({ job, index = 0 }
             <Link href={`/jobs/${job.id}`} className="absolute inset-0 z-0" aria-label={`View details for ${job.title}`} />
 
             <div className="relative h-48 overflow-hidden z-10">
-                <img
+                <Image
                     alt={job.title}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    className="object-cover group-hover:scale-110 transition-transform duration-500"
                     src={job.image}
+                    fill
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 />
                 <div className="absolute top-4 left-4">
                     {job.urgent ? (

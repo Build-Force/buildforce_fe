@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import api from "@/utils/api";
 import { SimilarJobCard } from "@/components/jobs/SimilarJobCard";
@@ -264,7 +265,9 @@ export const JobDetailClient: React.FC<JobDetailClientProps> = ({ jobId }) => {
               <div className="flex items-center gap-5 mb-6">
                 <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center overflow-hidden">
                   {hr?.avatar ? (
-                    <img src={hr.avatar} alt="" className="w-full h-full object-cover" />
+                    <div className="relative w-full h-full">
+                      <Image src={hr.avatar} alt="" fill className="object-cover" />
+                    </div>
                   ) : (
                     <span className="material-symbols-outlined text-primary text-3xl">domain</span>
                   )}
@@ -276,10 +279,12 @@ export const JobDetailClient: React.FC<JobDetailClientProps> = ({ jobId }) => {
               </div>
 
               <div className="rounded-3xl overflow-hidden h-48 mb-8 border border-slate-200 dark:border-slate-700 relative">
-                <img
+                <Image
                   src="https://images.unsplash.com/photo-1526772662000-3f88f10c053e?q=80&w=2000&auto=format&fit=crop"
                   alt="Map Preview"
-                  className="w-full h-full object-cover grayscale opacity-50"
+                  fill
+                  className="object-cover grayscale opacity-50"
+                  sizes="(max-width: 768px) 100vw, 400px"
                 />
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="bg-white/90 backdrop-blur-md px-6 py-3 rounded-full shadow-lg flex items-center gap-2 border border-slate-200">

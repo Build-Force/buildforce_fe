@@ -1,3 +1,4 @@
+import React from "react";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
@@ -24,7 +25,9 @@ export default function RootLayout({
   return (
     <html lang="vi" className="light">
       <body className={`${inter.variable} ${inter.className}`}>
-        <PageTransitionLoader />
+        <React.Suspense fallback={null}>
+          <PageTransitionLoader />
+        </React.Suspense>
         <RootFrame>{children}</RootFrame>
         <ChatWidgetWrapper />
       </body>
