@@ -11,8 +11,13 @@ type RootFrameProps = {
 export function RootFrame({ children }: RootFrameProps) {
   const pathname = usePathname();
   const isAdminRoute = pathname?.startsWith("/admin");
+  const isAuthRoute =
+    pathname === "/signin" ||
+    pathname === "/signup" ||
+    pathname === "/forgot-password" ||
+    pathname?.startsWith("/auth/");
 
-  if (isAdminRoute) {
+  if (isAdminRoute || isAuthRoute) {
     return <>{children}</>;
   }
 

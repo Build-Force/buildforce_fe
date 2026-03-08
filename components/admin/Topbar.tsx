@@ -1,12 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Locale } from "@/components/admin/types";
 import api from "@/utils/api";
-
-type TopbarProps = {
-  locale: Locale;
-};
 
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: "Quản trị viên cấp cao",
@@ -14,7 +9,7 @@ const ROLE_LABELS: Record<string, string> = {
   USER: "Người dùng",
 };
 
-export function Topbar({ locale }: TopbarProps) {
+export function Topbar() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [userProfile, setUserProfile] = useState<{
     firstName?: string;
@@ -30,6 +25,7 @@ export function Topbar({ locale }: TopbarProps) {
       setUserProfile(null);
       return;
     }
+
     try {
       const res = await api.get("/api/auth/profile");
       if (res.data?.success && res.data?.data) {
@@ -41,9 +37,22 @@ export function Topbar({ locale }: TopbarProps) {
   }, []);
 
   useEffect(() => {
-    if (document.documentElement.classList.contains("dark")) {
+    const root = document.documentElement;
+    const savedTheme = localStorage.getItem("theme");
+
+    if (savedTheme === "dark") {
+      root.classList.add("dark");
       setIsDarkMode(true);
+      return;
     }
+
+    if (savedTheme === "light") {
+      root.classList.remove("dark");
+      setIsDarkMode(false);
+      return;
+    }
+
+    setIsDarkMode(root.classList.contains("dark"));
   }, []);
 
   useEffect(() => {
@@ -53,7 +62,9 @@ export function Topbar({ locale }: TopbarProps) {
   const toggleDarkMode = () => {
     const root = document.documentElement;
     root.classList.toggle("dark");
-    setIsDarkMode(root.classList.contains("dark"));
+    const nextIsDark = root.classList.contains("dark");
+    localStorage.setItem("theme", nextIsDark ? "dark" : "light");
+    setIsDarkMode(nextIsDark);
   };
 
   return (
@@ -73,27 +84,6 @@ export function Topbar({ locale }: TopbarProps) {
       </div>
 
       <div className="ml-8 hidden items-center gap-4 md:flex">
-        <div className="flex items-center rounded-xl bg-slate-100 p-1 dark:bg-slate-800" suppressHydrationWarning>
-          <button
-            type="button"
-            className={`rounded-lg px-3 py-1.5 text-xs font-bold ${
-              locale === "en" ? "bg-white shadow-sm dark:bg-slate-700" : "text-slate-500"
-            }`}
-            suppressHydrationWarning
-          >
-            EN
-          </button>
-          <button
-            type="button"
-            className={`rounded-lg px-3 py-1.5 text-xs font-bold ${
-              locale === "vi" ? "bg-white shadow-sm dark:bg-slate-700" : "text-slate-500"
-            }`}
-            suppressHydrationWarning
-          >
-            VI
-          </button>
-        </div>
-
         <button
           type="button"
           onClick={toggleDarkMode}
@@ -105,7 +95,11 @@ export function Topbar({ locale }: TopbarProps) {
           <span className="material-symbols-outlined">{isDarkMode ? "light_mode" : "dark_mode"}</span>
         </button>
 
-        <button type="button" className="relative flex h-10 w-10 items-center justify-center rounded-xl text-slate-600 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800" suppressHydrationWarning>
+        <button
+          type="button"
+          className="relative flex h-10 w-10 items-center justify-center rounded-xl text-slate-600 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+          suppressHydrationWarning
+        >
           <span className="material-symbols-outlined">notifications</span>
           <span className="absolute right-2 top-2 h-2 w-2 rounded-full border-2 border-white bg-red-500 dark:border-slate-900" />
         </button>
@@ -126,11 +120,7 @@ export function Topbar({ locale }: TopbarProps) {
 
           <div className="h-10 w-10 overflow-hidden rounded-full border-2 border-transparent bg-primary/20 transition-all group-hover:border-primary">
             {userProfile?.avatar ? (
-              <img
-                src={userProfile.avatar}
-                alt="Ảnh đại diện"
-                className="h-full w-full object-cover"
-              />
+              <img src={userProfile.avatar} alt="Ảnh đại diện" className="h-full w-full object-cover" />
             ) : (
               <span className="flex h-full w-full items-center justify-center bg-primary/20 text-primary">
                 <span className="material-symbols-outlined text-2xl">person</span>

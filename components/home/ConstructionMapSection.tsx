@@ -2,13 +2,7 @@
 
 import React, { useMemo, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import Map, {
-  Marker,
-  Popup,
-  NavigationControl,
-  FullscreenControl,
-  MapRef,
-} from "react-map-gl/mapbox";
+import Map, { Marker, Popup, NavigationControl, MapRef } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN as string | undefined;

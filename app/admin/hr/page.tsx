@@ -56,13 +56,13 @@ export default function HRManagementPage() {
     setIsLoading(true);
     setErrorMessage(null);
     try {
-      const params: Record<string, string> = {};
-      if (search) params.search = search;
-      if (statusFilter !== "ALL" && statusFilter !== "BLACKLISTED") params.status = statusFilter;
-      if (statusFilter === "BLACKLISTED") params.blacklisted = "true";
+    const params: Record<string, string> = {};
+    if (search) params.search = search;
+    if (statusFilter !== "ALL" && statusFilter !== "BLACKLISTED") params.status = statusFilter;
+    if (statusFilter === "BLACKLISTED") params.blacklisted = "true";
 
-      const res = await adminApi.getHrList(params);
-      const items = res.data?.data?.data || [];
+    const res = await adminApi.getHrList(params);
+    const items = res.data?.data?.data || [];
 
       setRows(
         items.map((item: any) => {
@@ -158,9 +158,9 @@ export default function HRManagementPage() {
       if (pendingAction.type === "blacklist") await adminApi.updateHrBlacklist(pendingAction.hr.id, true, "Vi phạm chính sách nền tảng");
       if (pendingAction.type === "reactivate") await adminApi.updateHrBlacklist(pendingAction.hr.id, false, "Khôi phục hoạt động");
 
-      setPendingAction(null);
+    setPendingAction(null);
       setToast({ type: "success", message: "Cập nhật trạng thái HR thành công." });
-      await loadHr();
+    await loadHr();
     } catch (error) {
       setToast({ type: "error", message: getErrorMessage(error) });
     } finally {
@@ -183,7 +183,7 @@ export default function HRManagementPage() {
       {toast ? <AdminToast type={toast.type} message={toast.message} /> : null}
 
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <Topbar locale="vi" />
+        <Topbar />
         <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
           {errorMessage ? <AdminErrorBanner message={errorMessage} className="mb-6" /> : null}
 
@@ -204,7 +204,7 @@ export default function HRManagementPage() {
           {isLoading ? (
             <AdminLoadingState message="Đang tải danh sách HR..." />
           ) : (
-            <HRManagementTable data={rows} onViewDetails={setSelectedProfile} onApprove={(hr) => setPendingAction({ type: "approve", hr })} onReject={(hr) => setPendingAction({ type: "reject", hr })} onBlacklist={(hr) => setPendingAction({ type: "blacklist", hr })} onReactivate={(hr) => setPendingAction({ type: "reactivate", hr })} />
+          <HRManagementTable data={rows} onViewDetails={setSelectedProfile} onApprove={(hr) => setPendingAction({ type: "approve", hr })} onReject={(hr) => setPendingAction({ type: "reject", hr })} onBlacklist={(hr) => setPendingAction({ type: "blacklist", hr })} onReactivate={(hr) => setPendingAction({ type: "reactivate", hr })} />
           )}
         </div>
       </main>
