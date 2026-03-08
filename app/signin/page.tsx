@@ -45,7 +45,6 @@ export default function AuthPage() {
 
     const [showVerifyDialog, setShowVerifyDialog] = useState(false);
     const [registeredEmail, setRegisteredEmail] = useState("");
-    const [devVerifyUrl, setDevVerifyUrl] = useState("");
 
     // Form inputs state
     const [identifier, setIdentifier] = useState("");
@@ -199,9 +198,7 @@ export default function AuthPage() {
             });
 
             if (response.data.success) {
-                const targetEmail = email;
-                setRegisteredEmail(targetEmail);
-                setDevVerifyUrl(response.data.devVerifyUrl || "");
+                setRegisteredEmail(email);
                 setShowVerifyDialog(true);
             }
         } catch (error: any) {
@@ -411,14 +408,17 @@ export default function AuthPage() {
                                         <span className="flex-shrink mx-4 text-slate-400 font-bold text-sm uppercase tracking-widest whitespace-nowrap">HOẶC TIẾP TỤC VỚI</span>
                                         <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <button className="flex items-center justify-center gap-3 border-2 border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 py-4 rounded-2xl transition-all">
+                                    <div className="flex justify-center">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+                                                window.location.href = `${apiBase}/api/auth/google`;
+                                            }}
+                                            className="flex items-center justify-center gap-3 border-2 border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 py-4 px-8 rounded-2xl transition-all w-full max-w-xs"
+                                        >
                                             <img alt="Google" className="w-6 h-6" src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" />
-                                            <span className="font-bold text-slate-700 dark:text-slate-300">Google</span>
-                                        </button>
-                                        <button className="flex items-center justify-center gap-3 border-2 border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 py-4 rounded-2xl transition-all">
-                                            <svg className="w-6 h-6 text-[#1877F2]" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"></path></svg>
-                                            <span className="font-bold text-slate-700 dark:text-slate-300">Facebook</span>
+                                            <span className="font-bold text-slate-700 dark:text-slate-300">Continue with Google</span>
                                         </button>
                                     </div>
                                 </div>
@@ -590,19 +590,6 @@ export default function AuthPage() {
                             </span>
                             Đang chờ xác minh...
                         </div>
-
-                        {devVerifyUrl && (
-                            <div className="mb-8 p-3 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 rounded-xl text-center">
-                                <p className="text-xs font-bold text-red-600 dark:text-red-400 mb-2 uppercase tracking-wider">🚧 Chế độ thử nghiệm 🚧</p>
-                                <a
-                                    href={devVerifyUrl}
-                                    target="_blank"
-                                    className="text-sm text-sky-600 dark:text-sky-400 hover:underline font-medium break-all block"
-                                >
-                                    Nhấp vào đây để mô phỏng xác minh email
-                                </a>
-                            </div>
-                        )}
 
                         <button
                             onClick={() => setShowVerifyDialog(false)}
