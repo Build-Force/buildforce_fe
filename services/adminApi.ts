@@ -27,7 +27,7 @@ export const adminApi = {
   updateHrBlacklist: (id: string, isBlacklisted: boolean, reason?: string) =>
     api.patch(`/api/admin/hr/${id}/blacklist`, { isBlacklisted, reason }, { headers: getAuthHeaders() }),
 
-  getJobs: (params?: Record<string, string | number> | Record<string, never>) =>
+  getJobs: (params?: Record<string, string | number>) =>
     api.get("/api/admin/jobs", { params, headers: getAuthHeaders() }),
 
   approveJob: (id: string) => api.patch(`/api/admin/jobs/${id}/approve`, {}, { headers: getAuthHeaders() }),
