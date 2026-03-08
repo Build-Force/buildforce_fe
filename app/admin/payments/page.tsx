@@ -57,15 +57,14 @@ export default function AdminPaymentsPage() {
       const items = res.data?.data?.data || [];
       setRecords(
         items.map((item: any) => ({
-          id: item.id,
-          hrCompany: item.hrCompany,
-          amount: item.amount,
-          method: item.method,
-          createdAt: item.createdAt,
-          status: item.status,
+          id: item._id ?? item.id,
+          hrCompany: item.hrCompany ?? "—",
+          amount: item.amount ?? 0,
+          method: item.method ?? "BANK_TRANSFER",
+          createdAt: item.createdAt ?? "",
+          status: item.status ?? "processing",
         })),
       );
-      setToast({ type: "success", message: "Đã tải dữ liệu thanh toán." });
     } catch (error) {
       setRecords([]);
       setErrorMessage("Không thể tải danh sách thanh toán.");
@@ -99,6 +98,7 @@ export default function AdminPaymentsPage() {
         iconTextClass: "text-emerald-600",
         trend: "Theo dữ liệu API",
         trendTone: "positive",
+        accentColor: "#10b981",
       },
       {
         title: "Đang xử lý",
@@ -108,6 +108,7 @@ export default function AdminPaymentsPage() {
         iconTextClass: "text-amber-600",
         trend: "Theo dõi",
         trendTone: "neutral",
+        accentColor: "#f59e0b",
       },
       {
         title: "Giao dịch lỗi",
@@ -117,6 +118,7 @@ export default function AdminPaymentsPage() {
         iconTextClass: "text-red-600",
         trend: "Cần xử lý",
         trendTone: "negative",
+        accentColor: "#ef4444",
       },
     ];
   }, [records]);

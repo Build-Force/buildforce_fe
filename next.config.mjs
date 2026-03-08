@@ -3,6 +3,7 @@ const isStaticExport = process.env.NEXT_STATIC_EXPORT === "true";
 
 const nextConfig = {
   ...(isStaticExport ? { output: "export" } : {}),
+  transpilePackages: ["recharts"],
 
   async redirects() {
     return [{ source: "/favicon.ico", destination: "/next.svg", permanent: false }];

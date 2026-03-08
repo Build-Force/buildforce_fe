@@ -13,13 +13,15 @@ interface JobCardProps {
         location: string;
         compensation: string;
         postedAt: string;
-        urgent?: boolean;
-        verified?: boolean;
         image?: string;
         /** Nhiều ảnh: hiển thị carousel; 1 ảnh: hiển thị 1 ảnh */
         images?: string[];
         applicants?: number;
+        verified?: boolean;
         onTimePayment?: boolean;
+        /** Auto Match score 0–100 (Buildforce rule-based match) */
+        matchScore?: number;
+        urgent?: boolean;
         skills?: string[];
         workersNeeded?: number;
     };
@@ -126,6 +128,16 @@ export const JobCard: React.FC<JobCardProps> = ({ job, index = 0, variant = "exp
                 <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
                     <div>
                         <div className="flex items-center gap-3 mb-3 flex-wrap">
+                            {typeof job.matchScore === "number" && (
+                                <span className={`px-4 py-1.5 rounded-full border text-sm font-black flex items-center gap-1 ${
+                                    job.matchScore >= 85 ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800" :
+                                    job.matchScore >= 65 ? "bg-primary/10 text-primary border-primary/20" :
+                                    "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800"
+                                }`}>
+                                    <span className="material-symbols-outlined text-base">psychology</span>
+                                    {job.matchScore}% phù hợp
+                                </span>
+                            )}
                             {job.verified && (
                                 <span className="px-4 py-1.5 bg-green-50 dark:bg-green-900/30 text-secondary text-sm font-black rounded-full border border-green-100 dark:border-green-800 flex items-center gap-1">
                                     <span className="material-symbols-outlined text-base">verified</span> Nhà thầu đã xác minh
