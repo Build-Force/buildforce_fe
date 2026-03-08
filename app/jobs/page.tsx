@@ -41,20 +41,33 @@ export default function JobsPage() {
     const [salaryTrMin, setSalaryTrMin] = useState(0);
     const [salaryTrMax, setSalaryTrMax] = useState(200);
     const [sortBy, setSortBy] = useState<SortValue>("newest");
+    /** Bật "Chỉ xem việc phù hợp" — gọi API matched (cần đăng nhập tài khoản lao động). */
+    const [matchModeOnly, setMatchModeOnly] = useState(false);
 
     useEffect(() => {
         const load = async () => {
+            setLoading(true);
             try {
-                const res = await api.get("/api/jobs");
-                if (res.data.success) setJobs(res.data.data);
-            } catch (err) {
-                console.error("Failed to load jobs", err);
+                if (matchModeOnly) {
+                    const res = await api.get("/api/jobs/matched");
+                    if (res.data.success) setJobs(res.data.data || []);
+                    else setJobs([]);
+                } else {
+                    const res = await api.get("/api/jobs");
+                    if (res.data.success) setJobs(res.data.data || []);
+                }
+            } catch (err: any) {
+                if (matchModeOnly && (err?.response?.status === 401 || err?.response?.status === 403)) {
+                    setJobs([]);
+                } else {
+                    console.error("Failed to load jobs", err);
+                }
             } finally {
                 setLoading(false);
             }
         };
         load();
-    }, []);
+    }, [matchModeOnly]);
 
     const mappedJobs = useMemo(() => {
         const formatSalary = (salary: any) => {
@@ -83,6 +96,7 @@ export default function JobsPage() {
                 images: Array.isArray(j.images) ? j.images : [],
                 createdAt: j.createdAt ? new Date(j.createdAt).getTime() : 0,
                 monthlySalaryVnd: monthlyVnd ?? 0,
+                matchScore: typeof j.matchScore === "number" ? j.matchScore : undefined,
             };
         });
     }, [jobs]);
@@ -143,7 +157,7 @@ export default function JobsPage() {
         <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-sans antialiased transition-colors duration-300">
             <main className="max-w-[1600px] mx-auto px-8 pt-12 pb-24">
                 <div className="flex flex-col lg:flex-row gap-16">
-                    {/* Filters Sidebar */}
+                    {/* Filters Sidebar - scrollable */}
                     <aside className="w-full lg:w-[400px] shrink-0">
                         <div className="bg-white dark:bg-slate-900 p-10 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 sticky top-32">
                             <div className="flex items-center justify-between mb-12">
@@ -155,6 +169,24 @@ export default function JobsPage() {
                                 >
                                     Xóa tất cả
                                 </button>
+                            </div>
+
+                            {/* Auto Match toggle — chỉ việc phù hợp với hồ sơ (đăng nhập USER) */}
+                            <div className="mb-8">
+                                <label className="flex items-center gap-3 cursor-pointer group">
+                                    <input
+                                        type="checkbox"
+                                        checked={matchModeOnly}
+                                        onChange={(e) => setMatchModeOnly(e.target.checked)}
+                                        className="w-5 h-5 rounded border-2 border-slate-300 text-primary focus:ring-primary"
+                                    />
+                                    <span className="text-sm font-bold text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors">
+                                        Chỉ xem việc phù hợp với tôi
+                                    </span>
+                                </label>
+                                <p className="text-xs text-slate-500 mt-1.5 ml-8">
+                                    Cần đăng nhập tài khoản lao động. Khớp theo khu vực, nghề, thời gian, kinh nghiệm.
+                                </p>
                             </div>
 
                             <div className="filter-section">
@@ -272,10 +304,17 @@ export default function JobsPage() {
                             ) : filteredAndSortedJobs.length === 0 ? (
                                 <div className="bg-white dark:bg-slate-900 p-10 rounded-3xl border border-slate-200 dark:border-slate-800 text-center">
                                     <p className="text-slate-500 font-bold">
-                                        {mappedJobs.length === 0
+                                        {matchModeOnly && mappedJobs.length === 0
+                                            ? "Đăng nhập bằng tài khoản lao động và hoàn thành khảo sát để xem việc phù hợp với bạn."
+                                            : mappedJobs.length === 0
                                             ? "Chưa có công việc nào được duyệt."
                                             : "Không có công việc nào khớp với bộ lọc. Thử bỏ bớt điều kiện."}
                                     </p>
+                                    {matchModeOnly && mappedJobs.length === 0 && (
+                                        <a href="/auth/login" className="inline-block mt-4 px-6 py-3 rounded-xl bg-primary text-white font-bold text-sm hover:bg-primary/90">
+                                            Đăng nhập
+                                        </a>
+                                    )}
                                 </div>
                             ) : (
                                 filteredAndSortedJobs.map((job, idx) => (

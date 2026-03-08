@@ -18,7 +18,11 @@ export function Sidebar({ navItems }: SidebarProps) {
 
   return (
     <aside className="hidden w-64 shrink-0 border-r border-slate-200 bg-white lg:flex lg:flex-col dark:border-slate-800 dark:bg-slate-900">
-      <Link href="/" className="flex items-center gap-3 p-6 transition-opacity hover:opacity-90">
+      <Link
+        href="/"
+        className="flex items-center gap-3 p-6 transition-opacity hover:opacity-90"
+        aria-label="Về trang chủ Buildforce"
+      >
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-white">
           <span className="material-symbols-outlined">construction</span>
         </div>

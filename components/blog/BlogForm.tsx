@@ -311,12 +311,24 @@ export const BlogForm: React.FC<BlogFormProps> = ({
                         </label>
                         <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-600">
                             <Editor
-                                apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY}
+                                tinymceScriptSrc={
+                                    process.env.NEXT_PUBLIC_TINYMCE_API_KEY
+                                        ? undefined
+                                        : "https://cdn.jsdelivr.net/npm/tinymce@6/tinymce.min.js"
+                                }
+                                apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY || undefined}
+                                licenseKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY ? undefined : "gpl"}
                                 onInit={(_evt, editor) => {
                                     editorRef.current = editor;
                                 }}
                                 initialValue={content}
                                 init={{
+                                    ...(process.env.NEXT_PUBLIC_TINYMCE_API_KEY
+                                        ? {}
+                                        : {
+                                            base_url: "https://cdn.jsdelivr.net/npm/tinymce@6/",
+                                            suffix: ".min",
+                                          }),
                                     height: 500,
                                     menubar: true,
                                     plugins: [

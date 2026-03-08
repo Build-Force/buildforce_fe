@@ -133,6 +133,13 @@ const mapStatus = (status: string): JobModerationStatus => {
   return "matched";
 };
 
+function formatSalary(salary: { amount?: number; unit?: string } | undefined): string {
+  if (!salary?.amount) return "—";
+  const n = new Intl.NumberFormat("vi-VN").format(salary.amount);
+  const u = salary.unit === "day" ? "ngày" : salary.unit === "month" ? "tháng" : salary.unit === "hour" ? "giờ" : salary.unit || "";
+  return `${n} VND/${u}`;
+}
+
 export default function AdminJobsPage() {
   const [rows, setRows] = useState<AdminJob[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -160,18 +167,14 @@ export default function AdminJobsPage() {
       setRows(
         items.map((j: any) => {
           const hr = j.hrId;
-          const company = hr?.companyName || (hr?.firstName && hr?.lastName ? `${hr.firstName} ${hr.lastName}`.trim() : "--");
-          const salary = j.salary;
-          const salaryStr = salary?.amount != null
-            ? `${Number(salary.amount) >= 1_000_000 ? `${Math.round(Number(salary.amount) / 1_000_000)}tr` : `${Math.round(Number(salary.amount) / 1_000)}k`}/${salary.unit === "day" ? "ngày" : salary.unit === "month" ? "tháng" : salary.unit || ""}`
-            : "Thỏa thuận";
+          const company = hr?.companyName || (hr?.firstName && hr?.lastName ? `${hr.firstName} ${hr.lastName}`.trim() : "—");
           return {
             id: j._id,
             title: j.title,
             company,
-            region: j.location?.province || j.region || "--",
+            region: j.location?.province || j.location?.city || j.region || "—",
             vacancies: j.workersNeeded ?? j.quantity ?? 0,
-            salaryRange: salaryStr,
+            salaryRange: formatSalary(j.salary),
             postedAt: j.createdAt,
             status: mapStatus(j.status),
           };
@@ -200,9 +203,9 @@ export default function AdminJobsPage() {
     const pending = rows.filter((r) => r.status === "pending").length;
     const active = rows.filter((r) => r.status === "active").length;
     return [
-      { title: "Tin chờ duyệt", value: String(pending), icon: "pending_actions", iconBgClass: "bg-amber-100 dark:bg-amber-900/30", iconTextClass: "text-amber-600", trend: "Cần xử lý", trendTone: "neutral" },
-      { title: "Tin đang hoạt động", value: String(active), icon: "work_history", iconBgClass: "bg-emerald-100 dark:bg-emerald-900/30", iconTextClass: "text-emerald-600", trend: "Ổn định", trendTone: "positive" },
-      { title: "Tổng vị trí tuyển", value: String(rows.reduce((sum, item) => sum + item.vacancies, 0)), icon: "groups", iconBgClass: "bg-primary/10 dark:bg-primary/20", iconTextClass: "text-primary", trend: "--", trendTone: "neutral" },
+      { title: "Tin chờ duyệt", value: String(pending), icon: "pending_actions", iconBgClass: "bg-amber-100 dark:bg-amber-900/30", iconTextClass: "text-amber-600", trend: "Cần xử lý", trendTone: "neutral", accentColor: "#f59e0b" },
+      { title: "Tin đang hoạt động", value: String(active), icon: "work_history", iconBgClass: "bg-emerald-100 dark:bg-emerald-900/30", iconTextClass: "text-emerald-600", trend: "Ổn định", trendTone: "positive", accentColor: "#10b981" },
+      { title: "Tổng vị trí tuyển", value: String(rows.reduce((sum, item) => sum + item.vacancies, 0)), icon: "groups", iconBgClass: "bg-primary/10 dark:bg-primary/20", iconTextClass: "text-primary", trend: "--", trendTone: "neutral", accentColor: "#3b82f6" },
     ];
   }, [rows]);
 
