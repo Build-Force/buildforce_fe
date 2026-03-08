@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "@/utils/api";
 import Map, {
@@ -22,11 +23,15 @@ type WardOption = { name: string; code: number };
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN as string | undefined;
 
 export default function PostJobPage() {
+    const searchParams = useSearchParams();
+    const editJobId = searchParams.get("edit") || null;
+
     const [step, setStep] = useState(1);
     const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
     const [submitted, setSubmitted] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
+    const [loadingEdit, setLoadingEdit] = useState(!!editJobId);
     const [quotaInfo, setQuotaInfo] = useState<{
         packageName: string;
         jobPostLimit: number;
@@ -186,45 +191,105 @@ export default function PostJobPage() {
         fetchQuota();
     }, []);
 
+    // Load job for edit mode
+    useEffect(() => {
+        if (!editJobId || provinces.length === 0) {
+            if (editJobId && provinces.length === 0) return;
+            setLoadingEdit(false);
+            return;
+        }
+        let cancelled = false;
+        const load = async () => {
+            try {
+                const res = await api.get(`/api/jobs/${editJobId}`);
+                if (cancelled || !res.data?.success || !res.data?.data) {
+                    setLoadingEdit(false);
+                    return;
+                }
+                const j = res.data.data as any;
+                const loc = j.location || {};
+                const sal = j.salary || {};
+                // salary: backend amount in VND. day -> k, month -> millions
+                const salaryNum = sal.unit === "month" ? Math.round(Number(sal.amount) / 1_000_000) : Math.round(Number(sal.amount) / 1_000);
+                const salaryStr = String(salaryNum || "");
+                const provinceName = loc.province || "";
+                const prov = provinces.find((p) => p.name === provinceName) || provinces[0];
+                setForm({
+                    title: j.title || "",
+                    jobType: (j as any).jobType || "full-time",
+                    workers: String(j.workersNeeded ?? 5),
+                    province: provinceName || prov?.name || "",
+                    provinceCode: prov?.code ?? 0,
+                    district: loc.city || "",
+                    districtCode: 0,
+                    ward: "",
+                    address: loc.address || "",
+                    salary: salaryStr,
+                    salaryType: sal.unit === "month" ? "month" : "day",
+                    startDate: j.startDate ? new Date(j.startDate).toISOString().slice(0, 10) : "2026-06-12",
+                    endDate: j.endDate ? new Date(j.endDate).toISOString().slice(0, 10) : "",
+                    description: j.description || "",
+                    requirements: j.requirements || "",
+                    minExperienceYears: j.minExperienceYears ?? "",
+                    verificationRequired: Boolean(j.verificationRequired),
+                    images: Array.isArray(j.images) ? j.images : [],
+                });
+                setSelectedSkills(Array.isArray(j.skills) ? j.skills : []);
+                if (loc.lat != null && loc.lng != null) {
+                    setMapCenter({ lat: Number(loc.lat), lng: Number(loc.lng) });
+                }
+            } catch (err) {
+                if (!cancelled) setErrorMsg("Không tải được tin tuyển dụng. Bạn chỉ có thể chỉnh sửa tin nháp.");
+            } finally {
+                if (!cancelled) setLoadingEdit(false);
+            }
+        };
+        load();
+        return () => { cancelled = true; };
+    }, [editJobId, provinces]);
+
     const handleSubmit = async () => {
         if (submitting) return;
         setErrorMsg(null);
         setSubmitting(true);
         setSubmitError(null);
 
+        const payload = {
+            title: form.title,
+            description: form.description,
+            requirements: form.requirements,
+            skills: selectedSkills,
+            location: {
+                province: form.province,
+                city: form.district || form.province,
+                address: [form.address, form.ward].filter(Boolean).join(", ") || form.address,
+                ...(mapCenter && { lat: mapCenter.lat, lng: mapCenter.lng }),
+            },
+            salary: {
+                amount: form.salaryType === "month" ? Number(form.salary || 0) * 1_000_000 : Number(form.salary || 0) * 1_000,
+                unit: form.salaryType,
+                currency: "VND",
+            },
+            workersNeeded: Number(form.workers),
+            startDate: form.startDate ? new Date(form.startDate).toISOString() : undefined,
+            endDate: form.endDate ? new Date(form.endDate).toISOString() : undefined,
+            minExperienceYears: form.minExperienceYears !== "" ? Number(form.minExperienceYears) : undefined,
+            verificationRequired: Boolean(form.verificationRequired),
+            images: Array.isArray(form.images) ? form.images : [],
+        };
+
         try {
-            const salaryNumber = Number(form.salary || 0);
-            const amountVnd = form.salaryType === "month" ? salaryNumber * 1_000_000 : salaryNumber * 1_000;
+            if (editJobId) {
+                await api.put(`/api/jobs/${editJobId}`, payload);
+                setCreatedJobId(editJobId);
+                setSubmitted(true);
+                return;
+            }
 
-            const createRes = await api.post("/api/jobs", {
-                title: form.title,
-                description: form.description,
-                requirements: form.requirements,
-                skills: selectedSkills,
-                location: {
-                    province: form.province,
-                    city: form.district || form.province,
-                    address: [form.address, form.ward].filter(Boolean).join(", ") || form.address,
-                    ...(mapCenter && { lat: mapCenter.lat, lng: mapCenter.lng }),
-                },
-                salary: {
-                    amount: amountVnd,
-                    unit: form.salaryType,
-                    currency: "VND",
-                },
-                workersNeeded: Number(form.workers),
-                startDate: form.startDate ? new Date(form.startDate).toISOString() : undefined,
-                endDate: form.endDate ? new Date(form.endDate).toISOString() : undefined,
-                minExperienceYears: form.minExperienceYears !== "" ? Number(form.minExperienceYears) : undefined,
-                verificationRequired: Boolean(form.verificationRequired),
-                images: Array.isArray(form.images) ? form.images : [],
-            });
-
+            const createRes = await api.post("/api/jobs", payload);
             const jobId = createRes.data?.data?._id;
             setCreatedJobId(jobId);
-
             await api.post(`/api/jobs/${jobId}/submit`);
-
             setSubmitted(true);
         } catch (err: any) {
             const status = err?.response?.status;
@@ -291,7 +356,16 @@ export default function PostJobPage() {
         };
     }, [form.address, form.ward, form.district, form.province]);
 
+    if (loadingEdit) {
+        return (
+            <div className="min-h-screen bg-[#f0f4ff] dark:bg-[#040816] flex items-center justify-center">
+                <div className="animate-spin w-10 h-10 border-2 border-primary border-t-transparent rounded-full" />
+            </div>
+        );
+    }
+
     if (submitted) {
+        const isEdit = !!editJobId;
         return (
             <div className="min-h-screen bg-[#f0f4ff] dark:bg-[#040816] flex items-center justify-center px-6">
                 <motion.div
@@ -303,9 +377,9 @@ export default function PostJobPage() {
                     <div className="w-32 h-32 bg-emerald-500 rounded-[3rem] flex items-center justify-center mx-auto mb-10 shadow-2xl shadow-emerald-500/30">
                         <span className="material-symbols-outlined text-white text-7xl">check_circle</span>
                     </div>
-                    <h1 className="text-5xl font-black text-slate-900 dark:text-white mb-4 tracking-tight">Đăng tin thành công!</h1>
+                    <h1 className="text-5xl font-black text-slate-900 dark:text-white mb-4 tracking-tight">{isEdit ? "Đã cập nhật tin!" : "Đăng tin thành công!"}</h1>
                     <p className="text-xl text-slate-500 dark:text-slate-400 mb-4">
-                        Tin tuyển dụng <strong className="text-slate-900 dark:text-white">&quot;{form.title || 'Thợ xây nhà phố'}&quot;</strong> đã được đăng.
+                        Tin tuyển dụng <strong className="text-slate-900 dark:text-white">&quot;{form.title || "Tin của bạn"}&quot;</strong> {isEdit ? "đã được cập nhật." : "đã được đăng."}
                     </p>
                     <div className="bg-sky-50 dark:bg-sky-900/20 rounded-3xl p-6 mb-10 border border-sky-100 dark:border-sky-800/40">
                         <p className="text-sky-600 dark:text-sky-400 font-bold text-sm">
@@ -327,10 +401,10 @@ export default function PostJobPage() {
                             onClick={() => { setSubmitted(false); setStep(1); }}
                             className="flex-1 h-16 bg-primary text-white rounded-2xl font-black text-lg hover:bg-primary/90 transition-all shadow-lg shadow-primary/30"
                         >
-                            Đăng tin khác
+                            {editJobId ? "Chỉnh sửa tiếp" : "Đăng tin khác"}
                         </button>
                         <a href="/hr-dashboard" className="flex-1 h-16 border-2 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-2xl font-black text-lg flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
-                            Dashboard
+                            Về Dashboard
                         </a>
                     </div>
                 </motion.div>
@@ -354,7 +428,7 @@ export default function PostJobPage() {
                         </div>
                         <div>
                             <p className="text-xs font-black text-primary uppercase tracking-widest">BuildForce HR Portal</p>
-                            <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">Đăng Nhu Cầu Nhân Lực</h1>
+                            <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">{editJobId ? "Chỉnh sửa tin tuyển dụng" : "Đăng Nhu Cầu Nhân Lực"}</h1>
                         </div>
                     </div>
                     <p className="text-slate-500 dark:text-slate-400 text-lg ml-[72px]">
