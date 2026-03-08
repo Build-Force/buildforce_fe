@@ -55,35 +55,35 @@ export default function HRManagementPage() {
     setIsLoading(true);
     setErrorMessage(null);
     try {
-      const params: Record<string, string> = {};
-      if (search) params.search = search;
-      if (statusFilter !== "ALL" && statusFilter !== "BLACKLISTED") params.status = statusFilter;
-      if (statusFilter === "BLACKLISTED") params.blacklisted = "true";
+    const params: Record<string, string> = {};
+    if (search) params.search = search;
+    if (statusFilter !== "ALL" && statusFilter !== "BLACKLISTED") params.status = statusFilter;
+    if (statusFilter === "BLACKLISTED") params.blacklisted = "true";
 
-      const res = await adminApi.getHrList(params);
-      const items = res.data?.data?.data || [];
+    const res = await adminApi.getHrList(params);
+    const items = res.data?.data?.data || [];
 
-      setRows(
-        items.map((item: any) => ({
-          id: item._id,
-          companyName: item.companyName,
-          taxCode: item.taxCode,
-          region: item.address || "Việt Nam",
-          address: item.address || "--",
-          contactEmail: item.contactInfo || "--",
-          phone: "--",
-          verificationStatus: item.verificationStatus,
-          isBlacklisted: item.isBlacklisted,
-          completedProjects: item.totalJobsCompleted || 0,
-          workersHired: 0,
-          completionRate: 0,
-          avgRating: item.averageRating || 0,
-          reportCount: item.totalReports || 0,
-          popularPaymentMethod: "BANK_TRANSFER",
-          onTimePaymentRate: item.onTimePaymentRate || 0,
-          createdAt: item.createdAt,
-        })),
-      );
+    setRows(
+      items.map((item: any) => ({
+        id: item._id,
+        companyName: item.companyName,
+        taxCode: item.taxCode,
+        region: item.address || "Việt Nam",
+        address: item.address || "--",
+        contactEmail: item.contactInfo || "--",
+        phone: "--",
+        verificationStatus: item.verificationStatus,
+        isBlacklisted: item.isBlacklisted,
+        completedProjects: item.totalJobsCompleted || 0,
+        workersHired: 0,
+        completionRate: 0,
+        avgRating: item.averageRating || 0,
+        reportCount: item.totalReports || 0,
+        popularPaymentMethod: "BANK_TRANSFER",
+        onTimePaymentRate: item.onTimePaymentRate || 0,
+        createdAt: item.createdAt,
+      })),
+    );
     } catch (error) {
       setRows([]);
       setErrorMessage("Không thể tải danh sách HR.");
@@ -149,9 +149,9 @@ export default function HRManagementPage() {
       if (pendingAction.type === "blacklist") await adminApi.updateHrBlacklist(pendingAction.hr.id, true, "Vi phạm chính sách nền tảng");
       if (pendingAction.type === "reactivate") await adminApi.updateHrBlacklist(pendingAction.hr.id, false, "Khôi phục hoạt động");
 
-      setPendingAction(null);
+    setPendingAction(null);
       setToast({ type: "success", message: "Cập nhật trạng thái HR thành công." });
-      await loadHr();
+    await loadHr();
     } catch (error) {
       setToast({ type: "error", message: getErrorMessage(error) });
     } finally {
@@ -195,7 +195,7 @@ export default function HRManagementPage() {
           {isLoading ? (
             <AdminLoadingState message="Đang tải danh sách HR..." />
           ) : (
-            <HRManagementTable data={rows} onViewDetails={setSelectedProfile} onApprove={(hr) => setPendingAction({ type: "approve", hr })} onReject={(hr) => setPendingAction({ type: "reject", hr })} onBlacklist={(hr) => setPendingAction({ type: "blacklist", hr })} onReactivate={(hr) => setPendingAction({ type: "reactivate", hr })} />
+          <HRManagementTable data={rows} onViewDetails={setSelectedProfile} onApprove={(hr) => setPendingAction({ type: "approve", hr })} onReject={(hr) => setPendingAction({ type: "reject", hr })} onBlacklist={(hr) => setPendingAction({ type: "blacklist", hr })} onReactivate={(hr) => setPendingAction({ type: "reactivate", hr })} />
           )}
         </div>
       </main>

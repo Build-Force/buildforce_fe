@@ -178,20 +178,20 @@ export default function AdminPaymentsPage() {
                     </tr>
                   ) : (
                     records.map((record) => (
-                      <tr key={record.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                        <td className="px-4 py-4 text-sm font-semibold">{record.id}</td>
-                        <td className="px-4 py-4">{record.hrCompany}</td>
-                        <td className="px-4 py-4 text-sm">{currency.format(record.amount)}</td>
-                        <td className="px-4 py-4 text-sm">{record.method === "BANK_TRANSFER" ? "Chuyển khoản" : "Tiền mặt"}</td>
-                        <td className="px-4 py-4 text-sm text-slate-500">{new Date(record.createdAt).toLocaleDateString("vi-VN")}</td>
-                        <td className="px-4 py-4">
-                          <span
-                            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${paymentStatusBadge(record.status)}`}
-                          >
-                            {paymentStatusText(record.status)}
-                          </span>
-                        </td>
-                      </tr>
+                    <tr key={record.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                      <td className="px-4 py-4 text-sm font-semibold">{record.id}</td>
+                      <td className="px-4 py-4">{record.hrCompany}</td>
+                      <td className="px-4 py-4 text-sm">{currency.format(record.amount)}</td>
+                      <td className="px-4 py-4 text-sm">{record.method === "BANK_TRANSFER" ? "Chuyển khoản" : "Tiền mặt"}</td>
+                      <td className="px-4 py-4 text-sm text-slate-500">{new Date(record.createdAt).toLocaleDateString("vi-VN")}</td>
+                      <td className="px-4 py-4">
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${paymentStatusBadge(record.status)}`}
+                        >
+                          {paymentStatusText(record.status)}
+                        </span>
+                      </td>
+                    </tr>
                     ))
                   )}
                 </tbody>

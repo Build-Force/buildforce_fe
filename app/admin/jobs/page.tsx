@@ -60,20 +60,20 @@ export default function AdminJobsPage() {
     setIsLoading(true);
     setErrorMessage(null);
     try {
-      const res = await adminApi.getJobs();
-      const items = res.data?.data?.data || [];
-      setRows(
-        items.map((j: any) => ({
-          id: j._id,
-          title: j.title,
-          company: j.hrProfileId?.companyName || "--",
-          region: j.region,
-          vacancies: j.quantity,
-          salaryRange: j.salary,
-          postedAt: j.createdAt,
-          status: mapStatus(j.status),
-        })),
-      );
+    const res = await adminApi.getJobs();
+    const items = res.data?.data?.data || [];
+    setRows(
+      items.map((j: any) => ({
+        id: j._id,
+        title: j.title,
+        company: j.hrProfileId?.companyName || "--",
+        region: j.region,
+        vacancies: j.quantity,
+        salaryRange: j.salary,
+        postedAt: j.createdAt,
+        status: mapStatus(j.status),
+      })),
+    );
     } catch (error) {
       setRows([]);
       setErrorMessage("Không thể tải danh sách việc làm.");
@@ -106,9 +106,9 @@ export default function AdminJobsPage() {
   const approve = async (id: string) => {
     setIsUpdatingId(id);
     try {
-      await adminApi.approveJob(id);
+    await adminApi.approveJob(id);
       setToast({ type: "success", message: "Duyệt tin thành công." });
-      await loadJobs();
+    await loadJobs();
     } catch (error) {
       setToast({ type: "error", message: getErrorMessage(error) });
     } finally {
@@ -119,9 +119,9 @@ export default function AdminJobsPage() {
   const reject = async (id: string) => {
     setIsUpdatingId(id);
     try {
-      await adminApi.rejectJob(id, "Không đạt tiêu chí đăng tuyển");
+    await adminApi.rejectJob(id, "Không đạt tiêu chí đăng tuyển");
       setToast({ type: "success", message: "Từ chối tin thành công." });
-      await loadJobs();
+    await loadJobs();
     } catch (error) {
       setToast({ type: "error", message: getErrorMessage(error) });
     } finally {
@@ -153,11 +153,11 @@ export default function AdminJobsPage() {
                     </tr>
                   ) : (
                     rows.map((job) => (
-                      <tr key={job.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                        <td className="px-4 py-4 text-sm font-medium">{job.id}</td><td className="px-4 py-4 font-semibold">{job.title}</td><td className="px-4 py-4 text-sm">{job.company}</td><td className="px-4 py-4 text-sm">{job.region}</td><td className="px-4 py-4 text-sm">{job.salaryRange}</td><td className="px-4 py-4 text-sm">{job.vacancies}</td><td className="px-4 py-4 text-sm text-slate-500">{new Date(job.postedAt).toLocaleDateString("vi-VN")}</td>
-                        <td className="px-4 py-4"><StatusBadge status={job.status} /></td>
+                    <tr key={job.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                      <td className="px-4 py-4 text-sm font-medium">{job.id}</td><td className="px-4 py-4 font-semibold">{job.title}</td><td className="px-4 py-4 text-sm">{job.company}</td><td className="px-4 py-4 text-sm">{job.region}</td><td className="px-4 py-4 text-sm">{job.salaryRange}</td><td className="px-4 py-4 text-sm">{job.vacancies}</td><td className="px-4 py-4 text-sm text-slate-500">{new Date(job.postedAt).toLocaleDateString("vi-VN")}</td>
+                      <td className="px-4 py-4"><StatusBadge status={job.status} /></td>
                         <td className="px-4 py-4"><div className="flex gap-2"><button disabled={isUpdatingId === job.id} onClick={() => approve(job.id).catch(() => null)} className="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50">{isUpdatingId === job.id ? "Đang xử lý..." : "Duyệt"}</button><button disabled={isUpdatingId === job.id} onClick={() => reject(job.id).catch(() => null)} className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800">{isUpdatingId === job.id ? "Đang xử lý..." : "Từ chối"}</button></div></td>
-                      </tr>
+                    </tr>
                     ))
                   )}
                 </tbody>

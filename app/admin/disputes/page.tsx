@@ -207,28 +207,28 @@ export default function AdminDisputesPage() {
                     </tr>
                   ) : (
                     cases.map((item) => (
-                      <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                        <td className="px-4 py-4 text-sm font-semibold">{item.id}</td>
-                        <td className="px-4 py-4">{item.reporter}</td>
-                        <td className="px-4 py-4 text-sm">{item.target}</td>
-                        <td className="px-4 py-4 text-sm">{item.category}</td>
-                        <td className="px-4 py-4 text-sm text-slate-500">{new Date(item.createdAt).toLocaleDateString("vi-VN")}</td>
+                    <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                      <td className="px-4 py-4 text-sm font-semibold">{item.id}</td>
+                      <td className="px-4 py-4">{item.reporter}</td>
+                      <td className="px-4 py-4 text-sm">{item.target}</td>
+                      <td className="px-4 py-4 text-sm">{item.category}</td>
+                      <td className="px-4 py-4 text-sm text-slate-500">{new Date(item.createdAt).toLocaleDateString("vi-VN")}</td>
                         <td className={`px-4 py-4 text-sm font-semibold ${priorityClass(item.priority)}`}>{priorityLabel(item.priority)}</td>
-                        <td className="px-4 py-4">
-                          <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass(item.status)}`}>
-                            {statusLabel(item.status)}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4">
-                          <button
+                      <td className="px-4 py-4">
+                        <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass(item.status)}`}>
+                          {statusLabel(item.status)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <button
                             disabled={item.status === "RESOLVED" || isUpdatingId === item.id}
                             onClick={() => setResolved(item.id).catch(() => null)}
                             className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800"
-                          >
+                        >
                             {isUpdatingId === item.id ? "Đang xử lý..." : "Đánh dấu đã xử lý"}
-                          </button>
-                        </td>
-                      </tr>
+                        </button>
+                      </td>
+                    </tr>
                     ))
                   )}
                 </tbody>

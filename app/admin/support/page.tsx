@@ -150,16 +150,16 @@ export default function AdminSupportPage() {
                     </tr>
                   ) : (
                     tickets.map((ticket) => (
-                      <tr key={ticket.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                        <td className="px-4 py-4 text-sm font-semibold">{ticket.id}</td>
-                        <td className="px-4 py-4">{ticket.subject}</td>
-                        <td className="px-4 py-4 text-sm">{ticket.requester}</td>
+                    <tr key={ticket.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                      <td className="px-4 py-4 text-sm font-semibold">{ticket.id}</td>
+                      <td className="px-4 py-4">{ticket.subject}</td>
+                      <td className="px-4 py-4 text-sm">{ticket.requester}</td>
                         <td className="px-4 py-4 text-sm">{priorityLabel(ticket.priority)}</td>
-                        <td className="px-4 py-4">
-                          <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${badgeClass(ticket.status)}`}>
+                      <td className="px-4 py-4">
+                        <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${badgeClass(ticket.status)}`}>
                             {statusLabel(ticket.status)}
-                          </span>
-                        </td>
+                        </span>
+                      </td>
                         <td className="px-4 py-4">
                           <button
                             disabled={ticket.status === "CLOSED" || isUpdatingId === ticket.id}
@@ -169,7 +169,7 @@ export default function AdminSupportPage() {
                             {isUpdatingId === ticket.id ? "Đang xử lý..." : "Đóng ticket"}
                           </button>
                         </td>
-                      </tr>
+                    </tr>
                     ))
                   )}
                 </tbody>

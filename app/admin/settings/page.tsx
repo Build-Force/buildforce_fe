@@ -105,21 +105,21 @@ export default function AdminSettingsPage() {
               <AdminLoadingState message="Đang tải cài đặt hệ thống..." />
             </div>
           ) : (
-            <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
-              <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-                <h2 className="mb-4 text-base font-semibold">Vận hành nền tảng</h2>
-                <div className="space-y-4">
-                  <label className="flex items-center justify-between rounded-xl bg-slate-50 p-3 dark:bg-slate-800">
-                    <span className="text-sm">Bật chế độ bảo trì</span>
+          <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
+            <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+              <h2 className="mb-4 text-base font-semibold">Vận hành nền tảng</h2>
+              <div className="space-y-4">
+                <label className="flex items-center justify-between rounded-xl bg-slate-50 p-3 dark:bg-slate-800">
+                  <span className="text-sm">Bật chế độ bảo trì</span>
                     <input
                       type="checkbox"
                       checked={maintenance}
                       disabled={isSaving}
                       onChange={(e) => setMaintenance(e.target.checked)}
                     />
-                  </label>
-                  <label className="flex items-center justify-between rounded-xl bg-slate-50 p-3 dark:bg-slate-800">
-                    <span className="text-sm">Gửi email cảnh báo sự cố</span>
+                </label>
+                <label className="flex items-center justify-between rounded-xl bg-slate-50 p-3 dark:bg-slate-800">
+                  <span className="text-sm">Gửi email cảnh báo sự cố</span>
                     <input
                       type="checkbox"
                       checked={emailAlert}
@@ -137,26 +137,26 @@ export default function AdminSettingsPage() {
                       onChange={(e) => setAdminSessionHours(Math.max(1, Number(e.target.value || 1)))}
                       className="w-24 rounded-md border border-slate-300 px-2 py-1 text-right text-sm dark:border-slate-700 dark:bg-slate-900"
                     />
-                  </label>
-                </div>
-              </section>
+                </label>
+              </div>
+            </section>
 
-              <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-                <h2 className="mb-4 text-base font-semibold">Bảo mật</h2>
-                <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
+            <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+              <h2 className="mb-4 text-base font-semibold">Bảo mật</h2>
+              <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
                   <p>Phiên đăng nhập admin: {adminSessionHours} giờ</p>
-                  <p>Xác thực 2 lớp: Đã bật</p>
-                  <p>Đăng nhập bất thường tuần này: 2</p>
-                </div>
+                <p>Xác thực 2 lớp: Đã bật</p>
+                <p>Đăng nhập bất thường tuần này: 2</p>
+              </div>
                 <button
                   disabled={isSaving}
                   onClick={() => saveSettings().catch(() => null)}
                   className="mt-4 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isSaving ? "Đang lưu..." : "Lưu thay đổi"}
-                </button>
-              </section>
-            </div>
+              </button>
+            </section>
+          </div>
           )}
         </div>
       </main>
