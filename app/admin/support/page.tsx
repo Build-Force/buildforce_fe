@@ -125,7 +125,7 @@ export default function AdminSupportPage() {
       {toast ? <AdminToast type={toast.type} message={toast.message} /> : null}
 
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <Topbar locale="vi" />
+        <Topbar />
 
         <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
           <h1 className="text-2xl font-bold tracking-tight">Support Center</h1>

@@ -161,7 +161,7 @@ export default function AdminUsersPage() {
       {toast ? <AdminToast type={toast.type} message={toast.message} /> : null}
 
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <Topbar locale="vi" />
+        <Topbar />
         <div className="mx-auto w-full max-w-7xl space-y-6 p-8">
           {errorMessage ? <AdminErrorBanner message={errorMessage} /> : null}
 
