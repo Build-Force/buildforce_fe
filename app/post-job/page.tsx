@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "@/utils/api";
@@ -22,7 +22,7 @@ type WardOption = { name: string; code: number };
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN as string | undefined;
 
-export default function PostJobPage() {
+function PostJobContent() {
     const searchParams = useSearchParams();
     const editJobId = searchParams.get("edit") || null;
 
@@ -1036,5 +1036,19 @@ export default function PostJobPage() {
                 )}
             </div>
         </div>
+    );
+}
+
+export default function PostJobPage() {
+    return (
+        <Suspense
+            fallback={
+                <div className="min-h-screen bg-[#f0f4ff] dark:bg-[#040816] flex items-center justify-center">
+                    <div className="animate-spin w-10 h-10 border-2 border-primary border-t-transparent rounded-full" />
+                </div>
+            }
+        >
+            <PostJobContent />
+        </Suspense>
     );
 }
