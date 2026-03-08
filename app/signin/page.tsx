@@ -4,13 +4,10 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "../../utils/api";
-import { useRouter, useSearchParams } from "next/navigation";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+import { useRouter } from "next/navigation";
 
 export default function AuthPage() {
     const router = useRouter();
-    const searchParams = useSearchParams();
     const [isLogin, setIsLogin] = useState(true);
     const [showPassword, setShowPassword] = useState(false);
     const [userType, setUserType] = useState<"worker" | "contractor">("worker");
@@ -23,31 +20,6 @@ export default function AuthPage() {
             sessionStorage.removeItem("authMode");
         }
     }, []);
-
-    // Handle Google OAuth callback from backend redirect
-    useEffect(() => {
-        const google = searchParams.get("google");
-        const token = searchParams.get("token");
-        const email = searchParams.get("email");
-        const message = searchParams.get("message");
-
-        if (google === "success" && token) {
-            localStorage.setItem("token", token);
-            window.dispatchEvent(new Event("userLoggedIn"));
-            setSuccessMsg(email ? `Đăng nhập Google thành công (${decodeURIComponent(email)}). Đang chuyển...` : "Đăng nhập thành công. Đang chuyển...");
-            const t = setTimeout(() => {
-                router.replace("/");
-            }, 800);
-            return () => clearTimeout(t);
-        }
-        if (google === "verify" && email) {
-            setSuccessMsg(`Đã gửi email xác minh tới ${decodeURIComponent(email)}. Vui lòng kiểm tra hộp thư và bấm link để kích hoạt tài khoản.`);
-        }
-        if (google === "error") {
-            const msg = message === "missing_token" ? "Thiếu mã xác minh." : message === "invalid_token" ? "Link đã hết hạn hoặc không hợp lệ." : message === "verification_failed" ? "Xác minh thất bại." : "Đăng nhập Google thất bại.";
-            setErrorMsg(msg);
-        }
-    }, [searchParams, router]);
 
     // If already logged in, route based on role (admin -> /admin)
     useEffect(() => {
@@ -440,13 +412,10 @@ export default function AuthPage() {
                                         <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
-                                        <a
-                                            href={`${API_BASE}/api/auth/google`}
-                                            className="flex items-center justify-center gap-3 border-2 border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 py-4 rounded-2xl transition-all"
-                                        >
+                                        <button className="flex items-center justify-center gap-3 border-2 border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 py-4 rounded-2xl transition-all">
                                             <img alt="Google" className="w-6 h-6" src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" />
                                             <span className="font-bold text-slate-700 dark:text-slate-300">Google</span>
-                                        </a>
+                                        </button>
                                         <button className="flex items-center justify-center gap-3 border-2 border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 py-4 rounded-2xl transition-all">
                                             <svg className="w-6 h-6 text-[#1877F2]" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"></path></svg>
                                             <span className="font-bold text-slate-700 dark:text-slate-300">Facebook</span>
