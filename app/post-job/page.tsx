@@ -15,9 +15,9 @@ const SKILL_OPTIONS = [
     "Thợ sơn", "Thợ cốp pha", "Thợ hoàn thiện", "Kỹ sư hiện trường", "Giám sát công trình"
 ];
 
-const PROVINCES = [
-    "Đà Nẵng", "Hà Nội", "TP.HCM", "Quảng Nam", "Huế", "Bình Dương", "Đồng Nai", "Cần Thơ"
-];
+type ProvinceOption = { name: string; code: number; lat?: number; lng?: number };
+type DistrictOption = { name: string; code: number };
+type WardOption = { name: string; code: number };
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN as string | undefined;
 
@@ -37,11 +37,18 @@ export default function PostJobPage() {
     const [isMapModalOpen, setIsMapModalOpen] = useState(false);
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [createdJobId, setCreatedJobId] = useState<string | null>(null);
+    const [provinces, setProvinces] = useState<ProvinceOption[]>([]);
+    const [districts, setDistricts] = useState<DistrictOption[]>([]);
+    const [wards, setWards] = useState<WardOption[]>([]);
     const [form, setForm] = useState({
         title: "",
         jobType: "full-time",
         workers: "5",
-        province: "Đà Nẵng",
+        province: "",
+        provinceCode: 0,
+        district: "",
+        districtCode: 0,
+        ward: "",
         address: "",
         salary: "450",
         salaryType: "day",
@@ -49,7 +56,108 @@ export default function PostJobPage() {
         endDate: "",
         description: "",
         requirements: "",
+        images: [] as string[],
     });
+    const [imageUploading, setImageUploading] = useState(false);
+
+    // Load danh sách tỉnh/thành từ API (có code để load quận/phường)
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const res = await fetch("/api/address/provinces");
+                const json = await res.json();
+                if (json?.success && Array.isArray(json.data) && json.data.length > 0) {
+                    const list = json.data as ProvinceOption[];
+                    setProvinces(list);
+                    const daNang = list.find((p) => p.name.includes("Đà Nẵng")) ?? list[0];
+                    setForm((f) => ({
+                        ...f,
+                        province: f.province || daNang.name,
+                        provinceCode: f.provinceCode || daNang.code,
+                    }));
+                    if (daNang.lat != null && daNang.lng != null) {
+                        setMapCenter({ lat: daNang.lat, lng: daNang.lng });
+                    } else {
+                        setMapCenter({ lat: 16.0544, lng: 108.2022 });
+                    }
+                }
+            } catch {
+                const fallback: ProvinceOption[] = [
+                    { name: "Thành phố Đà Nẵng", code: 48, lat: 16.0544, lng: 108.2022 },
+                    { name: "Thành phố Hà Nội", code: 1, lat: 21.0285, lng: 105.8542 },
+                    { name: "Thành phố Hồ Chí Minh", code: 79, lat: 10.8231, lng: 106.6297 },
+                ];
+                setProvinces(fallback);
+                setForm((f) => ({ ...f, province: f.province || fallback[0].name, provinceCode: fallback[0].code }));
+                setMapCenter({ lat: 16.0544, lng: 108.2022 });
+            }
+        };
+        load();
+    }, []);
+
+    // Load quận/huyện khi chọn tỉnh
+    useEffect(() => {
+        if (!form.provinceCode) {
+            setDistricts([]);
+            return;
+        }
+        const load = async () => {
+            try {
+                const res = await fetch(`/api/address/districts/${form.provinceCode}`);
+                const json = await res.json();
+                if (json?.success && Array.isArray(json.data)) {
+                    setDistricts(json.data);
+                    setForm((prev) => ({ ...prev, district: "", districtCode: 0, ward: "" }));
+                    setWards([]);
+                } else {
+                    setDistricts([]);
+                }
+            } catch {
+                setDistricts([]);
+            }
+        };
+        load();
+    }, [form.provinceCode]);
+
+    // Load phường/xã khi chọn quận/huyện
+    useEffect(() => {
+        if (!form.districtCode) {
+            setWards([]);
+            return;
+        }
+        const load = async () => {
+            try {
+                const res = await fetch(`/api/address/wards/${form.districtCode}`);
+                const json = await res.json();
+                if (json?.success && Array.isArray(json.data)) {
+                    setWards(json.data);
+                    setForm((prev) => ({ ...prev, ward: "" }));
+                } else {
+                    setWards([]);
+                }
+            } catch {
+                setWards([]);
+            }
+        };
+        load();
+    }, [form.districtCode]);
+
+    const handleProvinceChange = (provinceName: string) => {
+        const p = provinces.find((x) => x.name === provinceName);
+        if (p) {
+            setForm((prev) => ({ ...prev, province: provinceName, provinceCode: p.code }));
+            if (p.lat != null && p.lng != null) setMapCenter({ lat: p.lat, lng: p.lng });
+        }
+    };
+
+    const handleDistrictChange = (districtName: string) => {
+        const d = districts.find((x) => x.name === districtName);
+        if (d) setForm((prev) => ({ ...prev, district: districtName, districtCode: d.code }));
+    };
+
+    const handleWardChange = (wardName: string) => {
+        setForm((prev) => ({ ...prev, ward: wardName }));
+    };
 
     const toggleSkill = (skill: string) => {
         setSelectedSkills(prev =>
@@ -93,8 +201,9 @@ export default function PostJobPage() {
                 skills: selectedSkills,
                 location: {
                     province: form.province,
-                    city: form.province,
-                    address: form.address,
+                    city: form.district || form.province,
+                    address: [form.address, form.ward].filter(Boolean).join(", ") || form.address,
+                    ...(mapCenter && { lat: mapCenter.lat, lng: mapCenter.lng }),
                 },
                 salary: {
                     amount: amountVnd,
@@ -104,6 +213,7 @@ export default function PostJobPage() {
                 workersNeeded: Number(form.workers),
                 startDate: form.startDate ? new Date(form.startDate).toISOString() : undefined,
                 endDate: form.endDate ? new Date(form.endDate).toISOString() : undefined,
+                images: Array.isArray(form.images) ? form.images : [],
             });
 
             const jobId = createRes.data?.data?._id;
@@ -126,67 +236,56 @@ export default function PostJobPage() {
         }
     };
 
-    // Cập nhật static map từ Mapbox theo địa chỉ/province
+    // Geocode địa chỉ cụ thể (số nhà, đường + phường/quận/tỉnh) để cập nhật marker bản đồ. Debounce 500ms để tránh gọi API liên tục khi gõ.
     useEffect(() => {
         if (!MAPBOX_TOKEN) return;
 
-        const queryParts = [];
-        if (form.address.trim()) queryParts.push(form.address.trim());
-        if (form.province.trim()) queryParts.push(form.province.trim());
-        queryParts.push("Việt Nam");
+        const rawAddress = form.address.trim();
+        if (rawAddress.length < 3) return;
 
-        const query = queryParts.join(", ");
+        const query = [rawAddress, form.ward, form.district, form.province.trim()].filter(Boolean).join(", ");
+        if (!query) return;
 
-        if (!query.trim()) return;
-
-        let cancelled = false;
         const controller = new AbortController();
+        const timer = window.setTimeout(() => {
+            const fetchCoords = async () => {
+                try {
+                    setIsMapLoading(true);
+                    const params = new URLSearchParams({
+                        access_token: MAPBOX_TOKEN,
+                        limit: "1",
+                        country: "VN",
+                        types: "address,place,locality,neighborhood",
+                    });
+                    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?${params.toString()}`;
 
-        const fetchCoords = async () => {
-            try {
-                setIsMapLoading(true);
-                const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
-                    query
-                )}.json?access_token=${MAPBOX_TOKEN}&limit=1`;
+                    const res = await fetch(url, { signal: controller.signal });
+                    if (!res.ok) throw new Error("Geocoding failed");
 
-                const res = await fetch(url, { signal: controller.signal });
-                if (!res.ok) throw new Error("Geocoding failed");
+                    const data = await res.json();
+                    const feature = data.features?.[0];
+                    if (!feature) return;
 
-                const data = await res.json();
-                const feature = data.features?.[0];
-                if (!feature || cancelled) {
-                    if (!cancelled) setMapCenter(null);
-                    return;
-                }
-
-                const [lng, lat] = feature.center as [number, number];
-
-                if (!cancelled) {
+                    const [lng, lat] = feature.center as [number, number];
                     setMapCenter({ lat, lng });
-                }
-            } catch {
-                if (!cancelled) {
-                    setMapCenter(null);
-                }
-            } finally {
-                if (!cancelled) {
+                } catch (err) {
+                    // Giữ nguyên mapCenter khi geocode lỗi hoặc bị abort
+                    if ((err as Error)?.name !== "AbortError") {
+                        console.warn("Geocode address failed:", err);
+                    }
+                } finally {
                     setIsMapLoading(false);
                 }
-            }
-        };
+            };
 
-        // Tránh gọi API khi người dùng chưa nhập gì
-        if (form.address.trim().length >= 3 || form.province.trim().length > 0) {
             fetchCoords();
-        } else {
-            setMapCenter(null);
-        }
+        }, 500);
 
         return () => {
-            cancelled = true;
+            clearTimeout(timer);
             controller.abort();
         };
-    }, [form.address, form.province]);
+    }, [form.address, form.ward, form.district, form.province]);
 
     if (submitted) {
         return (
@@ -370,22 +469,119 @@ export default function PostJobPage() {
                                         <select
                                             id="province-select"
                                             value={form.province}
-                                            onChange={e => setForm({ ...form, province: e.target.value })}
-                                            className="w-full h-16 px-6 rounded-2xl border-2 border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-bold text-lg focus:outline-none focus:border-primary transition-all appearance-none"
+                                            onChange={(e) => handleProvinceChange(e.target.value)}
+                                            className="w-full h-14 px-6 rounded-2xl border-2 border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-bold text-base focus:outline-none focus:border-primary transition-all appearance-none"
                                         >
-                                            {PROVINCES.map(p => <option key={p}>{p}</option>)}
+                                            {provinces.length === 0 && <option value="">Đang tải...</option>}
+                                            {provinces.map((p) => (
+                                                <option key={p.code} value={p.name}>{p.name}</option>
+                                            ))}
                                         </select>
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-3">Địa chỉ cụ thể</label>
+                                        <label className="block text-sm font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-3">Quận / Huyện</label>
+                                        <select
+                                            id="district-select"
+                                            value={form.district}
+                                            onChange={(e) => handleDistrictChange(e.target.value)}
+                                            disabled={districts.length === 0}
+                                            className="w-full h-14 px-6 rounded-2xl border-2 border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-bold text-base focus:outline-none focus:border-primary transition-all appearance-none disabled:opacity-60"
+                                        >
+                                            <option value="">{districts.length === 0 ? "Chọn tỉnh trước" : "Chọn quận/huyện"}</option>
+                                            {districts.map((d) => (
+                                                <option key={d.code} value={d.name}>{d.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-3">Phường / Xã</label>
+                                        <select
+                                            id="ward-select"
+                                            value={form.ward}
+                                            onChange={(e) => handleWardChange(e.target.value)}
+                                            disabled={wards.length === 0}
+                                            className="w-full h-14 px-6 rounded-2xl border-2 border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-bold text-base focus:outline-none focus:border-primary transition-all appearance-none disabled:opacity-60"
+                                        >
+                                            <option value="">{wards.length === 0 ? "Chọn quận/huyện trước" : "Chọn phường/xã"}</option>
+                                            {wards.map((w) => (
+                                                <option key={w.code} value={w.name}>{w.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-3">Địa chỉ cụ thể (số nhà, đường)</label>
                                         <input
                                             type="text"
                                             value={form.address}
                                             onChange={e => setForm({ ...form, address: e.target.value })}
-                                            placeholder="Số nhà, đường, phường/xã"
-                                            className="w-full h-16 px-6 rounded-2xl border-2 border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-bold text-lg focus:outline-none focus:border-primary transition-all"
+                                            placeholder="VD: 21 Huỳnh Văn Nghệ, Khu công nghiệp..."
+                                            className="w-full h-14 px-6 rounded-2xl border-2 border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-bold text-base focus:outline-none focus:border-primary transition-all"
                                         />
+                                    </div>
+
+                                    <div className="md:col-span-2">
+                                        <label className="block text-sm font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-3">Ảnh công trình (tùy chọn)</label>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">Thêm ảnh minh họa. Nhiều ảnh sẽ hiển thị dạng carousel trên tin tuyển dụng.</p>
+                                        <div className="flex flex-wrap gap-4 items-start">
+                                            {form.images.map((url, i) => (
+                                                <div key={url} className="relative group">
+                                                    <img src={url} alt="" className="w-24 h-24 rounded-xl object-cover border-2 border-slate-200 dark:border-slate-700" />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setForm((prev) => ({ ...prev, images: prev.images.filter((_, idx) => idx !== i) }))}
+                                                        className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg hover:bg-red-600"
+                                                        aria-label="Xóa ảnh"
+                                                    >
+                                                        <span className="material-symbols-outlined text-lg">close</span>
+                                                    </button>
+                                                </div>
+                                            ))}
+                                            <label className="w-24 h-24 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-600 flex flex-col items-center justify-center cursor-pointer hover:border-primary hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all">
+                                                <span className="material-symbols-outlined text-3xl text-slate-400">add_photo_alternate</span>
+                                                <span className="text-xs font-bold text-slate-500 mt-1">Thêm</span>
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    multiple
+                                                    className="hidden"
+                                                    disabled={imageUploading}
+                                                    onChange={async (e) => {
+                                                        const files = e.target.files;
+                                                        if (!files?.length) return;
+                                                        setImageUploading(true);
+                                                        const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+                                                        const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+                                                        try {
+                                                            for (let i = 0; i < files.length; i++) {
+                                                                const file = files[i];
+                                                                const fd = new FormData();
+                                                                fd.append("image", file);
+                                                                const res = await fetch(`${baseUrl}/api/jobs/upload/image`, {
+                                                                    method: "POST",
+                                                                    headers: token ? { Authorization: `Bearer ${token}` } : {},
+                                                                    body: fd,
+                                                                });
+                                                                const data = await res.json();
+                                                                if (!res.ok) {
+                                                                    throw new Error(data?.message || `Upload failed ${res.status}`);
+                                                                }
+                                                                const url = data?.data?.url;
+                                                                if (url) setForm((prev) => ({ ...prev, images: [...prev.images, url] }));
+                                                            }
+                                                        } catch (err) {
+                                                            console.error("Upload image failed", err);
+                                                        } finally {
+                                                            setImageUploading(false);
+                                                            e.target.value = "";
+                                                        }
+                                                    }}
+                                                />
+                                            </label>
+                                        </div>
+                                        {imageUploading && <p className="text-xs text-primary font-bold mt-2">Đang tải ảnh lên...</p>}
                                     </div>
                                 </div>
 
@@ -393,10 +589,11 @@ export default function PostJobPage() {
                                 <div className="mt-6 relative h-80 md:h-96 rounded-[2.5rem] overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-700 group hover:border-primary transition-all">
                                     {MAPBOX_TOKEN && mapCenter ? (
                                         <Map
+                                            key={`${mapCenter.lat}-${mapCenter.lng}`}
                                             initialViewState={{
                                                 longitude: mapCenter.lng,
                                                 latitude: mapCenter.lat,
-                                                zoom: 14,
+                                                zoom: 12,
                                             }}
                                             mapStyle="mapbox://styles/mapbox/light-v11"
                                             mapboxAccessToken={MAPBOX_TOKEN}
@@ -429,9 +626,7 @@ export default function PostJobPage() {
                                                     : "Chưa cấu hình MAPBOX_TOKEN • Vui lòng thêm NEXT_PUBLIC_MAPBOX_TOKEN vào env"}
                                             </p>
                                             <p className="text-xs text-slate-400 font-bold mt-1">
-                                                {form.address
-                                                    ? `${form.address}, ${form.province} • Việt Nam`
-                                                    : `${form.province} • Việt Nam`}
+                                                {[form.address, form.ward, form.district, form.province].filter(Boolean).join(", ") || "Chọn địa điểm"} • Việt Nam
                                             </p>
                                             {isMapLoading && (
                                                 <p className="mt-2 text-[10px] font-bold text-primary">
@@ -462,7 +657,7 @@ export default function PostJobPage() {
                                         </div>
                                         <div className="self-end mb-4 mr-4 bg-white/90 dark:bg-slate-900/90 rounded-2xl px-4 py-2 shadow-lg">
                                             <p className="text-xs font-black text-slate-500">
-                                                📍 {form.province}
+                                                📍 {[form.ward, form.district, form.province].filter(Boolean).join(", ") || form.province || "—"}
                                             </p>
                                         </div>
                                     </div>
@@ -575,7 +770,7 @@ export default function PostJobPage() {
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <h3 className="font-black text-slate-900 dark:text-white text-xl">{form.title || "Tiêu đề công việc"}</h3>
-                                        <p className="text-slate-500 font-bold text-sm mt-1">📍 {form.province} • 👥 {form.workers} người • 💰 {form.salary}k/{form.salaryType === 'day' ? 'ngày' : 'tháng'}</p>
+                                        <p className="text-slate-500 font-bold text-sm mt-1">📍 {[form.ward, form.district, form.province].filter(Boolean).join(", ") || form.province || "—"} • 👥 {form.workers} người • 💰 {form.salary}k/{form.salaryType === 'day' ? 'ngày' : 'tháng'}</p>
                                     </div>
                                     <div className="bg-emerald-500 text-white rounded-2xl px-4 py-2 text-sm font-black">Đang tuyển</div>
                                 </div>
@@ -641,7 +836,7 @@ export default function PostJobPage() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {[
                                         { label: "Tiêu đề", value: form.title || "Chưa nhập" },
-                                        { label: "Vị trí", value: form.province },
+                                        { label: "Vị trí", value: [form.address, form.ward, form.district, form.province].filter(Boolean).join(", ") || form.province || "—" },
                                         { label: "Số lượng", value: `${form.workers} người` },
                                         { label: "Lương", value: `${form.salary}k/${form.salaryType === 'day' ? 'ngày' : 'tháng'}` },
                                         { label: "Kỹ năng", value: selectedSkills.length > 0 ? selectedSkills.join(", ") : "Chưa chọn" },
@@ -691,10 +886,11 @@ export default function PostJobPage() {
                         <div className="relative w-full max-w-5xl mx-4">
                             <div className="bg-slate-900 rounded-[2.5rem] border border-slate-700 overflow-hidden shadow-2xl h-[70vh]">
                                 <Map
+                                    key={`modal-${mapCenter.lat}-${mapCenter.lng}`}
                                     initialViewState={{
                                         longitude: mapCenter.lng,
                                         latitude: mapCenter.lat,
-                                        zoom: 14,
+                                        zoom: 12,
                                     }}
                                     mapStyle="mapbox://styles/mapbox/light-v11"
                                     mapboxAccessToken={MAPBOX_TOKEN}

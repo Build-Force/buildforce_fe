@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { NAV_LINKS } from "@/data/mockData";
 import api from "@/utils/api";
@@ -16,8 +18,61 @@ export const Header = () => {
     const [userProfile, setUserProfile] = useState<any>(null);
     const [showDropdown, setShowDropdown] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const [showHrOnlyDialog, setShowHrOnlyDialog] = useState(false);
   const [currentPackageName, setCurrentPackageName] = useState<string | null>(null);
   const [currentPackageLevel, setCurrentPackageLevel] = useState<number | null>(null);
+
+    const handleSignOut = React.useCallback(() => {
+        localStorage.removeItem('token');
+        setIsLoggedIn(false);
+        setUserProfile(null);
+        setCurrentPackageName(null);
+        setCurrentPackageLevel(null);
+        setShowDropdown(false);
+        router.push('/signin');
+    }, [router]);
+
+    const checkAuthStatus = React.useCallback(async () => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            setIsLoggedIn(true);
+            try {
+                const response = await api.get('/api/auth/profile');
+                if (response.data.success) {
+                    setUserProfile(response.data.data);
+                    if (response.data.data.role === "hr") {
+                        try {
+                            const pkgRes = await api.get('/api/payments/my-package');
+                            const pkg = pkgRes.data?.data;
+                            if (pkg) {
+                                setCurrentPackageName(pkg.packageName || null);
+                                setCurrentPackageLevel(typeof pkg.priorityLevel === "number" ? pkg.priorityLevel : null);
+                            } else {
+                                setCurrentPackageName(null);
+                                setCurrentPackageLevel(null);
+                            }
+                        } catch {
+                            setCurrentPackageName(null);
+                            setCurrentPackageLevel(null);
+                        }
+                    } else {
+                        setCurrentPackageName(null);
+                        setCurrentPackageLevel(null);
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to fetch user profile for header:", error);
+                if (error && (error as any).response?.status === 401) {
+                    handleSignOut();
+                }
+            }
+        } else {
+            setIsLoggedIn(false);
+            setUserProfile(null);
+            setCurrentPackageName(null);
+            setCurrentPackageLevel(null);
+        }
+    }, [handleSignOut]);
 
     useEffect(() => {
         const handleScroll = () => {
@@ -74,70 +129,17 @@ export const Header = () => {
             window.removeEventListener("userLoggedOut", handleLogoutEvent);
             document.removeEventListener("mousedown", handleClickOutside);
         };
-    }, []);
-
-    const checkAuthStatus = async () => {
-        const token = localStorage.getItem('token');
-        if (token) {
-            setIsLoggedIn(true);
-            try {
-                // Token auto-attached via axios interceptor in utils/api.ts
-                const response = await api.get('/api/auth/profile');
-                if (response.data.success) {
-                    setUserProfile(response.data.data);
-          if (response.data.data.role === "hr") {
-            try {
-              const pkgRes = await api.get('/api/payments/my-package');
-              const pkg = pkgRes.data?.data;
-              if (pkg) {
-                setCurrentPackageName(pkg.packageName || null);
-                setCurrentPackageLevel(typeof pkg.priorityLevel === "number" ? pkg.priorityLevel : null);
-              } else {
-                setCurrentPackageName(null);
-                setCurrentPackageLevel(null);
-              }
-            } catch {
-              setCurrentPackageName(null);
-              setCurrentPackageLevel(null);
-            }
-          } else {
-            setCurrentPackageName(null);
-            setCurrentPackageLevel(null);
-          }
-                }
-            } catch (error) {
-                console.error("Failed to fetch user profile for header:", error);
-                if (error && (error as any).response?.status === 401) {
-                    handleSignOut();
-                }
-            }
-        } else {
-            setIsLoggedIn(false);
-            setUserProfile(null);
-      setCurrentPackageName(null);
-      setCurrentPackageLevel(null);
-        }
-    };
+    }, [checkAuthStatus]);
 
     const toggleDarkMode = () => {
         document.documentElement.classList.toggle("dark");
         setIsDarkMode(!isDarkMode);
     };
 
-    const handleSignOut = () => {
-        localStorage.removeItem('token');
-        setIsLoggedIn(false);
-        setUserProfile(null);
-        setCurrentPackageName(null);
-        setCurrentPackageLevel(null);
-        setShowDropdown(false);
-        router.push('/signin');
-    };
-
     // Construct Avatar text or image
     const getAvatarContent = () => {
         if (userProfile?.avatar) {
-            return <img src={userProfile.avatar} alt="Avatar" className="w-full h-full object-cover" />;
+            return <Image src={userProfile.avatar} alt="Avatar" width={40} height={40} className="w-full h-full object-cover" />;
         }
         if (userProfile?.firstName && userProfile?.lastName) {
             return `${userProfile.firstName.charAt(0)}${userProfile.lastName.charAt(0)}`.toUpperCase();
@@ -185,15 +187,32 @@ export const Header = () => {
                     </Link>
 
                     <div className="hidden md:flex items-center space-x-10">
-                        {NAV_LINKS.map((link) => (
-                            <Link
-                                key={link.label}
-                                href={link.href}
-                                className="text-base font-semibold hover:text-primary transition-colors text-slate-600 dark:text-slate-300 dark:hover:text-primary"
-                            >
-                                {link.label}
-                            </Link>
-                        ))}
+                        {NAV_LINKS.map((link) =>
+                            link.href === "/post-job" ? (
+                                <button
+                                    key={link.label}
+                                    type="button"
+                                    onClick={() => {
+                                        if (isLoggedIn && normalizedRole === "HR") {
+                                            router.push("/post-job");
+                                        } else {
+                                            setShowHrOnlyDialog(true);
+                                        }
+                                    }}
+                                    className="text-base font-semibold hover:text-primary transition-colors text-slate-600 dark:text-slate-300 dark:hover:text-primary"
+                                >
+                                    {link.label}
+                                </button>
+                            ) : (
+                                <Link
+                                    key={link.label}
+                                    href={link.href}
+                                    className="text-base font-semibold hover:text-primary transition-colors text-slate-600 dark:text-slate-300 dark:hover:text-primary"
+                                >
+                                    {link.label}
+                                </Link>
+                            )
+                        )}
                         <div className="h-6 w-px bg-slate-200 dark:bg-slate-700"></div>
 
                         {/* HR quick actions */}
@@ -339,6 +358,43 @@ export const Header = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Dialog: Chỉ HR mới được dùng Tuyển nhân sự - render qua portal để luôn căn giữa viewport */}
+            {showHrOnlyDialog &&
+                typeof document !== "undefined" &&
+                createPortal(
+                    <div
+                        className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+                        onClick={() => setShowHrOnlyDialog(false)}
+                    >
+                        <div
+                            className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 max-w-md w-full p-6"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                                    <span className="material-symbols-outlined text-2xl text-amber-600 dark:text-amber-400">info</span>
+                                </div>
+                                <h3 className="text-lg font-black text-slate-900 dark:text-white">
+                                    Chỉ dành cho Nhà tuyển dụng (HR)
+                                </h3>
+                            </div>
+                            <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed mb-6">
+                                {isLoggedIn
+                                    ? "Tính năng Tuyển nhân sự chỉ dành cho tài khoản Nhà tuyển dụng (HR). Bạn đang đăng nhập bằng tài khoản người lao động nên không thể truy cập."
+                                    : "Tính năng Tuyển nhân sự chỉ dành cho Nhà tuyển dụng (HR). Vui lòng đăng nhập bằng tài khoản HR để đăng tin tuyển dụng."}
+                            </p>
+                            <button
+                                type="button"
+                                onClick={() => setShowHrOnlyDialog(false)}
+                                className="w-full py-3 rounded-xl font-bold bg-primary text-white hover:opacity-90 transition-opacity"
+                            >
+                                Đã hiểu
+                            </button>
+                        </div>
+                    </div>,
+                    document.body
+                )}
         </nav>
     );
 };
