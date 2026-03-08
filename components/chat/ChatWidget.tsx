@@ -71,6 +71,19 @@ export const ChatWidget: React.FC = () => {
         };
     }, [isLoggedIn, isOpen]);
 
+    useEffect(() => {
+        const handleOpenChat = (e: CustomEvent<{ conversationId: string; participant: Participant }>) => {
+            const { conversationId, participant } = e.detail || {};
+            if (conversationId && participant) {
+                setIsOpen(true);
+                setActiveTab("messages");
+                setActiveConversation({ id: conversationId, participant });
+            }
+        };
+        window.addEventListener("buildforce:openChat", handleOpenChat as EventListener);
+        return () => window.removeEventListener("buildforce:openChat", handleOpenChat as EventListener);
+    }, []);
+
     if (!isLoggedIn) return null;
 
     const handleSelectConversation = (id: string, participant: Participant) => {

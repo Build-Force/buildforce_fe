@@ -34,10 +34,17 @@ const IMPACT_STATS = [
     { value: "₫500B+", label: "Tổng giá trị công trình", icon: "monetization_on", color: "text-cyan-500" },
 ];
 
+const BACKGROUND_PARTICLES = Array.from({ length: 30 }, (_, i) => ({
+    id: i,
+    left: `${(i * 17) % 100}%`,
+    top: `${(i * 29) % 100}%`,
+    duration: 2 + (i % 4) * 0.75,
+    delay: (i % 6) * 0.4,
+}));
+
 export default function EcosystemPage() {
     const [activeService, setActiveService] = useState<string | null>(null);
     const [activeFlowStep, setActiveFlowStep] = useState(0);
-    const [animating, setAnimating] = useState(false);
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -51,13 +58,13 @@ export default function EcosystemPage() {
             {/* Animated background */}
             <div className="fixed inset-0 pointer-events-none">
                 <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(139,92,246,0.08)_0%,_transparent_70%)]" />
-                {[...Array(30)].map((_, i) => (
+                {BACKGROUND_PARTICLES.map((particle) => (
                     <motion.div
-                        key={i}
+                        key={particle.id}
                         className="absolute w-1 h-1 bg-purple-500 rounded-full opacity-30"
-                        style={{ left: `${Math.random() * 100}%`, top: `${Math.random() * 100}%` }}
+                        style={{ left: particle.left, top: particle.top }}
                         animate={{ opacity: [0.1, 0.5, 0.1], scale: [1, 1.5, 1] }}
-                        transition={{ duration: 2 + Math.random() * 3, repeat: Infinity, delay: Math.random() * 3 }}
+                        transition={{ duration: particle.duration, repeat: Infinity, delay: particle.delay }}
                     />
                 ))}
             </div>

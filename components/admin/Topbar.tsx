@@ -67,45 +67,52 @@ export function Topbar({ locale }: TopbarProps) {
             type="text"
             placeholder="Tìm kiếm lao động, việc làm hoặc đối tác HR..."
             className="w-full rounded-xl bg-slate-100 py-2 pl-10 pr-4 text-sm text-slate-700 outline-none ring-primary/20 transition-all focus:ring-2 dark:bg-slate-800 dark:text-slate-100"
+            suppressHydrationWarning
           />
         </div>
       </div>
 
       <div className="ml-8 hidden items-center gap-4 md:flex">
-        <div className="flex items-center rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
+        <div className="flex items-center rounded-xl bg-slate-100 p-1 dark:bg-slate-800" suppressHydrationWarning>
           <button
+            type="button"
             className={`rounded-lg px-3 py-1.5 text-xs font-bold ${
               locale === "en" ? "bg-white shadow-sm dark:bg-slate-700" : "text-slate-500"
             }`}
+            suppressHydrationWarning
           >
             EN
           </button>
           <button
+            type="button"
             className={`rounded-lg px-3 py-1.5 text-xs font-bold ${
               locale === "vi" ? "bg-white shadow-sm dark:bg-slate-700" : "text-slate-500"
             }`}
+            suppressHydrationWarning
           >
             VI
           </button>
         </div>
 
         <button
+          type="button"
           onClick={toggleDarkMode}
           className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-600 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
           title="Chuyển giao diện sáng/tối"
           aria-label="Chuyển giao diện sáng tối"
+          suppressHydrationWarning
         >
           <span className="material-symbols-outlined">{isDarkMode ? "light_mode" : "dark_mode"}</span>
         </button>
 
-        <button className="relative flex h-10 w-10 items-center justify-center rounded-xl text-slate-600 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">
+        <button type="button" className="relative flex h-10 w-10 items-center justify-center rounded-xl text-slate-600 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800" suppressHydrationWarning>
           <span className="material-symbols-outlined">notifications</span>
           <span className="absolute right-2 top-2 h-2 w-2 rounded-full border-2 border-white bg-red-500 dark:border-slate-900" />
         </button>
 
         <div className="mx-2 h-8 w-px bg-slate-200 dark:bg-slate-700" />
 
-        <button className="group flex items-center gap-3">
+        <button type="button" className="group flex items-center gap-3" suppressHydrationWarning>
           <div className="text-right">
             <p className="text-sm font-bold leading-none">
               {userProfile?.firstName || userProfile?.lastName

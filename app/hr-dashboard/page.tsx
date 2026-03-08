@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "@/utils/api";
 
@@ -28,13 +29,23 @@ type UiApplicant = {
     status: "pending" | "accepted" | "rejected" | "hired" | "completed";
     initials: string;
     rawStatus: string;
+    hasHrReviewed?: boolean;
 };
 
-const STATS = [
-    { label: "Tổng tin đăng", value: "12", icon: "work", color: "text-primary", bg: "from-sky-500/10 to-blue-600/10", border: "border-sky-100 dark:border-sky-800/30" },
-    { label: "Đang tuyển", value: "4", icon: "pending_actions", color: "text-amber-500", bg: "from-amber-500/10 to-orange-500/10", border: "border-amber-100 dark:border-amber-800/30" },
-    { label: "Đã tuyển xong", value: "8", icon: "check_circle", color: "text-emerald-500", bg: "from-emerald-500/10 to-teal-500/10", border: "border-emerald-100 dark:border-emerald-800/30" },
-    { label: "Tổng lao động thuê", value: "47", icon: "group", color: "text-purple-500", bg: "from-purple-500/10 to-pink-500/10", border: "border-purple-100 dark:border-purple-800/30" },
+type ActivePackage = {
+    packageName: string;
+    jobPostLimit: number;
+    jobPostUsed: number;
+    expiresAt: string;
+    isActive: boolean;
+    priorityLevel?: number;
+};
+
+const STATS_CONFIG = [
+    { key: "totalJobs" as const, label: "Tổng tin đăng", icon: "work", color: "text-primary", bg: "from-sky-500/10 to-blue-600/10", border: "border-sky-100 dark:border-sky-800/30" },
+    { key: "activeJobs" as const, label: "Đang tuyển", icon: "pending_actions", color: "text-amber-500", bg: "from-amber-500/10 to-orange-500/10", border: "border-amber-100 dark:border-amber-800/30" },
+    { key: "closedJobs" as const, label: "Đã tuyển xong", icon: "check_circle", color: "text-emerald-500", bg: "from-emerald-500/10 to-teal-500/10", border: "border-emerald-100 dark:border-emerald-800/30" },
+    { key: "totalHired" as const, label: "Tổng lao động thuê", icon: "group", color: "text-purple-500", bg: "from-purple-500/10 to-pink-500/10", border: "border-purple-100 dark:border-purple-800/30" },
 ];
 
 const STATUS_CONFIG = {
@@ -51,6 +62,12 @@ export default function HRDashboardPage() {
     const [loadingJobs, setLoadingJobs] = useState(true);
     const [applicantsByJob, setApplicantsByJob] = useState<Record<string, UiApplicant[]>>({});
     const [loadingApplicants, setLoadingApplicants] = useState<Record<string, boolean>>({});
+    const [activePackage, setActivePackage] = useState<ActivePackage | null>(null);
+    const [hiredWorkers, setHiredWorkers] = useState<{ id: string; jobTitle: string; workerName: string; status: string; rating: number | null; startDate?: string; endDate?: string }[]>([]);
+    const [loadingHiredWorkers, setLoadingHiredWorkers] = useState(false);
+    const [dashboardStats, setDashboardStats] = useState<{ totalJobs: number; activeJobs: number; closedJobs: number; totalHired: number } | null>(null);
+    const [activityLast7Days, setActivityLast7Days] = useState<{ date: string; dayLabel: string; jobsCreated: number; applications: number }[]>([]);
+    const [loadingDashboard, setLoadingDashboard] = useState(true);
 
     const formatSalary = (salary: any) => {
         if (!salary?.amount) return "Thỏa thuận";
@@ -65,6 +82,61 @@ export default function HRDashboardPage() {
         if (status === "DRAFT" || status === "PENDING" || status === "REJECTED") return "draft";
         return "closed";
     };
+
+    const packageAccentClass =
+        activePackage?.priorityLevel === 2
+            ? "from-amber-500/15 to-orange-500/10 border-amber-300/50 dark:border-amber-700/50"
+            : activePackage?.priorityLevel === 1
+                ? "from-sky-500/15 to-indigo-500/10 border-primary/30 dark:border-primary/30"
+                : "from-slate-200/60 to-slate-100/60 border-slate-200 dark:from-slate-800/80 dark:to-slate-900/80 dark:border-slate-700";
+
+    const packageIcon =
+        activePackage?.priorityLevel === 2 ? "diamond" : activePackage?.priorityLevel === 1 ? "workspace_premium" : "inventory_2";
+
+    const loadHiredWorkers = React.useCallback(async () => {
+        setLoadingHiredWorkers(true);
+        try {
+            const res = await api.get("/api/hr/workers");
+            if (res.data.success && Array.isArray(res.data.data)) {
+                const list = res.data.data.map((w: any) => ({
+                    id: w.id,
+                    jobTitle: w.jobTitle || "—",
+                    workerName: w.workerName || "—",
+                    status: w.status === "COMPLETED" ? "Hoàn thành" : w.status === "COMPLETION_PENDING" ? "Chờ xác nhận hoàn thành" : "Đang làm",
+                    rating: typeof w.rating === "number" ? w.rating : null,
+                    startDate: w.startDate,
+                    endDate: w.endDate,
+                }));
+                setHiredWorkers(list);
+            } else {
+                setHiredWorkers([]);
+            }
+        } catch (err) {
+            console.error("Failed to load hired workers", err);
+            setHiredWorkers([]);
+        } finally {
+            setLoadingHiredWorkers(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        const loadDashboard = async () => {
+            setLoadingDashboard(true);
+            try {
+                const res = await api.get("/api/hr/dashboard");
+                if (res.data?.success && res.data?.data) {
+                    setDashboardStats(res.data.data.stats ?? null);
+                    setActivityLast7Days(Array.isArray(res.data.data.activityLast7Days) ? res.data.data.activityLast7Days : []);
+                }
+            } catch (_err) {
+                setDashboardStats(null);
+                setActivityLast7Days([]);
+            } finally {
+                setLoadingDashboard(false);
+            }
+        };
+        loadDashboard();
+    }, []);
 
     useEffect(() => {
         const loadJobs = async () => {
@@ -97,6 +169,25 @@ export default function HRDashboardPage() {
         loadJobs();
     }, []);
 
+    useEffect(() => {
+        if (activeTab === "workers") loadHiredWorkers();
+    }, [activeTab, loadHiredWorkers]);
+
+    useEffect(() => {
+        const loadPackage = async () => {
+            try {
+                const res = await api.get("/api/payments/my-package");
+                setActivePackage(res.data?.data || null);
+            } catch {
+                setActivePackage(null);
+            }
+        };
+
+        loadPackage();
+        window.addEventListener("packageUpdated", loadPackage);
+        return () => window.removeEventListener("packageUpdated", loadPackage);
+    }, []);
+
     const loadApplicants = async (jobId: string) => {
         if (loadingApplicants[jobId]) return;
         setLoadingApplicants((p) => ({ ...p, [jobId]: true }));
@@ -119,10 +210,11 @@ export default function HRDashboardPage() {
                         name,
                         skill: Array.isArray(w?.skills) && w.skills.length ? w.skills[0] : undefined,
                         experience: w?.experienceYears ? Number(w.experienceYears) : undefined,
-                        rating: undefined,
+                        rating: (() => { const r = Number(a.workerRating); return !Number.isNaN(r) && r > 0 ? r : undefined; })(),
                         status,
                         initials,
                         rawStatus,
+                        hasHrReviewed: !!a.hasHrReviewed,
                     };
                 });
                 setApplicantsByJob((p) => ({ ...p, [jobId]: mapped }));
@@ -182,10 +274,80 @@ export default function HRDashboardPage() {
         }
     };
 
+    const [confirmCompleteKey, setConfirmCompleteKey] = useState<string | null>(null);
+    const confirmComplete = async (jobId: string, applicationId: string) => {
+        const key = `${jobId}-${applicationId}`;
+        setConfirmCompleteKey(key);
+        try {
+            await api.put(`/api/jobs/${jobId}/applicants/${applicationId}/confirm-complete`);
+            await loadApplicants(jobId);
+        } catch (err) {
+            console.error("Failed to confirm complete", err);
+        } finally {
+            setConfirmCompleteKey(null);
+        }
+    };
+
+    // Review worker modal (HR rates worker after completed job)
+    const [reviewModalApplicant, setReviewModalApplicant] = useState<{ ap: UiApplicant; jobId: string; jobTitle: string } | null>(null);
+    const [reviewRating, setReviewRating] = useState(5);
+    const [reviewComment, setReviewComment] = useState("");
+    const [reviewSubmitting, setReviewSubmitting] = useState(false);
+    const [reviewError, setReviewError] = useState("");
+    const submitWorkerReview = async () => {
+        if (!reviewModalApplicant) return;
+        setReviewSubmitting(true);
+        setReviewError("");
+        try {
+            await api.post("/api/reviews", {
+                applicationId: reviewModalApplicant.ap.id,
+                rating: reviewRating,
+                comment: reviewComment.trim() || undefined,
+            });
+            updateApplicant(reviewModalApplicant.jobId, reviewModalApplicant.ap.id, (a) => ({ ...a, hasHrReviewed: true, rating: reviewRating }));
+            setReviewModalApplicant(null);
+            await loadApplicants(reviewModalApplicant.jobId);
+            setReviewRating(5);
+            setReviewComment("");
+        } catch (err: any) {
+            setReviewError(err?.response?.data?.message || "Gửi đánh giá thất bại.");
+        } finally {
+            setReviewSubmitting(false);
+        }
+    };
+
     const filteredJobs = useMemo(() => {
         if (filterStatus === "all") return jobPosts;
         return jobPosts.filter((j) => j.status === filterStatus);
     }, [filterStatus, jobPosts]);
+
+    const STATS = useMemo(() => {
+        const s = dashboardStats ?? {
+            totalJobs: jobPosts.length,
+            activeJobs: jobPosts.filter((j) => j.status === "active").length,
+            closedJobs: jobPosts.filter((j) => j.status === "closed").length,
+            totalHired: jobPosts.reduce((sum, j) => sum + j.accepted, 0),
+        };
+        return STATS_CONFIG.map((c) => ({
+            ...c,
+            value: String(s[c.key]),
+        }));
+    }, [dashboardStats, jobPosts]);
+
+    const activityChartData: { date?: string; dayLabel: string; jobsCreated: number; applications: number }[] =
+        activityLast7Days.length > 0
+            ? activityLast7Days
+            : [
+                { date: "fallback-0", dayLabel: "T2", jobsCreated: 0, applications: 0 },
+                { date: "fallback-1", dayLabel: "T3", jobsCreated: 0, applications: 0 },
+                { date: "fallback-2", dayLabel: "T4", jobsCreated: 0, applications: 0 },
+                { date: "fallback-3", dayLabel: "T5", jobsCreated: 0, applications: 0 },
+                { date: "fallback-4", dayLabel: "T6", jobsCreated: 0, applications: 0 },
+                { date: "fallback-5", dayLabel: "T7", jobsCreated: 0, applications: 0 },
+                { date: "fallback-6", dayLabel: "CN", jobsCreated: 0, applications: 0 },
+            ];
+    const maxViews = Math.max(1, ...activityChartData.map((d) => d.jobsCreated));
+    const maxApps = Math.max(1, ...activityChartData.map((d) => d.applications));
 
     return (
         <div className="min-h-screen bg-[#f0f4ff] dark:bg-[#040816] pt-24 pb-24 transition-all duration-500">
@@ -204,12 +366,79 @@ export default function HRDashboardPage() {
                                 <span className="material-symbols-outlined text-xl">add</span>
                                 Đăng tin mới
                             </a>
+                            <Link
+                                href="/hr-dashboard/packages"
+                                className="h-14 px-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 rounded-2xl font-black text-sm flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all shadow-sm"
+                            >
+                                <span className="material-symbols-outlined text-xl text-amber-500">workspace_premium</span>
+                                Gói dịch vụ
+                            </Link>
                             <button className="h-14 w-14 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
                                 <span className="material-symbols-outlined text-slate-500 text-2xl">notifications</span>
                             </button>
                         </div>
                     </div>
                 </motion.div>
+
+                {activePackage && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className={`mb-8 rounded-[2rem] border bg-gradient-to-r ${packageAccentClass} p-6 shadow-sm`}
+                    >
+                        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                            <div className="flex items-start gap-4">
+                                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/80 text-slate-900 shadow-sm dark:bg-slate-900/80 dark:text-white">
+                                    <span className="material-symbols-outlined text-3xl text-amber-500">
+                                        {packageIcon}
+                                    </span>
+                                </div>
+                                <div>
+                                    <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-500 dark:text-slate-400">
+                                        Gói đang sử dụng
+                                    </p>
+                                    <h2 className="mt-1 text-2xl font-black text-slate-900 dark:text-white">
+                                        {activePackage.packageName}
+                                    </h2>
+                                    <p className="mt-1 text-sm font-bold text-slate-500 dark:text-slate-400">
+                                        Đã dùng {activePackage.jobPostUsed}/{activePackage.jobPostLimit === -1 ? "∞" : activePackage.jobPostLimit} lượt đăng
+                                        {" "}• Hết hạn {new Date(activePackage.expiresAt).toLocaleDateString("vi-VN")}
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <div className="min-w-[180px]">
+                                    <div className="mb-2 flex justify-between text-[11px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                                        <span>Quota</span>
+                                        <span>
+                                            {activePackage.jobPostLimit === -1
+                                                ? "Unlimited"
+                                                : `${Math.max(0, activePackage.jobPostLimit - activePackage.jobPostUsed)} còn lại`}
+                                        </span>
+                                    </div>
+                                    <div className="h-2.5 overflow-hidden rounded-full bg-white/70 dark:bg-slate-900/70">
+                                        <div
+                                            className="h-full rounded-full bg-gradient-to-r from-primary to-indigo-500"
+                                            style={{
+                                                width:
+                                                    activePackage.jobPostLimit === -1
+                                                        ? "100%"
+                                                        : `${Math.min(100, (activePackage.jobPostUsed / Math.max(activePackage.jobPostLimit, 1)) * 100)}%`,
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                                <Link
+                                    href="/hr-dashboard/packages"
+                                    className="inline-flex h-11 items-center gap-2 rounded-2xl bg-white px-4 text-sm font-black text-slate-800 shadow-sm transition-colors hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+                                >
+                                    <span className="material-symbols-outlined text-base">tune</span>
+                                    Quản lý gói
+                                </Link>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
 
                 {/* Tab Navigation */}
                 <div className="flex gap-2 mb-8 bg-white dark:bg-slate-900 rounded-2xl p-2 border border-slate-100 dark:border-slate-800 w-fit">
@@ -264,45 +493,53 @@ export default function HRDashboardPage() {
                                 <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-800 shadow-sm">
                                     <div className="flex items-center justify-between mb-8">
                                         <h2 className="text-xl font-black text-slate-900 dark:text-white">Hoạt động 7 ngày qua</h2>
-                                        <span className="px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 text-xs font-black rounded-full">
-                                            +23% so với tuần trước
-                                        </span>
+                                        {!loadingDashboard && activityLast7Days.length > 0 && (
+                                            <span className="px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 text-xs font-black rounded-full">
+                                                Dự án &amp; ứng tuyển
+                                            </span>
+                                        )}
                                     </div>
-                                    {/* Simple bar chart */}
-                                    <div className="flex items-end gap-3 h-32">
-                                        {[
-                                            { day: "T2", views: 35, apps: 8 },
-                                            { day: "T3", views: 52, apps: 12 },
-                                            { day: "T4", views: 48, apps: 10 },
-                                            { day: "T5", views: 71, apps: 18 },
-                                            { day: "T6", views: 89, apps: 24 },
-                                            { day: "T7", views: 43, apps: 11 },
-                                            { day: "CN", views: 28, apps: 7 },
-                                        ].map(({ day, views, apps }) => (
-                                            <div key={day} className="flex-1 flex flex-col items-center gap-1">
-                                                <div className="w-full flex flex-col items-center gap-1">
-                                                    <motion.div
-                                                        initial={{ height: 0 }}
-                                                        animate={{ height: `${(views / 89) * 80}px` }}
-                                                        transition={{ duration: 0.8, delay: 0.2 }}
-                                                        className="w-full bg-primary/30 rounded-t-lg relative"
-                                                    >
-                                                        <motion.div
-                                                            initial={{ height: 0 }}
-                                                            animate={{ height: `${(apps / 24) * 80}px` }}
-                                                            transition={{ duration: 0.8, delay: 0.3 }}
-                                                            className="absolute bottom-0 w-full bg-primary rounded-t-lg"
-                                                        />
-                                                    </motion.div>
-                                                </div>
-                                                <p className="text-[10px] font-black text-slate-400">{day}</p>
+                                    {loadingDashboard ? (
+                                        <div className="flex items-center justify-center h-32">
+                                            <span className="material-symbols-outlined text-4xl text-primary animate-spin">progress_activity</span>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div className="flex items-end gap-3 h-32">
+                                                {activityChartData.map((d, i) => {
+                                                    const dayLabel = d.dayLabel;
+                                                    const jobsCreated = d.jobsCreated ?? 0;
+                                                    const applications = d.applications ?? 0;
+                                                    const h1 = maxViews > 0 ? (jobsCreated / maxViews) * 80 : 0;
+                                                    const h2 = maxApps > 0 ? (applications / maxApps) * 80 : 0;
+                                                    return (
+                                                        <div key={d.date ?? `day-${i}`} className="flex-1 flex flex-col items-center gap-1">
+                                                            <div className="w-full flex flex-col items-center gap-1">
+                                                                <motion.div
+                                                                    initial={{ height: 0 }}
+                                                                    animate={{ height: `${Math.max(h1, 4)}px` }}
+                                                                    transition={{ duration: 0.5, delay: i * 0.05 }}
+                                                                    className="w-full bg-primary/30 rounded-t-lg relative min-h-[4px]"
+                                                                >
+                                                                    <motion.div
+                                                                        initial={{ height: 0 }}
+                                                                        animate={{ height: `${Math.max(h2, 4)}px` }}
+                                                                        transition={{ duration: 0.5, delay: 0.1 + i * 0.05 }}
+                                                                        className="absolute bottom-0 w-full bg-primary rounded-t-lg min-h-[4px]"
+                                                                    />
+                                                                </motion.div>
+                                                            </div>
+                                                            <p className="text-[10px] font-black text-slate-400">{dayLabel}</p>
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
-                                        ))}
-                                    </div>
-                                    <div className="flex items-center gap-6 mt-4">
-                                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-primary/30" /><span className="text-xs font-bold text-slate-400">Lượt xem</span></div>
-                                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-primary" /><span className="text-xs font-bold text-slate-400">Lượt ứng tuyển</span></div>
-                                    </div>
+                                            <div className="flex items-center gap-6 mt-4">
+                                                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-primary/30" /><span className="text-xs font-bold text-slate-400">Tin đăng mới</span></div>
+                                                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-primary" /><span className="text-xs font-bold text-slate-400">Lượt ứng tuyển</span></div>
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
 
                                 {/* Skill demand */}
@@ -501,12 +738,54 @@ export default function HRDashboardPage() {
                                                                                 Confirm hire
                                                                             </button>
                                                                         )}
-                                                                        {ap.rawStatus !== "APPLIED" && ap.rawStatus !== "ACCEPTED" && (
-                                                                            <span className={`px-3 py-1 rounded-full text-xs font-black ${ap.rawStatus === "REJECTED"
-                                                                                    ? "bg-slate-100 text-slate-500 dark:bg-slate-700"
-                                                                                    : "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
-                                                                                }`}>
-                                                                                {ap.rawStatus}
+                                                                        {ap.rawStatus === "COMPLETION_PENDING" && (
+                                                                            <button
+                                                                                onClick={(e) => { e.stopPropagation(); confirmComplete(job.id, ap.id); }}
+                                                                                disabled={confirmCompleteKey === `${job.id}-${ap.id}`}
+                                                                                className="px-3 py-1 rounded-full text-xs font-black bg-amber-500/20 text-amber-700 dark:text-amber-400 hover:bg-amber-500/30 transition-colors disabled:opacity-70 inline-flex items-center gap-1.5"
+                                                                            >
+                                                                                {confirmCompleteKey === `${job.id}-${ap.id}` ? (
+                                                                                    <>
+                                                                                        <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+                                                                                        Đang xác nhận...
+                                                                                    </>
+                                                                                ) : (
+                                                                                    "Xác nhận hoàn thành"
+                                                                                )}
+                                                                            </button>
+                                                                        )}
+                                                                        {ap.rawStatus === "COMPLETED" && !ap.hasHrReviewed && (
+                                                                            <button
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    setReviewModalApplicant({ ap, jobId: job.id, jobTitle: job.title });
+                                                                                    setReviewRating(5);
+                                                                                    setReviewComment("");
+                                                                                    setReviewError("");
+                                                                                }}
+                                                                                className="px-3 py-1 rounded-full text-xs font-black bg-amber-500/20 text-amber-700 dark:text-amber-400 hover:bg-amber-500/30 transition-colors"
+                                                                            >
+                                                                                Đánh giá Worker
+                                                                            </button>
+                                                                        )}
+                                                                        {ap.rawStatus === "COMPLETED" && ap.hasHrReviewed && (
+                                                                            <span className="px-3 py-1 rounded-full text-xs font-bold text-slate-500 dark:text-slate-400 inline-flex items-center gap-1">
+                                                                                Đã đánh giá
+                                                                                {(() => {
+                                                                                    const stars = Number(ap.rating);
+                                                                                    if (!Number.isNaN(stars) && stars > 0) return <><span className="text-amber-500"> • ⭐ {stars.toFixed(1)}</span></>;
+                                                                                    return null;
+                                                                                })()}
+                                                                            </span>
+                                                                        )}
+                                                                        {ap.rawStatus === "REJECTED" && (
+                                                                            <span className="px-3 py-1 rounded-full text-xs font-black bg-slate-100 text-slate-500 dark:bg-slate-700">
+                                                                                REJECTED
+                                                                            </span>
+                                                                        )}
+                                                                        {ap.rawStatus === "HIRED" && (
+                                                                            <span className="px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
+                                                                                HIRED
                                                                             </span>
                                                                         )}
                                                                     </div>
@@ -528,37 +807,103 @@ export default function HRDashboardPage() {
                         <motion.div key="workers" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                             <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-800 shadow-sm">
                                 <h2 className="text-xl font-black text-slate-900 dark:text-white mb-6">Lao động đã thuê</h2>
-                                <div className="space-y-4">
-                                    {[
-                                        { name: "Nguyễn Văn Bình", skill: "Thợ điện", project: "The Ocean View", period: "15/06 – 15/09/2026", status: "Đang làm", rating: 4.8, initials: "NB", pay: "Đúng hạn" },
-                                        { name: "Trần Văn Cường", skill: "Thợ xây", project: "Smart City Zone A", period: "20/06 – 20/10/2026", status: "Đang làm", rating: 4.6, initials: "TC", pay: "Đúng hạn" },
-                                        { name: "Lê Minh Tuấn", skill: "Thợ hàn", project: "Nhà máy Liên Chiểu", period: "01/03 – 30/04/2026", status: "Hoàn thành", rating: 4.9, initials: "LT", pay: "Đã thanh toán" },
-                                    ].map((w, i) => (
-                                        <div key={i} className="flex items-center gap-4 p-5 rounded-3xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all border border-transparent hover:border-slate-100 dark:hover:border-slate-700">
-                                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center text-white font-black text-lg">
-                                                {w.initials}
-                                            </div>
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-3">
-                                                    <p className="font-black text-slate-900 dark:text-white">{w.name}</p>
-                                                    <span className="text-xs font-black px-3 py-1 rounded-full bg-sky-50 text-sky-600 dark:bg-sky-900/20 dark:text-sky-400">{w.skill}</span>
+                                {loadingHiredWorkers ? (
+                                    <div className="flex items-center gap-3 text-slate-500 font-bold py-8">
+                                        <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+                                        Đang tải...
+                                    </div>
+                                ) : hiredWorkers.length === 0 ? (
+                                    <p className="text-slate-500 font-bold py-8">Chưa có lao động nào trong danh sách đã thuê.</p>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {hiredWorkers.map((w) => {
+                                            const initials = w.workerName.split(/\s+/).map((s) => s[0]).join("").slice(0, 2).toUpperCase() || "—";
+                                            const period = [w.startDate, w.endDate].filter(Boolean).map((d) => new Date(d as string).toLocaleDateString("vi-VN")).join(" – ") || "—";
+                                            return (
+                                                <div key={w.id} className="flex items-center gap-4 p-5 rounded-3xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all border border-transparent hover:border-slate-100 dark:hover:border-slate-700">
+                                                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center text-white font-black text-lg">
+                                                        {initials}
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-3">
+                                                            <p className="font-black text-slate-900 dark:text-white">{w.workerName}</p>
+                                                        </div>
+                                                        <p className="text-sm text-slate-500 font-bold">{w.jobTitle} {period !== "—" ? `• ${period}` : ""}</p>
+                                                    </div>
+                                                    <div className="text-right space-y-1">
+                                                        <span className={`px-3 py-1 rounded-full text-xs font-black ${w.status === "Đang làm" ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" : w.status === "Hoàn thành" ? "bg-slate-100 text-slate-500" : "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"}`}>
+                                                            {w.status}
+                                                        </span>
+                                                        {typeof w.rating === "number" && w.rating > 0 ? (
+                                                            <p className="text-xs font-bold text-amber-600 dark:text-amber-400">⭐ {w.rating.toFixed(1)}</p>
+                                                        ) : (
+                                                            <p className="text-xs text-slate-400 font-bold">Chưa đánh giá</p>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                                <p className="text-sm text-slate-500 font-bold">{w.project} • {w.period}</p>
-                                            </div>
-                                            <div className="text-right space-y-1">
-                                                <span className={`px-3 py-1 rounded-full text-xs font-black ${w.status === "Đang làm" ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-slate-100 text-slate-500"}`}>
-                                                    {w.status}
-                                                </span>
-                                                <p className="text-xs text-slate-400 font-bold">⭐{w.rating} • {w.pay}</p>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </div>
                         </motion.div>
                     )}
                 </AnimatePresence>
             </div>
+
+            {/* Modal: Đánh giá Worker (HR) */}
+            {reviewModalApplicant && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => !reviewSubmitting && setReviewModalApplicant(null)}>
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="text-lg font-black text-slate-900 dark:text-white mb-1">Đánh giá người lao động</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+                            {reviewModalApplicant.jobTitle} — {reviewModalApplicant.ap.name}
+                        </p>
+                        <div className="mb-4">
+                            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Điểm (1–5 sao)</p>
+                            <div className="flex gap-2">
+                                {[1, 2, 3, 4, 5].map((n) => (
+                                    <button
+                                        key={n}
+                                        type="button"
+                                        onClick={() => setReviewRating(n)}
+                                        className={`w-10 h-10 rounded-full font-black text-sm transition-all ${reviewRating >= n ? "bg-amber-400 text-amber-900" : "bg-slate-100 dark:bg-slate-800 text-slate-400"}`}
+                                    >
+                                        {n}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="mb-4">
+                            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Nhận xét (tùy chọn)</label>
+                            <textarea
+                                value={reviewComment}
+                                onChange={(e) => setReviewComment(e.target.value)}
+                                placeholder="Viết vài dòng về chất lượng công việc..."
+                                className="w-full h-24 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 text-sm resize-none"
+                            />
+                        </div>
+                        {reviewError && <p className="text-sm text-red-500 mb-3">{reviewError}</p>}
+                        <div className="flex gap-3">
+                            <button
+                                type="button"
+                                onClick={() => !reviewSubmitting && setReviewModalApplicant(null)}
+                                className="flex-1 py-2.5 rounded-xl font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                type="button"
+                                onClick={submitWorkerReview}
+                                disabled={reviewSubmitting}
+                                className="flex-1 py-2.5 rounded-xl font-bold bg-primary text-white hover:opacity-90 disabled:opacity-50 transition-all"
+                            >
+                                {reviewSubmitting ? "Đang gửi..." : "Gửi đánh giá"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

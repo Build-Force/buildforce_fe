@@ -1,13 +1,15 @@
 import { JobDetailClient } from "@/components/jobs/JobDetailClient";
-import { JOBS as MOCK_JOBS } from "@/data/mockData";
+import api from "@/utils/api";
 
-// With `output: 'export'`, ONLY the IDs returned here can be visited.
-// At build time the API is often unavailable, so we only use mock IDs to avoid ECONNREFUSED.
 export async function generateStaticParams() {
-  const mockParams = (Array.isArray(MOCK_JOBS) ? MOCK_JOBS : []).map((job: any) => ({
-    id: String(job.id),
-  }));
-  return mockParams;
+  try {
+    const res = await api.get("/api/jobs");
+    const items = res.data?.data || [];
+    return Array.isArray(items) ? items.map((job: any) => ({ id: String(job._id) })) : [];
+  } catch (error) {
+    console.error("Failed to generate static params for jobs/[id]", error);
+    return [];
+  }
 }
 
 export default async function JobDetailPage({
