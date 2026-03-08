@@ -150,8 +150,11 @@ export default function AdminJobsPage() {
     setIsLoading(true);
     setErrorMessage(null);
     try {
-      const params: Record<string, string | number> | undefined = statusFilter ? { status: statusFilter } : undefined;
-      const res = await adminApi.getJobs(params);
+      const res = await adminApi.getJobs(
+        (statusFilter ? { status: statusFilter } : undefined) as
+          | Record<string, string | number>
+          | undefined
+      );
       const items = res.data?.data?.data || [];
       setJobDetailsById(items.reduce((acc: Record<string, any>, j: any) => ({ ...acc, [j._id]: j }), {}));
       setRows(
