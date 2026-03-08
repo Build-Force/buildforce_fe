@@ -1,9 +1,95 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import api from "../../utils/api";
+import api from "@/utils/api";
+
+function ConfirmCompleteButton({
+  jobId,
+  applicationId,
+  onSuccess,
+}: {
+  jobId: string;
+  applicationId: string;
+  onSuccess: () => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const handleConfirm = async () => {
+    if (!jobId || !applicationId) return;
+    setLoading(true);
+    setSuccess(false);
+    try {
+      await api.put(`/api/jobs/${jobId}/applicants/${applicationId}/confirm-complete`);
+      setLoading(false);
+      setSuccess(true);
+      setTimeout(() => onSuccess(), 1400);
+    } catch (err) {
+      console.error("Confirm complete failed", err);
+      setLoading(false);
+    }
+  };
+  if (success) {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-black bg-emerald-500/20 text-emerald-700 dark:text-emerald-400">
+        <span className="material-symbols-outlined text-base animate-in zoom-in duration-300">check_circle</span>
+        Đã xác nhận hoàn thành
+      </span>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={handleConfirm}
+      disabled={loading}
+      className="px-4 py-2 rounded-full text-xs font-black bg-amber-500/20 text-amber-700 dark:text-amber-400 hover:bg-amber-500/30 transition-all disabled:opacity-60 inline-flex items-center gap-2"
+    >
+      {loading ? (
+        <>
+          <span className="material-symbols-outlined text-base animate-spin">progress_activity</span>
+          Đang xác nhận...
+        </>
+      ) : (
+        "Xác nhận hoàn thành"
+      )}
+    </button>
+  );
+}
+
+function OpenChatButton({ hrId, companyName }: { hrId: string; companyName: string }) {
+  const [loading, setLoading] = useState(false);
+  const id = typeof hrId === "string" ? hrId : (hrId as any)?.toString?.();
+  const handleOpen = async () => {
+    if (!id || loading) return;
+    setLoading(true);
+    try {
+      const res = await api.post("/api/chat", { participantId: id });
+      const conv = res.data?.data;
+      if (conv?._id && Array.isArray(conv.participants)) {
+        const hrParticipant = conv.participants.find((p: any) => String(p._id) === String(id));
+        const participant = hrParticipant || { _id: id, firstName: "", lastName: "", role: "hr", companyName };
+        window.dispatchEvent(new CustomEvent("buildforce:openChat", { detail: { conversationId: conv._id, participant } }));
+      }
+    } catch (err) {
+      console.error("Open chat failed", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  return (
+    <button
+      type="button"
+      onClick={handleOpen}
+      disabled={loading}
+      className="px-4 py-2 rounded-full text-xs font-black bg-primary/10 text-primary hover:bg-primary/20 transition-all disabled:opacity-60 flex items-center gap-1"
+    >
+      <span className="material-symbols-outlined text-sm">chat</span>
+      {loading ? "Đang mở..." : "Nhắn tin"}
+    </button>
+  );
+}
 
 // --- PREMIUM DESIGN TOKENS ---
 const glassStyle = "bg-white/60 dark:bg-slate-900/40 backdrop-blur-3xl border border-white/20 dark:border-slate-800/50 shadow-2xl";
@@ -68,6 +154,8 @@ export default function ProfilePage() {
     const [profileData, setProfileData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState("overview");
+    const [appliedLoading, setAppliedLoading] = useState(false);
+    const [appliedApplications, setAppliedApplications] = useState<any[]>([]);
 
     // Change Password state
     const [showPasswordForm, setShowPasswordForm] = useState(false);
@@ -86,6 +174,13 @@ export default function ProfilePage() {
     const [avatarUploading, setAvatarUploading] = useState(false);
     const [avatarError, setAvatarError] = useState('');
     const avatarInputRef = React.useRef<HTMLInputElement>(null);
+
+    // Review HR modal (worker rates HR after completed job)
+    const [reviewModalApp, setReviewModalApp] = useState<any>(null);
+    const [reviewRating, setReviewRating] = useState(5);
+    const [reviewComment, setReviewComment] = useState("");
+    const [reviewSubmitting, setReviewSubmitting] = useState(false);
+    const [reviewError, setReviewError] = useState("");
     const calculateStrength = () => {
         if (!profileData) return 90; // Fallback for demo
         let score = 0;
@@ -132,6 +227,45 @@ export default function ProfilePage() {
         };
         fetchProfile();
     }, [router]);
+
+    const loadApplied = React.useCallback(async () => {
+        setAppliedLoading(true);
+        try {
+            const res = await api.get("/api/users/jobs/applied");
+            if (res.data.success) setAppliedApplications(res.data.data || []);
+        } catch (err) {
+            console.error("Failed to load applied jobs", err);
+        } finally {
+            setAppliedLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (activeTab !== "applied") return;
+        loadApplied();
+    }, [activeTab, loadApplied]);
+
+    const submitReview = async () => {
+        if (!reviewModalApp) return;
+        setReviewSubmitting(true);
+        setReviewError("");
+        try {
+            await api.post("/api/reviews", {
+                applicationId: reviewModalApp._id,
+                rating: reviewRating,
+                comment: reviewComment.trim() || undefined,
+            });
+            setReviewModalApp(null);
+            setReviewRating(5);
+            setReviewComment("");
+            await loadApplied();
+        } catch (err: any) {
+            const msg = err?.response?.data?.message || "Gửi đánh giá thất bại.";
+            setReviewError(msg);
+        } finally {
+            setReviewSubmitting(false);
+        }
+    };
 
     if (!mounted || loading) {
         return (
@@ -214,14 +348,28 @@ export default function ProfilePage() {
                                 <div className="flex items-center gap-3">
                                     <span className="material-symbols-outlined text-amber-500 text-xl fill-1">star</span>
                                     <div>
-                                        <p className="text-base font-black text-slate-900 dark:text-white leading-none">{isHR ? MOCK_HR_STATS.rating : MOCK_WORKER_STATS.rating}</p>
-                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Đánh giá chung</p>
+                                        <p className="text-base font-black text-slate-900 dark:text-white leading-none">
+                                            {(() => {
+                                                const avg = Number(profileData.averageRating);
+                                                return !Number.isNaN(avg) && avg > 0 ? avg.toFixed(1) : "—";
+                                            })()}
+                                        </p>
+                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                                            Đánh giá chung {(() => {
+                                                const cnt = Number(profileData.reviewCount);
+                                                return !Number.isNaN(cnt) && cnt > 0 ? `(${cnt})` : "";
+                                            })()}
+                                        </p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">
                                     <span className="material-symbols-outlined text-primary text-xl">local_activity</span>
                                     <div>
-                                        <p className="text-base font-black text-slate-900 dark:text-white leading-none">{isHR ? MOCK_HR_STATS.jobsPosted : MOCK_WORKER_STATS.jobsCompleted}</p>
+                                        <p className="text-base font-black text-slate-900 dark:text-white leading-none">
+                                            {isHR
+                                                ? (profileData.totalJobsPosted ?? "—")
+                                                : (typeof profileData.jobsCompleted === "number" ? profileData.jobsCompleted : "—")}
+                                        </p>
                                         <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Lịch sử làm việc</p>
                                     </div>
                                 </div>
@@ -287,6 +435,7 @@ export default function ProfilePage() {
                                     { id: 'overview', label: 'Hồ sơ năng lực', icon: 'dna', desc: 'Chuyên môn & Khả năng' },
                                     { id: 'activity', label: 'Hoạt động', icon: 'auto_graph', desc: 'Dự án & Danh tiếng' },
                                     { id: 'history', label: 'Lịch sử xây dựng', icon: 'history_edu', desc: 'Nhật ký dự án & Chứng chỉ' },
+                                    { id: 'applied', label: 'Việc đã ứng tuyển', icon: 'send', desc: 'Theo dõi trạng thái' },
                                     { id: 'account', label: 'Bảo mật tài khoản', icon: 'fingerprint', desc: 'Truy cập & Tài sản' }
                                 ].map(tab => (
                                     <button
@@ -501,11 +650,7 @@ export default function ProfilePage() {
                                                                 </div>
                                                             </div>
                                                             <div className="text-right flex flex-col justify-between">
-                                                                <div className="flex items-center gap-3 justify-end text-slate-900 dark:text-white">
-                                                                    <span className="text-xl font-black">{item.rating || 5.0}</span>
-                                                                    <span className="material-symbols-outlined text-amber-500 text-xl fill-1">star</span>
-                                                                </div>
-                                                                <div className="flex items-center gap-2 justify-end text-emerald-500 font-black text-[10px] uppercase tracking-widest mt-4">
+                                                                <div className="flex items-center gap-2 justify-end text-emerald-500 font-black text-[10px] uppercase tracking-widest">
                                                                     <span className="material-symbols-outlined text-lg">verified</span>
                                                                     Hợp đồng {item.status}
                                                                 </div>
@@ -515,6 +660,139 @@ export default function ProfilePage() {
                                                 </div>
                                             ))}
                                         </div>
+                                    </div>
+                                </motion.div>
+                            )}
+
+                            {/* APPLIED JOBS TAB */}
+                            {activeTab === 'applied' && (
+                                <motion.div
+                                    key="applied"
+                                    initial={{ opacity: 0, y: 30 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0 }}
+                                    className="space-y-8"
+                                >
+                                    <div className={cardStyle}>
+                                        <div className="flex items-center justify-between mb-5">
+                                            <div>
+                                                <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Việc đã ứng tuyển</h2>
+                                                <p className="text-slate-400 font-bold uppercase text-[9px] tracking-[0.3em] mt-1">Theo dõi trạng thái ứng tuyển</p>
+                                            </div>
+                                            <span className="px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-full text-xs font-black text-slate-500">
+                                                {appliedApplications.length} hồ sơ
+                                            </span>
+                                        </div>
+
+                                        {appliedLoading ? (
+                                            <div className="flex items-center gap-3 text-slate-500 font-bold">
+                                                <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+                                                Đang tải...
+                                            </div>
+                                        ) : appliedApplications.length === 0 ? (
+                                            <div className="p-6 bg-slate-50 dark:bg-slate-800/20 rounded-2xl border border-slate-100 dark:border-slate-800/40 text-center">
+                                                <p className="text-slate-500 font-bold">Bạn chưa ứng tuyển công việc nào.</p>
+                                                <Link href="/jobs" className="inline-block mt-3 text-primary font-black text-sm hover:underline">
+                                                    Tìm việc ngay →
+                                                </Link>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-4">
+                                                {appliedApplications.map((app: any) => {
+                                                    const j = app.jobId;
+                                                    const hr = j?.hrId;
+                                                    const company = hr?.companyName || (hr?.firstName ? `${hr.firstName} ${hr.lastName || ""}`.trim() : "Nhà tuyển dụng");
+                                                    const location = j?.location?.province || "Việt Nam";
+                                                    const statusLabel: Record<string, string> = {
+                                                        APPLIED: "Đã gửi",
+                                                        ACCEPTED: "Đã chấp nhận",
+                                                        REJECTED: "Bị từ chối",
+                                                        HIRED: "Đã nhận việc",
+                                                        COMPLETION_PENDING: "Chờ xác nhận hoàn thành",
+                                                        COMPLETED: "Hoàn thành",
+                                                    };
+                                                    const statusText = statusLabel[app.status] ?? app.status;
+                                                    return (
+                                                        <div
+                                                            key={app._id}
+                                                            className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/20 border border-slate-100 dark:border-slate-800/40 hover:bg-white dark:hover:bg-slate-800/30 transition-all"
+                                                        >
+                                                            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                                                                <div className="min-w-0">
+                                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                                                                        {company} • {location}
+                                                                    </p>
+                                                                    <p className="text-base font-black text-slate-900 dark:text-white truncate">
+                                                                        {j?.title || "Công việc"}
+                                                                    </p>
+                                                                    <p className="text-xs font-bold text-slate-400 mt-1">
+                                                                        Ứng tuyển: {app.appliedAt ? new Date(app.appliedAt).toLocaleDateString("vi-VN") : "—"}
+                                                                    </p>
+                                                                    {(() => {
+                                                                        const stars = Number(app.hrRating);
+                                                                        if (!Number.isNaN(stars) && stars > 0) return (
+                                                                            <p className="text-xs font-bold text-amber-600 dark:text-amber-400 mt-1 inline-flex items-center gap-1">
+                                                                                <span className="material-symbols-outlined text-amber-500 text-sm fill-amber-500">star</span>
+                                                                                {stars.toFixed(1)} (nhà tuyển dụng đã đánh giá)
+                                                                            </p>
+                                                                        );
+                                                                        return null;
+                                                                    })()}
+                                                                    {app.status === "REJECTED" && app.decisionReason && (
+                                                                        <p className="text-xs font-bold text-red-600 dark:text-red-400 mt-2">Lý do: {app.decisionReason}</p>
+                                                                    )}
+                                                                </div>
+                                                                <div className="flex items-center gap-3 flex-wrap">
+                                                                    <span className="px-4 py-2 rounded-full text-xs font-black bg-primary/10 text-primary">
+                                                                        {statusText}
+                                                                    </span>
+                                                                    {(app.status === "HIRED" || app.status === "COMPLETION_PENDING") && (
+                                                                        <ConfirmCompleteButton
+                                                                            jobId={j?._id}
+                                                                            applicationId={app._id}
+                                                                            onSuccess={() => loadApplied()}
+                                                                        />
+                                                                    )}
+                                                                    {app.status === "COMPLETED" && !app.hasWorkerReviewed && (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                setReviewModalApp(app);
+                                                                                setReviewRating(5);
+                                                                                setReviewComment("");
+                                                                                setReviewError("");
+                                                                            }}
+                                                                            className="px-4 py-2 rounded-full text-xs font-black bg-amber-500/20 text-amber-700 dark:text-amber-400 hover:bg-amber-500/30 transition-all"
+                                                                        >
+                                                                            Đánh giá HR
+                                                                        </button>
+                                                                    )}
+                                                                    {app.status === "COMPLETED" && app.hasWorkerReviewed && (
+                                                                        <span className="px-4 py-2 rounded-full text-xs font-bold text-slate-500 dark:text-slate-400">
+                                                                            Đã đánh giá
+                                                                        </span>
+                                                                    )}
+                                                                    {j?._id && (
+                                                                        <Link
+                                                                            href={`/jobs/${j._id}`}
+                                                                            className="px-4 py-2 rounded-full text-xs font-black bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:opacity-90 transition-all"
+                                                                        >
+                                                                            Xem job
+                                                                        </Link>
+                                                                    )}
+                                                                    {(app.hrId || (hr as any)?._id) && (
+                                                                        <OpenChatButton
+                                                                            hrId={(hr as any)?._id ?? app.hrId}
+                                                                            companyName={company}
+                                                                        />
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
                                     </div>
                                 </motion.div>
                             )}
@@ -576,6 +854,60 @@ export default function ProfilePage() {
                     </main>
                 </div>
             </div>
+
+            {/* Modal: Đánh giá HR (worker) */}
+            {reviewModalApp && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => !reviewSubmitting && setReviewModalApp(null)}>
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="text-lg font-black text-slate-900 dark:text-white mb-1">Đánh giá nhà tuyển dụng</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+                            {reviewModalApp.jobId?.title || "Công việc"} — {reviewModalApp.jobId?.hrId?.companyName || "Nhà tuyển dụng"}
+                        </p>
+                        <div className="mb-4">
+                            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Điểm (1–5 sao)</p>
+                            <div className="flex gap-2">
+                                {[1, 2, 3, 4, 5].map((n) => (
+                                    <button
+                                        key={n}
+                                        type="button"
+                                        onClick={() => setReviewRating(n)}
+                                        className={`w-10 h-10 rounded-full font-black text-sm transition-all ${reviewRating >= n ? "bg-amber-400 text-amber-900" : "bg-slate-100 dark:bg-slate-800 text-slate-400"}`}
+                                    >
+                                        {n}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="mb-4">
+                            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Nhận xét (tùy chọn)</label>
+                            <textarea
+                                value={reviewComment}
+                                onChange={(e) => setReviewComment(e.target.value)}
+                                placeholder="Viết vài dòng về trải nghiệm làm việc..."
+                                className="w-full h-24 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 text-sm resize-none"
+                            />
+                        </div>
+                        {reviewError && <p className="text-sm text-red-500 mb-3">{reviewError}</p>}
+                        <div className="flex gap-3">
+                            <button
+                                type="button"
+                                onClick={() => !reviewSubmitting && setReviewModalApp(null)}
+                                className="flex-1 py-2.5 rounded-xl font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                type="button"
+                                onClick={submitReview}
+                                disabled={reviewSubmitting}
+                                className="flex-1 py-2.5 rounded-xl font-bold bg-primary text-white hover:opacity-90 disabled:opacity-50 transition-all"
+                            >
+                                {reviewSubmitting ? "Đang gửi..." : "Gửi đánh giá"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

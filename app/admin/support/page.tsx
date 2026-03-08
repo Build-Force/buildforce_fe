@@ -32,6 +32,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Việc làm", href: "/admin/jobs", icon: "work" },
   { label: "Thanh toán", href: "/admin/payments", icon: "payments" },
   { label: "Tranh chấp", href: "/admin/disputes", icon: "report_problem" },
+  { label: "Blog", href: "/admin/blogs", icon: "article" },
 ];
 
 const getErrorMessage = (error: unknown) => {
@@ -54,13 +55,18 @@ export default function AdminSupportPage() {
       const items = res.data?.data?.data || [];
 
       setTickets(
-        items.map((item: any) => ({
-          id: item._id,
-          subject: item.subject || "Không có tiêu đề",
-          requester: item.userId?.fullName || item.userId?.email || "Người dùng",
-          priority: item.priority,
-          status: item.status,
-        })),
+        items.map((item: any) => {
+          const requester = item.userId
+            ? [item.userId.firstName, item.userId.lastName].filter(Boolean).join(" ") || item.userId.email
+            : "Người dùng";
+          return {
+            id: item._id,
+            subject: item.subject || "Không có tiêu đề",
+            requester,
+            priority: item.priority,
+            status: item.status,
+          };
+        }),
       );
     } catch (error) {
       setTickets([]);

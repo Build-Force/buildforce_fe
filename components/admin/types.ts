@@ -19,9 +19,15 @@ export type StatItem = {
   trendTone: StatTrendTone;
   periodComparison?: string;
   sparkline?: number[];
+  /** Delta vs previous period; if undefined, show "—" */
+  trendDelta?: number;
+  /** Accent color for left border (e.g. #3b82f6) */
+  accentColor: string;
+  /** Show pulsing alert dot when true (e.g. pending > 50, disputes > 0) */
+  showAlertDot?: boolean;
 };
 
-export type ActivityStatus = "active" | "pending" | "matched";
+export type ActivityStatus = "active" | "pending" | "matched" | "closed" | "resolved";
 
 export type ActivityRow = {
   id: string;

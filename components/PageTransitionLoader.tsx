@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 
 interface Brick {
@@ -30,12 +30,13 @@ function generateBricks(): Brick[] {
 
   for (let row = 0; row < ROWS; row++) {
     for (let col = 0; col < COLS; col++) {
+      const colorIndex = (row * COLS + col) % BRICK_COLORS.length;
       bricks.push({
         id: id++,
         row,
         col,
         delay: (col + row * 0.5) * 60,
-        color: BRICK_COLORS[Math.floor(Math.random() * BRICK_COLORS.length)],
+        color: BRICK_COLORS[colorIndex],
       });
     }
   }
@@ -139,15 +140,15 @@ function LoaderOverlay({ visible }: { visible: boolean }) {
         </svg>
         <span
           style={{
-            fontFamily: "'Barlow Condensed', 'Arial Narrow', sans-serif",
-            fontWeight: 700,
+            fontFamily: "var(--font-inter), sans-serif",
+            fontWeight: 800,
             fontSize: 22,
-            letterSpacing: '0.08em',
-            color: '#F1F5F9',
-            textTransform: 'uppercase',
+            letterSpacing: "-0.02em",
+            color: "#F1F5F9",
+            textTransform: "uppercase",
           }}
         >
-          Build<span style={{ color: '#3B82F6' }}>Force</span>
+          Build<span style={{ color: "#3B82F6" }}>Force</span>
         </span>
       </div>
 
@@ -156,10 +157,10 @@ function LoaderOverlay({ visible }: { visible: boolean }) {
       <p
         className="mt-5 text-xs uppercase tracking-widest"
         style={{
-          color: 'rgba(148,163,184,0.6)',
-          fontFamily: "'Barlow', sans-serif",
+          color: "rgba(148,163,184,0.6)",
+          fontFamily: "var(--font-inter), sans-serif",
           opacity: visible ? 1 : 0,
-          transition: 'opacity 0.4s ease 0.2s',
+          transition: "opacity 0.4s ease 0.2s",
         }}
       >
         Đang tải...
@@ -181,7 +182,7 @@ export function PageTransitionLoader() {
   const routeKey = `${pathname}?${searchParams.toString()}#${hash}`;
   const skipLoader = shouldSkipLoader(pathname);
 
-  const startLoading = () => {
+  const startLoading = useCallback(() => {
     if (skipLoader) {
       setLoading(false);
       return;
@@ -193,7 +194,7 @@ export function PageTransitionLoader() {
     hideTimerRef.current = setTimeout(() => {
       setLoading(false);
     }, LOADER_VISIBLE_TIME);
-  };
+  }, [skipLoader]);
 
   useEffect(() => {
     setHash(window.location.hash || '');
@@ -221,7 +222,7 @@ export function PageTransitionLoader() {
       setPrevRouteKey(routeKey);
       startLoading();
     }
-  }, [routeKey, prevRouteKey]);
+  }, [routeKey, prevRouteKey, startLoading]);
 
   useEffect(() => {
     return () => {

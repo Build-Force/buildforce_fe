@@ -20,6 +20,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Việc làm", href: "/admin/jobs", icon: "work" },
   { label: "Thanh toán", href: "/admin/payments", icon: "payments" },
   { label: "Tranh chấp", href: "/admin/disputes", icon: "report_problem" },
+  { label: "Blog", href: "/admin/blogs", icon: "article" },
 ];
 
 type PendingAction =
@@ -63,27 +64,32 @@ export default function HRManagementPage() {
     const res = await adminApi.getHrList(params);
     const items = res.data?.data?.data || [];
 
-    setRows(
-      items.map((item: any) => ({
-        id: item._id,
-        companyName: item.companyName,
-        taxCode: item.taxCode,
-        region: item.address || "Việt Nam",
-        address: item.address || "--",
-        contactEmail: item.contactInfo || "--",
-        phone: "--",
-        verificationStatus: item.verificationStatus,
-        isBlacklisted: item.isBlacklisted,
-        completedProjects: item.totalJobsCompleted || 0,
-        workersHired: 0,
-        completionRate: 0,
-        avgRating: item.averageRating || 0,
-        reportCount: item.totalReports || 0,
-        popularPaymentMethod: "BANK_TRANSFER",
-        onTimePaymentRate: item.onTimePaymentRate || 0,
-        createdAt: item.createdAt,
-      })),
-    );
+      setRows(
+        items.map((item: any) => {
+          const totalPosted = item.totalJobsPosted || 0;
+          const totalCompleted = item.totalJobsCompleted || 0;
+          const completionRate = totalPosted > 0 ? Math.round((totalCompleted / totalPosted) * 100) : 0;
+          return {
+            id: item._id,
+            companyName: item.companyName,
+            taxCode: item.taxCode,
+            region: item.address || "Việt Nam",
+            address: item.address || "--",
+            contactEmail: item.contactInfo || "--",
+            phone: item.contactInfo || "--",
+            verificationStatus: item.verificationStatus,
+            isBlacklisted: item.isBlacklisted,
+            completedProjects: totalCompleted,
+            workersHired: totalCompleted,
+            completionRate,
+            avgRating: item.averageRating ?? 0,
+            reportCount: item.totalReports ?? 0,
+            popularPaymentMethod: "BANK_TRANSFER" as const,
+            onTimePaymentRate: item.onTimePaymentRate ?? 0,
+            createdAt: item.createdAt,
+          };
+        }),
+      );
     } catch (error) {
       setRows([]);
       setErrorMessage("Không thể tải danh sách HR.");
@@ -117,6 +123,7 @@ export default function HRManagementPage() {
         iconTextClass: "text-emerald-600",
         trend: "Ổn định",
         trendTone: "positive",
+        accentColor: "#10b981",
       },
       {
         title: "Đang chờ duyệt",
@@ -126,6 +133,7 @@ export default function HRManagementPage() {
         iconTextClass: "text-amber-600",
         trend: "Cần xử lý",
         trendTone: "neutral",
+        accentColor: "#f59e0b",
       },
       {
         title: "Bị blacklist",
@@ -135,6 +143,7 @@ export default function HRManagementPage() {
         iconTextClass: "text-red-600",
         trend: "Theo dõi",
         trendTone: "negative",
+        accentColor: "#ef4444",
       },
     ];
   }, [rows]);
@@ -161,11 +170,11 @@ export default function HRManagementPage() {
 
   const actionText = pendingAction
     ? {
-        approve: { title: "Duyệt hồ sơ HR?", desc: `Xác nhận duyệt ${pendingAction.hr.companyName}.`, confirm: "Duyệt" },
-        reject: { title: "Từ chối hồ sơ HR?", desc: `Xác nhận từ chối ${pendingAction.hr.companyName}.`, confirm: "Từ chối" },
-        blacklist: { title: "Đưa vào blacklist?", desc: `HR ${pendingAction.hr.companyName} sẽ bị tạm khóa hoạt động trên hệ thống.`, confirm: "Blacklist" },
-        reactivate: { title: "Khôi phục HR?", desc: `Khôi phục hoạt động cho ${pendingAction.hr.companyName}.`, confirm: "Khôi phục" },
-      }[pendingAction.type]
+      approve: { title: "Duyệt hồ sơ HR?", desc: `Xác nhận duyệt ${pendingAction.hr.companyName}.`, confirm: "Duyệt" },
+      reject: { title: "Từ chối hồ sơ HR?", desc: `Xác nhận từ chối ${pendingAction.hr.companyName}.`, confirm: "Từ chối" },
+      blacklist: { title: "Đưa vào blacklist?", desc: `HR ${pendingAction.hr.companyName} sẽ bị tạm khóa hoạt động trên hệ thống.`, confirm: "Blacklist" },
+      reactivate: { title: "Khôi phục HR?", desc: `Khôi phục hoạt động cho ${pendingAction.hr.companyName}.`, confirm: "Khôi phục" },
+    }[pendingAction.type]
     : null;
 
   return (

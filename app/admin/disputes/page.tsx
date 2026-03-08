@@ -35,6 +35,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Việc làm", href: "/admin/jobs", icon: "work" },
   { label: "Thanh toán", href: "/admin/payments", icon: "payments" },
   { label: "Tranh chấp", href: "/admin/disputes", icon: "report_problem", active: true },
+  { label: "Blog", href: "/admin/blogs", icon: "article" },
 ];
 
 const getErrorMessage = (error: unknown) => {
@@ -57,15 +58,23 @@ export default function AdminDisputesPage() {
       const items = res.data?.data?.data || [];
 
       setCases(
-        items.map((item: any) => ({
-          id: item._id,
-          reporter: item.reporterId?.fullName || item.reporterId?.email || "Không rõ",
-          target: item.targetId?.fullName || item.targetId?.email || "Không rõ",
-          category: item.category || "Khác",
-          createdAt: item.createdAt,
-          priority: item.priority,
-          status: item.status,
-        })),
+        items.map((item: any) => {
+          const reporterName = item.reporterId
+            ? [item.reporterId.firstName, item.reporterId.lastName].filter(Boolean).join(" ") || item.reporterId.email
+            : "Không rõ";
+          const targetName = item.targetId
+            ? item.targetId.companyName || [item.targetId.firstName, item.targetId.lastName].filter(Boolean).join(" ") || item.targetId.email
+            : "Không rõ";
+          return {
+            id: item._id,
+            reporter: reporterName,
+            target: targetName,
+            category: item.category || "Khác",
+            createdAt: item.createdAt,
+            priority: item.priority,
+            status: item.status,
+          };
+        }),
       );
     } catch (error) {
       setCases([]);
@@ -100,6 +109,7 @@ export default function AdminDisputesPage() {
         iconTextClass: "text-red-600",
         trend: "Ưu tiên xử lý",
         trendTone: "negative",
+        accentColor: "#ef4444",
       },
       {
         title: "Đang điều tra",
@@ -109,6 +119,7 @@ export default function AdminDisputesPage() {
         iconTextClass: "text-amber-600",
         trend: "Theo dõi",
         trendTone: "neutral",
+        accentColor: "#f59e0b",
       },
       {
         title: "Đã giải quyết",
@@ -118,6 +129,7 @@ export default function AdminDisputesPage() {
         iconTextClass: "text-emerald-600",
         trend: "Ổn định",
         trendTone: "positive",
+        accentColor: "#10b981",
       },
     ];
   }, [cases]);

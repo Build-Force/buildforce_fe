@@ -11,6 +11,15 @@ export const Hero = () => {
     const [isSurveyOpen, setIsSurveyOpen] = React.useState(false);
     const [isLoggedIn, setIsLoggedIn] = React.useState(false);
     const [isHR, setIsHR] = React.useState(false);
+    const [keyword, setKeyword] = React.useState("");
+    const [location, setLocation] = React.useState("");
+
+    const handleSearch = () => {
+        const params = new URLSearchParams();
+        if (keyword.trim()) params.set("search", keyword.trim());
+        if (location.trim()) params.set("location", location.trim());
+        router.push(`/jobs${params.toString() ? `?${params.toString()}` : ""}`);
+    };
 
     React.useEffect(() => {
         const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
@@ -113,6 +122,9 @@ export const Hero = () => {
                             <span className="material-symbols-outlined text-slate-400 text-3xl">search</span>
                             <div className="w-full text-left">
                                 <input
+                                    value={keyword}
+                                    onChange={(e) => setKeyword(e.target.value)}
+                                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                                     className="w-full bg-transparent border-none focus:ring-0 text-xl text-slate-800 dark:text-white placeholder-slate-500 font-medium py-2"
                                     placeholder="Chức danh công việc hoặc ngành nghề (ví dụ: Thợ điện)"
                                     type="text"
@@ -123,13 +135,20 @@ export const Hero = () => {
                             <span className="material-symbols-outlined text-slate-400 text-3xl">location_on</span>
                             <div className="w-full text-left">
                                 <input
+                                    value={location}
+                                    onChange={(e) => setLocation(e.target.value)}
+                                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                                     className="w-full bg-transparent border-none focus:ring-0 text-xl text-slate-800 dark:text-white placeholder-slate-500 font-medium py-2"
                                     placeholder="Thành phố hoặc tỉnh thành"
                                     type="text"
                                 />
                             </div>
                         </div>
-                        <button className="bg-slate-900 dark:bg-primary hover:opacity-90 text-white px-10 py-5 rounded-2xl font-bold text-xl transition-all whitespace-nowrap">
+                        <button
+                            type="button"
+                            onClick={handleSearch}
+                            className="bg-slate-900 dark:bg-primary hover:opacity-90 text-white px-10 py-5 rounded-2xl font-bold text-xl transition-all whitespace-nowrap"
+                        >
                             Tìm việc làm
                         </button>
                     </div>
