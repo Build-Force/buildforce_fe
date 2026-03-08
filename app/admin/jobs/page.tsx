@@ -212,9 +212,9 @@ export default function AdminJobsPage() {
   const approve = async (id: string) => {
     setIsUpdatingId(id);
     try {
-      await adminApi.approveJob(id);
+    await adminApi.approveJob(id);
       setToast({ type: "success", message: "Duyệt tin thành công." });
-      await loadJobs();
+    await loadJobs();
     } catch (error) {
       setToast({ type: "error", message: getErrorMessage(error) });
     } finally {
@@ -250,7 +250,7 @@ export default function AdminJobsPage() {
       {toast ? <AdminToast type={toast.type} message={toast.message} /> : null}
 
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <Topbar locale="vi" />
+        <Topbar />
         <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
           {errorMessage ? <AdminErrorBanner message={errorMessage} className="mb-6" /> : null}
 

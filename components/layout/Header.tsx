@@ -80,7 +80,14 @@ export const Header = () => {
         };
         window.addEventListener("scroll", handleScroll);
 
-        if (document.documentElement.classList.contains("dark")) {
+        const savedTheme = localStorage.getItem("theme");
+        if (savedTheme === "dark") {
+            document.documentElement.classList.add("dark");
+            setIsDarkMode(true);
+        } else if (savedTheme === "light") {
+            document.documentElement.classList.remove("dark");
+            setIsDarkMode(false);
+        } else if (document.documentElement.classList.contains("dark")) {
             setIsDarkMode(true);
         }
 
@@ -133,7 +140,9 @@ export const Header = () => {
 
     const toggleDarkMode = () => {
         document.documentElement.classList.toggle("dark");
-        setIsDarkMode(!isDarkMode);
+        const nextIsDark = document.documentElement.classList.contains("dark");
+        localStorage.setItem("theme", nextIsDark ? "dark" : "light");
+        setIsDarkMode(nextIsDark);
     };
 
     // Construct Avatar text or image
