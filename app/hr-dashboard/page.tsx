@@ -701,16 +701,25 @@ export default function HRDashboardPage() {
                                                 <span>👁 {job.views} lượt xem</span>
                                                 <span>📅 {job.startDate}</span>
                                                 <div className="flex gap-3 ml-auto">
-                                                    {job.status === "draft" && (
+                                                    {job.status === "draft" ? (
                                                         <button
+                                                            type="button"
                                                             className="text-primary hover:underline"
                                                             onClick={(e) => { e.stopPropagation(); router.push(`/post-job?edit=${job.id}`); }}
                                                         >
                                                             Chỉnh sửa
                                                         </button>
+                                                    ) : (
+                                                        <span
+                                                            className="text-slate-400 cursor-not-allowed"
+                                                            title="Chỉ tin trạng thái Nháp mới chỉnh sửa được"
+                                                        >
+                                                            Chỉnh sửa
+                                                        </span>
                                                     )}
                                                     {job.status !== "closed" && (
                                                         <button
+                                                            type="button"
                                                             className="text-slate-400 hover:text-red-500"
                                                             onClick={(e) => { e.stopPropagation(); setJobToClose(job); }}
                                                         >
