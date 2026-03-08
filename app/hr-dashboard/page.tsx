@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "@/utils/api";
 
@@ -55,11 +56,15 @@ const STATUS_CONFIG = {
 };
 
 export default function HRDashboardPage() {
+    const router = useRouter();
     const [activeTab, setActiveTab] = useState<"overview" | "jobs" | "workers">("overview");
     const [selectedJob, setSelectedJob] = useState<UiJob | null>(null);
     const [filterStatus, setFilterStatus] = useState("all");
     const [jobPosts, setJobPosts] = useState<UiJob[]>([]);
     const [loadingJobs, setLoadingJobs] = useState(true);
+    const [jobToClose, setJobToClose] = useState<UiJob | null>(null);
+    const [closingJobId, setClosingJobId] = useState<string | null>(null);
+    const [refreshJobs, setRefreshJobs] = useState(0);
     const [applicantsByJob, setApplicantsByJob] = useState<Record<string, UiApplicant[]>>({});
     const [loadingApplicants, setLoadingApplicants] = useState<Record<string, boolean>>({});
     const [activePackage, setActivePackage] = useState<ActivePackage | null>(null);
@@ -138,36 +143,53 @@ export default function HRDashboardPage() {
         loadDashboard();
     }, []);
 
-    useEffect(() => {
-        const loadJobs = async () => {
-            setLoadingJobs(true);
-            try {
-                const res = await api.get("/api/hr/jobs");
-                if (res.data.success) {
-                    const mapped: UiJob[] = (res.data.data || []).map((j: any) => ({
-                        id: j._id,
-                        title: j.title,
-                        status: mapStatus(j.status),
-                        applicants: j.applicantsCount || 0,
-                        needed: j.workersNeeded || 0,
-                        accepted: j.workersHired || 0,
-                        location: j.location?.province || "Việt Nam",
-                        salary: formatSalary(j.salary),
-                        startDate: j.startDate ? new Date(j.startDate).toLocaleDateString("vi-VN") : "—",
-                        urgent: false,
-                        views: 0,
-                        skill: Array.isArray(j.skills) && j.skills.length > 0 ? j.skills[0] : undefined,
-                    }));
-                    setJobPosts(mapped);
-                }
-            } catch (err) {
-                console.error("Failed to load HR jobs", err);
-            } finally {
-                setLoadingJobs(false);
+    const loadJobs = React.useCallback(async () => {
+        setLoadingJobs(true);
+        try {
+            const res = await api.get("/api/hr/jobs");
+            if (res.data.success) {
+                const mapped: UiJob[] = (res.data.data || []).map((j: any) => ({
+                    id: j._id,
+                    title: j.title,
+                    status: mapStatus(j.status),
+                    applicants: j.applicantsCount || 0,
+                    needed: j.workersNeeded || 0,
+                    accepted: j.workersHired || 0,
+                    location: j.location?.province || "Việt Nam",
+                    salary: formatSalary(j.salary),
+                    startDate: j.startDate ? new Date(j.startDate).toLocaleDateString("vi-VN") : "—",
+                    urgent: false,
+                    views: 0,
+                    skill: Array.isArray(j.skills) && j.skills.length > 0 ? j.skills[0] : undefined,
+                }));
+                setJobPosts(mapped);
             }
-        };
-        loadJobs();
+        } catch (err) {
+            console.error("Failed to load HR jobs", err);
+        } finally {
+            setLoadingJobs(false);
+        }
     }, []);
+
+    useEffect(() => {
+        loadJobs();
+    }, [loadJobs, refreshJobs]);
+
+    const handleCloseJob = async () => {
+        if (!jobToClose) return;
+        setClosingJobId(jobToClose.id);
+        try {
+            await api.put(`/api/jobs/${jobToClose.id}/close`);
+            setJobToClose(null);
+            setSelectedJob((prev) => (prev?.id === jobToClose.id ? null : prev));
+            setRefreshJobs((r) => r + 1);
+        } catch (err: any) {
+            console.error("Close job failed", err);
+            alert(err?.response?.data?.message || "Không thể đóng tin. Thử lại sau.");
+        } finally {
+            setClosingJobId(null);
+        }
+    };
 
     useEffect(() => {
         if (activeTab === "workers") loadHiredWorkers();
@@ -679,8 +701,22 @@ export default function HRDashboardPage() {
                                                 <span>👁 {job.views} lượt xem</span>
                                                 <span>📅 {job.startDate}</span>
                                                 <div className="flex gap-3 ml-auto">
-                                                    <button className="text-primary hover:underline" onClick={e => e.stopPropagation()}>Chỉnh sửa</button>
-                                                    <button className="text-slate-400 hover:text-red-500" onClick={e => e.stopPropagation()}>Đóng</button>
+                                                    {job.status === "draft" && (
+                                                        <button
+                                                            className="text-primary hover:underline"
+                                                            onClick={(e) => { e.stopPropagation(); router.push(`/post-job?edit=${job.id}`); }}
+                                                        >
+                                                            Chỉnh sửa
+                                                        </button>
+                                                    )}
+                                                    {job.status !== "closed" && (
+                                                        <button
+                                                            className="text-slate-400 hover:text-red-500"
+                                                            onClick={(e) => { e.stopPropagation(); setJobToClose(job); }}
+                                                        >
+                                                            Đóng tin
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
 
@@ -850,6 +886,36 @@ export default function HRDashboardPage() {
                     )}
                 </AnimatePresence>
             </div>
+
+            {/* Modal: Xác nhận đóng tin */}
+            {jobToClose && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => !closingJobId && setJobToClose(null)}>
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="text-lg font-black text-slate-900 dark:text-white mb-1">Đóng tin tuyển dụng</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+                            Bạn có chắc muốn đóng tin &quot;{jobToClose.title}&quot;? Tin đã đóng sẽ không còn hiển thị cho ứng viên.
+                        </p>
+                        <div className="flex gap-3 justify-end">
+                            <button
+                                type="button"
+                                onClick={() => setJobToClose(null)}
+                                disabled={!!closingJobId}
+                                className="px-4 py-2.5 rounded-xl font-bold text-sm border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleCloseJob}
+                                disabled={!!closingJobId}
+                                className="px-4 py-2.5 rounded-xl font-bold text-sm bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition-all"
+                            >
+                                {closingJobId ? "Đang xử lý..." : "Đóng tin"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Modal: Đánh giá Worker (HR) */}
             {reviewModalApplicant && (

@@ -175,6 +175,11 @@ export default function ProfilePage() {
     const [avatarError, setAvatarError] = useState('');
     const avatarInputRef = React.useRef<HTMLInputElement>(null);
 
+    // Inline edit thông tin tài khoản (overview)
+    const [editingBasicInfo, setEditingBasicInfo] = useState(false);
+    const [basicInfoSaving, setBasicInfoSaving] = useState(false);
+    const [basicInfoError, setBasicInfoError] = useState("");
+
     // Review HR modal (worker rates HR after completed job)
     const [reviewModalApp, setReviewModalApp] = useState<any>(null);
     const [reviewRating, setReviewRating] = useState(5);
@@ -244,6 +249,30 @@ export default function ProfilePage() {
         if (activeTab !== "applied") return;
         loadApplied();
     }, [activeTab, loadApplied]);
+
+    const saveBasicInfo = async () => {
+        setBasicInfoError("");
+        setBasicInfoSaving(true);
+        try {
+            const res = await api.put("/api/auth/profile", {
+                firstName: editForm.firstName?.trim() || profileData.firstName,
+                lastName: editForm.lastName?.trim() ?? profileData.lastName,
+                phone: editForm.phone?.trim() || null,
+                ...(isHR && {
+                    companyName: profileData.companyName,
+                    taxCode: profileData.taxCode,
+                }),
+            });
+            if (res.data?.success && res.data?.data) {
+                setProfileData((prev: any) => ({ ...prev, ...res.data.data }));
+                setEditingBasicInfo(false);
+            }
+        } catch (err: any) {
+            setBasicInfoError(err?.response?.data?.message || "Cập nhật thất bại. Thử lại.");
+        } finally {
+            setBasicInfoSaving(false);
+        }
+    };
 
     const submitReview = async () => {
         if (!reviewModalApp) return;
@@ -505,6 +534,135 @@ export default function ProfilePage() {
                                     transition={{ duration: 0.5, ease: "circOut" }}
                                     className="space-y-8"
                                 >
+                                    {/* Thông tin cơ bản từ API — có thể sửa Họ tên & SĐT tại đây */}
+                                    <div className={cardStyle}>
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Thông tin tài khoản</h2>
+                                            {!editingBasicInfo ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setEditForm({
+                                                            firstName: profileData.firstName || "",
+                                                            lastName: profileData.lastName || "",
+                                                            phone: profileData.phone || "",
+                                                            companyName: profileData.companyName || "",
+                                                            taxCode: profileData.taxCode || "",
+                                                        });
+                                                        setBasicInfoError("");
+                                                        setEditingBasicInfo(true);
+                                                    }}
+                                                    className="p-2 rounded-xl text-slate-400 hover:text-primary hover:bg-primary/10 transition-all"
+                                                    title="Chỉnh sửa"
+                                                >
+                                                    <span className="material-symbols-outlined text-xl">edit</span>
+                                                </button>
+                                            ) : (
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => { setEditingBasicInfo(false); setBasicInfoError(""); }}
+                                                        disabled={basicInfoSaving}
+                                                        className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all disabled:opacity-50"
+                                                        title="Hủy"
+                                                    >
+                                                        <span className="material-symbols-outlined text-xl">close</span>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={saveBasicInfo}
+                                                        disabled={basicInfoSaving}
+                                                        className="px-4 py-2 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90 disabled:opacity-50 transition-all flex items-center gap-2"
+                                                    >
+                                                        {basicInfoSaving ? (
+                                                            <>
+                                                                <span className="material-symbols-outlined text-lg animate-spin">progress_activity</span>
+                                                                Đang lưu...
+                                                            </>
+                                                        ) : (
+                                                            "Lưu"
+                                                        )}
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                        {basicInfoError && (
+                                            <p className="text-sm text-red-500 font-bold mb-3">{basicInfoError}</p>
+                                        )}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            {/* Họ và tên — chỉ hiển thị hoặc cho sửa */}
+                                            <div className="sm:col-span-2">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Họ và tên</p>
+                                                {editingBasicInfo ? (
+                                                    <div className="flex gap-3 flex-wrap">
+                                                        <input
+                                                            type="text"
+                                                            value={editForm.lastName}
+                                                            onChange={(e) => setEditForm((f) => ({ ...f, lastName: e.target.value }))}
+                                                            placeholder="Họ"
+                                                            className="flex-1 min-w-[120px] h-11 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-bold focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                                                        />
+                                                        <input
+                                                            type="text"
+                                                            value={editForm.firstName}
+                                                            onChange={(e) => setEditForm((f) => ({ ...f, firstName: e.target.value }))}
+                                                            placeholder="Tên"
+                                                            className="flex-1 min-w-[120px] h-11 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-bold focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                                                        />
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-slate-900 dark:text-white font-bold">
+                                                        {[profileData.lastName, profileData.firstName].filter(Boolean).join(" ") || "—"}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Email</p>
+                                                <p className="text-slate-900 dark:text-white font-bold">{profileData.email || "—"}</p>
+                                                <p className="text-[10px] text-slate-400 mt-0.5">Không thể thay đổi</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Số điện thoại</p>
+                                                {editingBasicInfo ? (
+                                                    <input
+                                                        type="tel"
+                                                        value={editForm.phone}
+                                                        onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
+                                                        placeholder="Số điện thoại"
+                                                        className="w-full h-11 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-bold focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                                                    />
+                                                ) : (
+                                                    <p className="text-slate-900 dark:text-white font-bold">{profileData.phone || "—"}</p>
+                                                )}
+                                            </div>
+                                            {profileData.username && (
+                                                <div>
+                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Tên đăng nhập</p>
+                                                    <p className="text-slate-900 dark:text-white font-bold">{profileData.username}</p>
+                                                    <p className="text-[10px] text-slate-400 mt-0.5">Không thể thay đổi</p>
+                                                </div>
+                                            )}
+                                            <div>
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Vai trò</p>
+                                                <p className="text-slate-900 dark:text-white font-bold">
+                                                    {profileData.role === "hr" ? "Nhà tuyển dụng" : profileData.role === "admin" ? "Quản trị viên" : "Lao động"}
+                                                </p>
+                                            </div>
+                                            {isHR && (
+                                                <>
+                                                    <div className="sm:col-span-2">
+                                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Công ty</p>
+                                                        <p className="text-slate-900 dark:text-white font-bold">{profileData.companyName || "—"}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Mã số thuế</p>
+                                                        <p className="text-slate-900 dark:text-white font-bold">{profileData.taxCode || "—"}</p>
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+
                                     <div className={cardStyle}>
                                         <h2 className="text-xl font-black text-slate-900 dark:text-white mb-4 tracking-tight">Tóm tắt năng lực</h2>
                                         <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed italic font-medium">
