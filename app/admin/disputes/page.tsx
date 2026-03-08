@@ -109,6 +109,7 @@ export default function AdminDisputesPage() {
         iconTextClass: "text-red-600",
         trend: "Ưu tiên xử lý",
         trendTone: "negative",
+        accentColor: "#ef4444",
       },
       {
         title: "Đang điều tra",
@@ -118,6 +119,7 @@ export default function AdminDisputesPage() {
         iconTextClass: "text-amber-600",
         trend: "Theo dõi",
         trendTone: "neutral",
+        accentColor: "#f59e0b",
       },
       {
         title: "Đã giải quyết",
@@ -127,6 +129,7 @@ export default function AdminDisputesPage() {
         iconTextClass: "text-emerald-600",
         trend: "Ổn định",
         trendTone: "positive",
+        accentColor: "#10b981",
       },
     ];
   }, [cases]);

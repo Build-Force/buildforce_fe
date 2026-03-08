@@ -17,18 +17,38 @@ interface SurveyWizardProps {
     onClose: () => void;
 }
 
-const STEPS = [ // Renamed from 'steps' to 'STEPS'
+const TRADE_OPTIONS = [
+    { label: "Thợ điện", value: "electrician", icon: "bolt" },
+    { label: "Thợ ống nước", value: "plumber", icon: "water_drop" },
+    { label: "Thợ mộc", value: "carpenter", icon: "architecture" },
+    { label: "Thợ hàn", value: "welder", icon: "precision_manufacturing" },
+    { label: "Thợ sắt / Thép", value: "ironworker", icon: "construction" },
+    { label: "Thợ xây / Nề", value: "mason", icon: "foundation" },
+    { label: "Thợ sơn", value: "painter", icon: "format_paint" },
+    { label: "Thợ ốp lát", value: "tiler", icon: "grid_4x4" },
+    { label: "Thợ lợp mái", value: "roofer", icon: "roofing" },
+    { label: "Thợ lắp đặt điều hòa", value: "hvac", icon: "ac_unit" },
+    { label: "Thợ lắp kính / Nhôm kính", value: "glazier", icon: "window" },
+    { label: "Vận hành máy xúc / Máy ủi", value: "heavy_equipment", icon: "engineering" },
+    { label: "Vận hành cần cẩu", value: "crane_operator", icon: "crisis_alert" },
+    { label: "Kỹ sư xây dựng", value: "civil_engineer", icon: "engineering" },
+    { label: "Giám sát công trình", value: "site_supervisor", icon: "supervisor_account" },
+    { label: "Thợ lắp điện nội thất", value: "electrical_installer", icon: "electrical_services" },
+    { label: "Thợ bảo trì / Sửa chữa", value: "maintenance", icon: "build" },
+    { label: "Lao động phổ thông", value: "general", icon: "groups" },
+    { label: "Khác (tự nhập)", value: "other", icon: "edit_note" },
+];
+
+const PREFERRED_PROVINCES = [
+    "Đà Nẵng", "Hà Nội", "TP.HCM", "Quảng Nam", "Huế", "Bình Dương", "Đồng Nai", "Cần Thơ", "Hải Phòng", "Khánh Hòa"
+];
+
+const STEPS = [
     {
         id: "trade",
         title: "Ngành nghề của bạn là gì?",
-        description: "Chọn ngành chuyên môn chính của bạn.",
-        options: [
-            { label: "Thợ điện", value: "electrician", icon: "bolt" },
-            { label: "Thợ ống nước", value: "plumber", icon: "water_drop" },
-            { label: "Thợ mộc", value: "carpenter", icon: "architecture" },
-            { label: "Vận hành máy", value: "operator", icon: "engineering" },
-            { label: "Lao động phổ thông", value: "general", icon: "groups" },
-        ],
+        description: "Chọn ngành chuyên môn chính của bạn. Có thể gõ ngành khác nếu không có trong danh sách.",
+        options: TRADE_OPTIONS,
     },
     {
         id: "experience",
@@ -66,11 +86,13 @@ const STEPS = [ // Renamed from 'steps' to 'STEPS'
 
 export const SurveyWizard: React.FC<SurveyWizardProps> = ({ isOpen, onClose }) => {
     const [currentStep, setCurrentStep] = useState(0);
-    const [formData, setFormData] = useState<Record<string, string>>({ // Updated formData type
+    const [formData, setFormData] = useState<Record<string, string>>({
         trade: "",
+        tradeOther: "", // Ngành tự nhập khi chọn "Khác"
         experience: "",
         availability: "",
         location_pref: "",
+        preferredCity: "", // Tỉnh/thành cho Auto Match (khi chọn local/regional)
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [matchedJobs, setMatchedJobs] = useState<Job[]>([]);
@@ -94,7 +116,8 @@ export const SurveyWizard: React.FC<SurveyWizardProps> = ({ isOpen, onClose }) =
 
     const handleOptionSelect = (field: string, value: string) => {
         setFormData(prev => ({ ...prev, [field]: value }));
-        // Automatically advance to the next step after selection
+        // Khi chọn "Khác" ở bước ngành nghề thì không tự chuyển bước — user cần nhập text
+        if (field === "trade" && value === "other") return;
         if (currentStep < STEPS.length - 1) {
             setCurrentStep(currentStep + 1);
         } else {
@@ -102,10 +125,38 @@ export const SurveyWizard: React.FC<SurveyWizardProps> = ({ isOpen, onClose }) =
         }
     };
 
+    const canProceedFromCurrentStep = (): boolean => {
+        const field = STEPS[currentStep].id;
+        const value = formData[field];
+        if (!value) return false;
+        if (field === "trade" && value === "other") {
+            return (formData.tradeOther || "").trim().length > 0;
+        }
+        if (field === "location_pref" && (value === "local" || value === "regional")) {
+            return (formData.preferredCity || "").trim().length > 0;
+        }
+        return true;
+    };
+
+    const getPayload = () => {
+        const payload = { ...formData };
+        if (payload.trade === "other" && payload.tradeOther) {
+            payload.tradeCustom = payload.tradeOther;
+        }
+        const locPref = payload.location_pref;
+        const radius = locPref === "national" ? 999 : locPref === "regional" ? 50 : 10;
+        const city = (locPref === "local" || locPref === "regional") && payload.preferredCity
+            ? payload.preferredCity
+            : locPref === "national"
+            ? "Toàn quốc"
+            : "Không xác định";
+        (payload as any).preferredLocation = { city, radius };
+        return payload;
+    };
+
     const handleSubmit = async () => {
         setIsSubmitting(true);
         try {
-            // Mock API call
             const token = localStorage.getItem('token');
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/survey`, {
                 method: 'POST',
@@ -113,7 +164,7 @@ export const SurveyWizard: React.FC<SurveyWizardProps> = ({ isOpen, onClose }) =
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify(formData) // Sending formData directly
+                body: JSON.stringify(getPayload())
             });
 
             const result = await response.json();
@@ -259,30 +310,73 @@ export const SurveyWizard: React.FC<SurveyWizardProps> = ({ isOpen, onClose }) =
                                     </p>
                                 </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {STEPS[currentStep].options.map((option) => (
-                                        <button
-                                            key={option.value}
-                                            onClick={() => handleOptionSelect(STEPS[currentStep].id, option.value)}
-                                            className={`p-6 rounded-2xl border-2 text-left transition-all flex items-center gap-4 ${formData[STEPS[currentStep].id] === option.value
-                                                ? "border-primary bg-sky-50 dark:bg-sky-900/20"
-                                                : "border-slate-100 dark:border-slate-800 hover:border-slate-200 dark:hover:border-slate-700"
-                                                }`}
+                                <div className="space-y-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[320px] overflow-y-auto pr-1">
+                                        {STEPS[currentStep].options.map((option) => (
+                                            <button
+                                                key={option.value}
+                                                onClick={() => handleOptionSelect(STEPS[currentStep].id, option.value)}
+                                                className={`p-5 rounded-2xl border-2 text-left transition-all flex items-center gap-4 shrink-0 ${formData[STEPS[currentStep].id] === option.value
+                                                    ? "border-primary bg-sky-50 dark:bg-sky-900/20"
+                                                    : "border-slate-100 dark:border-slate-800 hover:border-slate-200 dark:hover:border-slate-700"
+                                                    }`}
+                                            >
+                                                <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${formData[STEPS[currentStep].id] === option.value
+                                                    ? "bg-primary text-white"
+                                                    : "bg-slate-100 dark:bg-slate-800 text-slate-500"
+                                                    }`}>
+                                                    <span className="material-symbols-outlined text-xl">{option.icon}</span>
+                                                </div>
+                                                <span className={`text-base font-bold truncate ${formData[STEPS[currentStep].id] === option.value
+                                                    ? "text-primary"
+                                                    : "text-slate-700 dark:text-slate-300"
+                                                    }`}>
+                                                    {option.label}
+                                                </span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                    {STEPS[currentStep].id === "trade" && formData.trade === "other" && (
+                                        <motion.div
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{ opacity: 1, height: "auto" }}
+                                            className="pt-2"
                                         >
-                                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${formData[STEPS[currentStep].id] === option.value
-                                                ? "bg-primary text-white"
-                                                : "bg-slate-100 dark:bg-slate-800 text-slate-500"
-                                                }`}>
-                                                <span className="material-symbols-outlined">{option.icon}</span>
-                                            </div>
-                                            <span className={`text-lg font-bold ${formData[STEPS[currentStep].id] === option.value
-                                                ? "text-primary"
-                                                : "text-slate-700 dark:text-slate-300"
-                                                }`}>
-                                                {option.label}
-                                            </span>
-                                        </button>
-                                    ))}
+                                            <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">
+                                                Nhập ngành nghề của bạn
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={formData.tradeOther}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, tradeOther: e.target.value }))}
+                                                placeholder="Ví dụ: Thợ lắp đặt camera, Kỹ thuật viên PCCC..."
+                                                className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                                autoFocus
+                                            />
+                                        </motion.div>
+                                    )}
+                                    {STEPS[currentStep].id === "location_pref" && (formData.location_pref === "local" || formData.location_pref === "regional") && (
+                                        <motion.div
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{ opacity: 1, height: "auto" }}
+                                            className="pt-4"
+                                        >
+                                            <label className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-2">
+                                                Tỉnh / Thành phố bạn muốn làm việc
+                                            </label>
+                                            <select
+                                                value={formData.preferredCity}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, preferredCity: e.target.value }))}
+                                                className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                            >
+                                                <option value="">— Chọn tỉnh/thành —</option>
+                                                {PREFERRED_PROVINCES.map((p) => (
+                                                    <option key={p} value={p}>{p}</option>
+                                                ))}
+                                            </select>
+                                            <p className="text-xs text-slate-500 mt-1.5">Giúp gợi ý công việc đúng khu vực</p>
+                                        </motion.div>
+                                    )}
                                 </div>
                             </motion.div>
                         )}
@@ -302,7 +396,7 @@ export const SurveyWizard: React.FC<SurveyWizardProps> = ({ isOpen, onClose }) =
                         </button>
                         <button
                             onClick={handleNext}
-                            disabled={!formData[STEPS[currentStep].id]}
+                            disabled={!canProceedFromCurrentStep()}
                             className="bg-primary hover:bg-sky-600 text-white px-8 py-3 rounded-xl font-bold transition-all disabled:opacity-50 flex items-center gap-2"
                         >
                             {currentStep === STEPS.length - 1 ? "Xem kết quả" : "Tiếp theo"}

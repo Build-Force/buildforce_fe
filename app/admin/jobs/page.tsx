@@ -105,9 +105,9 @@ export default function AdminJobsPage() {
     const pending = rows.filter((r) => r.status === "pending").length;
     const active = rows.filter((r) => r.status === "active").length;
     return [
-      { title: "Tin chờ duyệt", value: String(pending), icon: "pending_actions", iconBgClass: "bg-amber-100 dark:bg-amber-900/30", iconTextClass: "text-amber-600", trend: "Cần xử lý", trendTone: "neutral" },
-      { title: "Tin đang hoạt động", value: String(active), icon: "work_history", iconBgClass: "bg-emerald-100 dark:bg-emerald-900/30", iconTextClass: "text-emerald-600", trend: "Ổn định", trendTone: "positive" },
-      { title: "Tổng vị trí tuyển", value: String(rows.reduce((sum, item) => sum + item.vacancies, 0)), icon: "groups", iconBgClass: "bg-primary/10 dark:bg-primary/20", iconTextClass: "text-primary", trend: "--", trendTone: "neutral" },
+      { title: "Tin chờ duyệt", value: String(pending), icon: "pending_actions", iconBgClass: "bg-amber-100 dark:bg-amber-900/30", iconTextClass: "text-amber-600", trend: "Cần xử lý", trendTone: "neutral", accentColor: "#f59e0b" },
+      { title: "Tin đang hoạt động", value: String(active), icon: "work_history", iconBgClass: "bg-emerald-100 dark:bg-emerald-900/30", iconTextClass: "text-emerald-600", trend: "Ổn định", trendTone: "positive", accentColor: "#10b981" },
+      { title: "Tổng vị trí tuyển", value: String(rows.reduce((sum, item) => sum + item.vacancies, 0)), icon: "groups", iconBgClass: "bg-primary/10 dark:bg-primary/20", iconTextClass: "text-primary", trend: "--", trendTone: "neutral", accentColor: "#3b82f6" },
     ];
   }, [rows]);
 

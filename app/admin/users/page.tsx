@@ -109,6 +109,7 @@ export default function AdminUsersPage() {
         iconTextClass: "text-emerald-600",
         trend: "Ổn định",
         trendTone: "positive",
+        accentColor: "#10b981",
       },
       {
         title: "Tạm khóa",
@@ -118,6 +119,7 @@ export default function AdminUsersPage() {
         iconTextClass: "text-amber-600",
         trend: "Theo dõi",
         trendTone: "neutral",
+        accentColor: "#f59e0b",
       },
     ];
   }, [users]);

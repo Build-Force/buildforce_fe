@@ -3,6 +3,7 @@ const isStaticExport = process.env.NEXT_STATIC_EXPORT === "true";
 
 const nextConfig = {
   ...(isStaticExport ? { output: "export" } : {}),
+  transpilePackages: ["recharts"],
 
   // Specify the path if your app is not deployed at the root of your domain.
   // basePath: '/',

@@ -8,6 +8,7 @@ import {
   JobsByStatusChartCard,
   UserRolesChartCard,
 } from "@/components/admin/OverviewCharts";
+import { JobGrowthTerminalChart } from "@/components/admin/JobGrowthTerminalChart";
 import { RecentActivityTable } from "@/components/admin/RecentActivityTable";
 import { Sidebar } from "@/components/admin/Sidebar";
 import { StatsCard } from "@/components/admin/StatsCard";
@@ -100,6 +101,17 @@ export default function AdminOverviewPage() {
     load();
   }, []);
 
+  const sparklineFromJobGrowth = useMemo(() => {
+    const raw = dashboardData.jobGrowth;
+    if (!raw?.length) return [];
+    const sorted = [...raw].sort(
+      (a, b) =>
+        new Date(a._id?.year ?? 0, (a._id?.month ?? 1) - 1, a._id?.day ?? 1).getTime() -
+        new Date(b._id?.year ?? 0, (b._id?.month ?? 1) - 1, b._id?.day ?? 1).getTime()
+    );
+    return sorted.slice(-7).map((p) => p.total ?? 0);
+  }, [dashboardData.jobGrowth]);
+
   const STATS: StatItem[] = useMemo(
     () => [
       {
@@ -110,6 +122,8 @@ export default function AdminOverviewPage() {
         iconTextClass: "text-blue-600",
         trend: "--",
         trendTone: "neutral",
+        accentColor: "#3b82f6",
+        sparkline: sparklineFromJobGrowth.length >= 2 ? sparklineFromJobGrowth : undefined,
       },
       {
         title: "Đối tác HR",
@@ -119,6 +133,8 @@ export default function AdminOverviewPage() {
         iconTextClass: "text-green-600",
         trend: "--",
         trendTone: "neutral",
+        accentColor: "#10b981",
+        sparkline: sparklineFromJobGrowth.length >= 2 ? sparklineFromJobGrowth : undefined,
       },
       {
         title: "Việc làm đang mở",
@@ -128,6 +144,8 @@ export default function AdminOverviewPage() {
         iconTextClass: "text-primary",
         trend: "--",
         trendTone: "neutral",
+        accentColor: "#8b5cf6",
+        sparkline: sparklineFromJobGrowth.length >= 2 ? sparklineFromJobGrowth : undefined,
       },
       {
         title: "Chờ duyệt",
@@ -137,6 +155,9 @@ export default function AdminOverviewPage() {
         iconTextClass: "text-yellow-600",
         trend: "--",
         trendTone: "neutral",
+        accentColor: "#f59e0b",
+        showAlertDot: statsRaw.pendingApprovals > 50,
+        sparkline: sparklineFromJobGrowth.length >= 2 ? sparklineFromJobGrowth : undefined,
       },
       {
         title: "Tranh chấp mở",
@@ -146,20 +167,23 @@ export default function AdminOverviewPage() {
         iconTextClass: "text-red-600",
         trend: "--",
         trendTone: "neutral",
+        accentColor: "#ef4444",
+        showAlertDot: statsRaw.disputes > 0,
+        sparkline: sparklineFromJobGrowth.length >= 2 ? sparklineFromJobGrowth : undefined,
       },
     ],
-    [statsRaw],
+    [statsRaw, sparklineFromJobGrowth],
   );
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50 text-slate-900 dark:bg-background-dark dark:text-slate-100">
+    <div className="admin-dashboard flex h-screen overflow-hidden">
       <Sidebar navItems={NAV_ITEMS} />
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Topbar locale="vi" />
         <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
           <header className="mb-8">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Tổng quan</h1>
-            <p className="mt-1 text-sm text-slate-500">Thống kê và hoạt động gần đây từ hệ thống</p>
+            <h1 className="text-[20px] font-bold tracking-tight text-[var(--text-primary)]">Tổng quan</h1>
+            <p className="mt-1 text-[14px] text-[var(--text-secondary)]">Thống kê và hoạt động gần đây từ hệ thống</p>
           </header>
 
           <section className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
@@ -168,8 +192,11 @@ export default function AdminOverviewPage() {
             ))}
           </section>
 
-          <section className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <JobGrowthChartCard jobGrowth={dashboardData.jobGrowth} />
+          <section className="mb-8">
+            <JobGrowthTerminalChart jobGrowth={dashboardData.jobGrowth} />
+          </section>
+
+          <section className="mb-8 w-full">
             <HrRegistrationsChartCard hrRegistrations={dashboardData.hrRegistrations} />
           </section>
 

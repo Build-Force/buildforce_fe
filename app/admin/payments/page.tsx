@@ -98,6 +98,7 @@ export default function AdminPaymentsPage() {
         iconTextClass: "text-emerald-600",
         trend: "Theo dữ liệu API",
         trendTone: "positive",
+        accentColor: "#10b981",
       },
       {
         title: "Đang xử lý",
@@ -107,6 +108,7 @@ export default function AdminPaymentsPage() {
         iconTextClass: "text-amber-600",
         trend: "Theo dõi",
         trendTone: "neutral",
+        accentColor: "#f59e0b",
       },
       {
         title: "Giao dịch lỗi",
@@ -116,6 +118,7 @@ export default function AdminPaymentsPage() {
         iconTextClass: "text-red-600",
         trend: "Cần xử lý",
         trendTone: "negative",
+        accentColor: "#ef4444",
       },
     ];
   }, [records]);

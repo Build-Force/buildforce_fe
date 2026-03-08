@@ -32,6 +32,8 @@ export default function PostJobPage() {
         endDate: "",
         description: "",
         requirements: "",
+        minExperienceYears: "" as string | number,
+        verificationRequired: false,
     });
 
     const toggleSkill = (skill: string) => {
@@ -67,6 +69,8 @@ export default function PostJobPage() {
                 workersNeeded: Number(form.workers),
                 startDate: form.startDate ? new Date(form.startDate).toISOString() : undefined,
                 endDate: form.endDate ? new Date(form.endDate).toISOString() : undefined,
+                minExperienceYears: form.minExperienceYears !== "" ? Number(form.minExperienceYears) : undefined,
+                verificationRequired: Boolean(form.verificationRequired),
             });
 
             const jobId = createRes.data?.data?._id;
@@ -381,6 +385,35 @@ export default function PostJobPage() {
                                             className="w-full h-16 px-6 rounded-2xl border-2 border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-bold text-lg focus:outline-none focus:border-primary transition-all"
                                         />
                                     </div>
+
+                                    <div>
+                                        <label className="block text-sm font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-3">Kinh nghiệm tối thiểu (năm)</label>
+                                        <select
+                                            value={form.minExperienceYears}
+                                            onChange={e => setForm({ ...form, minExperienceYears: e.target.value })}
+                                            className="w-full h-16 px-6 rounded-2xl border-2 border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-bold text-lg focus:outline-none focus:border-primary transition-all appearance-none"
+                                        >
+                                            <option value="">Không yêu cầu</option>
+                                            <option value="1">1 năm</option>
+                                            <option value="2">2 năm</option>
+                                            <option value="3">3 năm</option>
+                                            <option value="5">5 năm trở lên</option>
+                                        </select>
+                                        <p className="mt-1.5 text-xs font-bold text-slate-500">Dùng cho Auto Match — chỉ hiện với lao động đủ kinh nghiệm</p>
+                                    </div>
+
+                                    <div className="md:col-span-2 mt-2 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">
+                                        <label className="flex items-center gap-3 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={form.verificationRequired}
+                                                onChange={e => setForm({ ...form, verificationRequired: e.target.checked })}
+                                                className="w-5 h-5 rounded border-2 border-slate-300 text-primary focus:ring-primary"
+                                            />
+                                            <span className="text-sm font-black text-slate-700 dark:text-slate-300">Yêu cầu xác minh CCCD</span>
+                                        </label>
+                                        <p className="text-xs text-slate-500 mt-1.5 ml-8">Chỉ lao động đã xác minh mới thấy tin này (Auto Match)</p>
+                                    </div>
                                 </div>
                             </div>
 
@@ -461,6 +494,8 @@ export default function PostJobPage() {
                                         { label: "Lương", value: `${form.salary}k/${form.salaryType === 'day' ? 'ngày' : 'tháng'}` },
                                         { label: "Kỹ năng", value: selectedSkills.length > 0 ? selectedSkills.join(", ") : "Chưa chọn" },
                                         { label: "Bắt đầu", value: form.startDate },
+                                        { label: "KN tối thiểu", value: form.minExperienceYears !== "" ? `${form.minExperienceYears} năm` : "Không yêu cầu" },
+                                        { label: "Xác minh CCCD", value: form.verificationRequired ? "Có" : "Không" },
                                     ].map(({ label, value }) => (
                                         <div key={label} className="flex items-start gap-4 p-5 bg-slate-50 dark:bg-slate-800 rounded-2xl">
                                             <span className="material-symbols-outlined text-primary text-xl mt-0.5">check_circle</span>

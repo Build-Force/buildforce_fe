@@ -2,6 +2,7 @@ export const NAV_LINKS = [
     { label: "Tìm việc làm", href: "/jobs" },
     { label: "Tuyển nhân sự", href: "#" },
     { label: "Trung tâm an toàn", href: "#" },
+    { label: "Mạng xã hội", href: "/blog" },
 ];
 
 export const JOBS = [
