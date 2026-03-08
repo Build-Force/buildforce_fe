@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -17,16 +18,47 @@ export const Header = () => {
     const [userProfile, setUserProfile] = useState<any>(null);
     const [showDropdown, setShowDropdown] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const [showHrOnlyDialog, setShowHrOnlyDialog] = useState(false);
+  const [currentPackageName, setCurrentPackageName] = useState<string | null>(null);
+  const [currentPackageLevel, setCurrentPackageLevel] = useState<number | null>(null);
+
+    const handleSignOut = React.useCallback(() => {
+        localStorage.removeItem('token');
+        setIsLoggedIn(false);
+        setUserProfile(null);
+        setCurrentPackageName(null);
+        setCurrentPackageLevel(null);
+        setShowDropdown(false);
+        router.push('/signin');
+    }, [router]);
 
     const checkAuthStatus = React.useCallback(async () => {
         const token = localStorage.getItem('token');
         if (token) {
             setIsLoggedIn(true);
             try {
-                // Token auto-attached via axios interceptor in utils/api.ts
                 const response = await api.get('/api/auth/profile');
                 if (response.data.success) {
                     setUserProfile(response.data.data);
+                    if (response.data.data.role === "hr") {
+                        try {
+                            const pkgRes = await api.get('/api/payments/my-package');
+                            const pkg = pkgRes.data?.data;
+                            if (pkg) {
+                                setCurrentPackageName(pkg.packageName || null);
+                                setCurrentPackageLevel(typeof pkg.priorityLevel === "number" ? pkg.priorityLevel : null);
+                            } else {
+                                setCurrentPackageName(null);
+                                setCurrentPackageLevel(null);
+                            }
+                        } catch {
+                            setCurrentPackageName(null);
+                            setCurrentPackageLevel(null);
+                        }
+                    } else {
+                        setCurrentPackageName(null);
+                        setCurrentPackageLevel(null);
+                    }
                 }
             } catch (error) {
                 console.error("Failed to fetch user profile for header:", error);
@@ -37,8 +69,10 @@ export const Header = () => {
         } else {
             setIsLoggedIn(false);
             setUserProfile(null);
+            setCurrentPackageName(null);
+            setCurrentPackageLevel(null);
         }
-    }, [router]); // handleSignOut uses router
+    }, [handleSignOut]);
 
     useEffect(() => {
         const handleScroll = () => {
@@ -64,8 +98,21 @@ export const Header = () => {
             checkAuthStatus();
         };
 
+        const handlePackageUpdated = () => {
+            checkAuthStatus();
+        };
+
+        const handleLogoutEvent = () => {
+            setIsLoggedIn(false);
+            setUserProfile(null);
+            setCurrentPackageName(null);
+            setCurrentPackageLevel(null);
+        };
+
         window.addEventListener("storage", handleStorageChange);
         window.addEventListener("userLoggedIn", handleLoginEvent);
+        window.addEventListener("packageUpdated", handlePackageUpdated);
+        window.addEventListener("userLoggedOut", handleLogoutEvent);
 
         const handleClickOutside = (event: MouseEvent) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -78,6 +125,8 @@ export const Header = () => {
             window.removeEventListener("scroll", handleScroll);
             window.removeEventListener("storage", handleStorageChange);
             window.removeEventListener("userLoggedIn", handleLoginEvent);
+            window.removeEventListener("packageUpdated", handlePackageUpdated);
+            window.removeEventListener("userLoggedOut", handleLogoutEvent);
             document.removeEventListener("mousedown", handleClickOutside);
         };
     }, [checkAuthStatus]);
@@ -85,14 +134,6 @@ export const Header = () => {
     const toggleDarkMode = () => {
         document.documentElement.classList.toggle("dark");
         setIsDarkMode(!isDarkMode);
-    };
-
-    const handleSignOut = () => {
-        localStorage.removeItem('token');
-        setIsLoggedIn(false);
-        setUserProfile(null);
-        setShowDropdown(false);
-        router.push('/signin');
     };
 
     // Construct Avatar text or image
@@ -109,15 +150,33 @@ export const Header = () => {
         return <span className="material-symbols-outlined text-white">person</span>;
     };
 
-    const normalizedRole = String(userProfile?.role || "").toUpperCase();
+  const packageNameLower = currentPackageName?.toLowerCase() || "";
+  const normalizedRole = String(userProfile?.role || "").toUpperCase();
+  const effectivePackageLevel =
+    currentPackageLevel ??
+    (packageNameLower.includes("enterprise") ? 2 : packageNameLower.includes("pro") ? 1 : packageNameLower ? 0 : null);
+  const packageRingClass =
+    effectivePackageLevel === 2
+      ? "ring-[3px] ring-amber-400/95 shadow-[0_0_0_3px_rgba(251,191,36,0.22),0_0_24px_rgba(245,158,11,0.32)]"
+      : effectivePackageLevel === 1
+        ? "ring-[3px] ring-sky-400/95 shadow-[0_0_0_3px_rgba(96,165,250,0.2),0_0_22px_rgba(59,130,246,0.28)]"
+        : "";
+  const packageAuraClass =
+    effectivePackageLevel === 2
+      ? "from-amber-300 via-yellow-300 to-orange-400"
+      : effectivePackageLevel === 1
+        ? "from-sky-400 via-blue-500 to-indigo-500"
+        : "from-slate-300 via-slate-400 to-slate-500";
+  const packageIcon =
+    effectivePackageLevel === 2 ? "diamond" : effectivePackageLevel === 1 ? "workspace_premium" : "inventory_2";
 
     return (
-        <nav className={`fixed top-0 z-50 w-full border-b transition-all duration-300 glass ${isScrolled
+        <nav suppressHydrationWarning className={`fixed top-0 z-50 w-full border-b transition-all duration-300 glass ${isScrolled
             ? "py-2 border-slate-200 dark:border-slate-800 shadow-lg bg-white/80 dark:bg-slate-900/80 backdrop-blur-md"
             : "py-4 border-white/10 dark:border-slate-800/50"
             }`}>
-            <div className="max-w-7xl mx-auto px-6">
-                <div className="flex justify-between h-20 items-center">
+            <div suppressHydrationWarning className="max-w-7xl mx-auto px-6">
+                <div suppressHydrationWarning className="flex justify-between h-20 items-center">
                     <Link href="/" className="flex items-center gap-3 group">
                         <div className="bg-primary p-2 rounded-lg transition-transform group-hover:scale-110">
                             <span className="material-symbols-outlined text-white text-3xl">construction</span>
@@ -128,35 +187,43 @@ export const Header = () => {
                     </Link>
 
                     <div className="hidden md:flex items-center space-x-10">
-                        {NAV_LINKS.map((link) => (
-                            <Link
-                                key={link.label}
-                                href={link.href}
-                                className="text-base font-semibold hover:text-primary transition-colors text-slate-600 dark:text-slate-300 dark:hover:text-primary"
-                            >
-                                {link.label}
-                            </Link>
-                        ))}
+                        {NAV_LINKS.map((link) =>
+                            link.href === "/post-job" ? (
+                                <button
+                                    key={link.label}
+                                    type="button"
+                                    onClick={() => {
+                                        if (isLoggedIn && normalizedRole === "HR") {
+                                            router.push("/post-job");
+                                        } else {
+                                            setShowHrOnlyDialog(true);
+                                        }
+                                    }}
+                                    className="text-base font-semibold hover:text-primary transition-colors text-slate-600 dark:text-slate-300 dark:hover:text-primary"
+                                >
+                                    {link.label}
+                                </button>
+                            ) : (
+                                <Link
+                                    key={link.label}
+                                    href={link.href}
+                                    className="text-base font-semibold hover:text-primary transition-colors text-slate-600 dark:text-slate-300 dark:hover:text-primary"
+                                >
+                                    {link.label}
+                                </Link>
+                            )
+                        )}
                         <div className="h-6 w-px bg-slate-200 dark:bg-slate-700"></div>
 
                         {/* HR quick actions */}
                         {isLoggedIn && normalizedRole === "HR" && (
-                            <div className="flex items-center space-x-3">
-                                <button
-                                    onClick={() => router.push("/post-job")}
-                                    className="h-10 px-4 rounded-full bg-primary text-white text-sm font-bold flex items-center gap-1 shadow-md hover:bg-primary/90 transition-all"
-                                >
-                                    <span className="material-symbols-outlined text-base">add</span>
-                                    Đăng tin
-                                </button>
-                                <button
-                                    onClick={() => router.push("/hr-dashboard")}
-                                    className="h-10 px-4 rounded-full bg-slate-900 text-white text-sm font-bold flex items-center gap-1 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200/60 dark:border-slate-700 transition-all"
-                                >
-                                    <span className="material-symbols-outlined text-base">dashboard</span>
-                                    HR Dashboard
-                                </button>
-                            </div>
+                            <button
+                                onClick={() => router.push("/hr-dashboard")}
+                                className="h-10 px-4 rounded-full bg-slate-900 text-white text-sm font-bold flex items-center gap-1 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200/60 dark:border-slate-700 transition-all"
+                            >
+                                <span className="material-symbols-outlined text-base">dashboard</span>
+                                HR Dashboard
+                            </button>
                         )}
 
                         <button
@@ -175,9 +242,19 @@ export const Header = () => {
                                     onClick={() => setShowDropdown(!showDropdown)}
                                     className="flex items-center gap-2 hover:opacity-80 transition-opacity"
                                 >
-                                    <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold overflow-hidden border-2 border-white dark:border-slate-800 shadow-md">
-                                        {getAvatarContent()}
-                                    </div>
+                              <div className="relative">
+                                <div className={`absolute inset-[-5px] rounded-full bg-gradient-to-br ${packageAuraClass} opacity-80 blur-[6px] ${effectivePackageLevel !== null ? "" : "hidden"}`} />
+                                <div className={`relative w-11 h-11 rounded-full bg-primary flex items-center justify-center text-white font-bold overflow-hidden border-[2.5px] border-white dark:border-slate-800 shadow-md ${packageRingClass}`}>
+                                  {getAvatarContent()}
+                                </div>
+                                {effectivePackageLevel !== null && (
+                                  <div className={`absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full border-2 border-white dark:border-slate-900 shadow-lg flex items-center justify-center ${effectivePackageLevel === 2 ? "bg-amber-500" : effectivePackageLevel === 1 ? "bg-sky-500" : "bg-slate-500"}`}>
+                                    <span className="material-symbols-outlined text-[13px] text-white">
+                                      {packageIcon}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
                                     <span className="material-symbols-outlined text-slate-600 dark:text-slate-400 text-sm">
                                         expand_more
                                     </span>
@@ -193,6 +270,14 @@ export const Header = () => {
                                             <p className="text-xs text-slate-500 truncate">
                                                 {userProfile?.email}
                                             </p>
+                                            {normalizedRole === "HR" && currentPackageName && (
+                                                <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-amber-600 dark:bg-amber-900/20 dark:text-amber-300">
+                                                    <span className="material-symbols-outlined text-[14px]">
+                                                        workspace_premium
+                                                    </span>
+                                                    {currentPackageName}
+                                                </div>
+                                            )}
                                         </div>
                                         {normalizedRole === "ADMIN" ? (
                                             <Link
@@ -259,15 +344,7 @@ export const Header = () => {
                             </span>
                         </button>
 
-                        {isLoggedIn && normalizedRole === "HR" ? (
-                            <button
-                                onClick={() => router.push("/post-job")}
-                                className="h-9 px-3 rounded-full bg-primary text-white text-xs font-bold flex items-center gap-1 shadow-md"
-                            >
-                                <span className="material-symbols-outlined text-base">add</span>
-                                Đăng tin
-                            </button>
-                        ) : isLoggedIn ? (
+                        {isLoggedIn ? (
                             <Link href="/profile" className="flex items-center">
                                 <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold overflow-hidden border-2 border-white dark:border-slate-800 shadow-md">
                                     {getAvatarContent()}
@@ -281,6 +358,43 @@ export const Header = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Dialog: Chỉ HR mới được dùng Tuyển nhân sự - render qua portal để luôn căn giữa viewport */}
+            {showHrOnlyDialog &&
+                typeof document !== "undefined" &&
+                createPortal(
+                    <div
+                        className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+                        onClick={() => setShowHrOnlyDialog(false)}
+                    >
+                        <div
+                            className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 max-w-md w-full p-6"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                                    <span className="material-symbols-outlined text-2xl text-amber-600 dark:text-amber-400">info</span>
+                                </div>
+                                <h3 className="text-lg font-black text-slate-900 dark:text-white">
+                                    Chỉ dành cho Nhà tuyển dụng (HR)
+                                </h3>
+                            </div>
+                            <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed mb-6">
+                                {isLoggedIn
+                                    ? "Tính năng Tuyển nhân sự chỉ dành cho tài khoản Nhà tuyển dụng (HR). Bạn đang đăng nhập bằng tài khoản người lao động nên không thể truy cập."
+                                    : "Tính năng Tuyển nhân sự chỉ dành cho Nhà tuyển dụng (HR). Vui lòng đăng nhập bằng tài khoản HR để đăng tin tuyển dụng."}
+                            </p>
+                            <button
+                                type="button"
+                                onClick={() => setShowHrOnlyDialog(false)}
+                                className="w-full py-3 rounded-xl font-bold bg-primary text-white hover:opacity-90 transition-opacity"
+                            >
+                                Đã hiểu
+                            </button>
+                        </div>
+                    </div>,
+                    document.body
+                )}
         </nav>
     );
 };

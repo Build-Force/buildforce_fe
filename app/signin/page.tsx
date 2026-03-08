@@ -91,6 +91,8 @@ export default function AuthPage() {
                     const res = await api.post('/api/auth/check-verification', { email: registeredEmail });
                     if (res.data.success && res.data.verified) {
                         setShowVerifyDialog(false);
+                        localStorage.removeItem('token');
+                        window.dispatchEvent(new Event('userLoggedOut'));
                         setSuccessMsg("Xác minh tài khoản thành công! Bạn có thể đăng nhập ngay.");
                         setTimeout(() => {
                             toggleAuthMode();
@@ -139,13 +141,13 @@ export default function AuthPage() {
 
             const backendMsg = error.response?.data?.message;
             if (backendMsg === "Invalid credentials") {
-                setErrorMsg("Email/Số điện thoại hoặc mật khẩu không chính xác.");
+                setErrorMsg("Username/Email hoặc mật khẩu không chính xác.");
             } else if (backendMsg === "Account has been suspended or is inactive") {
                 setErrorMsg("Tài khoản của bạn đã bị khóa hoặc chưa được kích hoạt.");
             } else if (backendMsg === "Validation failed") {
                 // If there are specific error details from express-validator
                 const specificError = error.response?.data?.errors?.[0]?.msg;
-                setErrorMsg(specificError || "Vui lòng nhập đầy đủ thông tin đăng nhập.");
+                setErrorMsg(specificError || "Vui lòng nhập đầy đủ thông tin đăng nhập (username/email).");
             } else {
                 setErrorMsg(backendMsg || "Đã xảy ra lỗi trong quá trình đăng nhập. Vui lòng thử lại sau.");
             }
@@ -158,6 +160,15 @@ export default function AuthPage() {
         e.preventDefault();
         setErrorMsg("");
         setSuccessMsg("");
+
+        localStorage.removeItem('token');
+        window.dispatchEvent(new Event('userLoggedOut'));
+
+        const normalizedUsername = username.trim().toLowerCase();
+        if (!normalizedUsername) {
+            setErrorMsg("Vui lòng nhập username.");
+            return;
+        }
 
         if (password !== confirmPassword) {
             setErrorMsg("Mật khẩu không khớp.");
@@ -173,7 +184,8 @@ export default function AuthPage() {
 
         try {
             const response = await api.post('/api/auth/register', {
-                email: email || `${phone}@temp.com`, // Adjust this based on your reality
+                username: normalizedUsername,
+                email,
                 password,
                 firstName,
                 lastName,
@@ -187,7 +199,7 @@ export default function AuthPage() {
             });
 
             if (response.data.success) {
-                const targetEmail = email || `${phone}@temp.com`;
+                const targetEmail = email;
                 setRegisteredEmail(targetEmail);
                 setDevVerifyUrl(response.data.devVerifyUrl || "");
                 setShowVerifyDialog(true);
@@ -197,6 +209,8 @@ export default function AuthPage() {
             const backendMsg = error.response?.data?.message;
             if (backendMsg === "Email already exists") {
                 setErrorMsg("Email này đã được đăng ký. Vui lòng sử dụng email khác hoặc đăng nhập.");
+            } else if (backendMsg === "Username already exists") {
+                setErrorMsg("Username này đã được sử dụng. Vui lòng chọn username khác.");
             } else if (backendMsg === "Phone already exists") {
                 setErrorMsg("Số điện thoại này đã được đăng ký.");
             } else if (backendMsg === "Validation failed") {
@@ -334,14 +348,14 @@ export default function AuthPage() {
                                 <form className="space-y-6" onSubmit={handleLoginSubmit}>
                                     <div>
                                         <label className="block text-lg font-bold text-slate-700 dark:text-slate-300 mb-2" htmlFor="account">
-                                            Email hoặc Số điện thoại
+                                            Username hoặc Email
                                         </label>
                                         <div className="relative">
                                             <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">person</span>
                                             <input
                                                 className="w-full pl-12 pr-4 py-5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl text-lg font-medium focus:outline-none transition-all placeholder:text-slate-400"
                                                 id="account"
-                                                placeholder="VD: 0912345678"
+                                                placeholder="VD: nguyenvana hoặc example@email.com"
                                                 type="text"
                                                 value={identifier}
                                                 onChange={(e) => setIdentifier(e.target.value)}
@@ -460,6 +474,21 @@ export default function AuthPage() {
                                     <div>
                                         <label className="block text-lg font-bold text-slate-700 dark:text-slate-300 mb-2" htmlFor="fullname">Họ và tên</label>
                                         <input value={fullName} onChange={e => setFullName(e.target.value)} required className="w-full h-16 px-6 rounded-2xl border-2 border-slate-100 dark:border-slate-700 dark:bg-slate-800 text-xl font-medium focus:outline-none custom-focus transition-all" id="fullname" placeholder="Nhập họ và tên của bạn" type="text" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-lg font-bold text-slate-700 dark:text-slate-300 mb-2" htmlFor="username">Username</label>
+                                        <input
+                                            value={username}
+                                            onChange={e => setUsername(e.target.value)}
+                                            required
+                                            className="w-full h-16 px-6 rounded-2xl border-2 border-slate-100 dark:border-slate-700 dark:bg-slate-800 text-xl font-medium focus:outline-none custom-focus transition-all"
+                                            id="username"
+                                            placeholder="vd: nguyenvana_123"
+                                            type="text"
+                                            autoCapitalize="none"
+                                            autoCorrect="off"
+                                            spellCheck={false}
+                                        />
                                     </div>
                                     <div>
                                         <label className="block text-lg font-bold text-slate-700 dark:text-slate-300 mb-2" htmlFor="email">Email</label>

@@ -30,12 +30,13 @@ function generateBricks(): Brick[] {
 
   for (let row = 0; row < ROWS; row++) {
     for (let col = 0; col < COLS; col++) {
+      const colorIndex = (row * COLS + col) % BRICK_COLORS.length;
       bricks.push({
         id: id++,
         row,
         col,
         delay: (col + row * 0.5) * 60,
-        color: BRICK_COLORS[Math.floor(Math.random() * BRICK_COLORS.length)],
+        color: BRICK_COLORS[colorIndex],
       });
     }
   }

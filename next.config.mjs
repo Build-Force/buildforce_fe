@@ -4,6 +4,14 @@ const isStaticExport = process.env.NEXT_STATIC_EXPORT === "true";
 const nextConfig = {
   ...(isStaticExport ? { output: "export" } : {}),
 
+  async redirects() {
+    return [{ source: "/favicon.ico", destination: "/next.svg", permanent: false }];
+  },
+
+  images: {
+    domains: ["images.unsplash.com"],
+  },
+
   // Specify the path if your app is not deployed at the root of your domain.
   // basePath: '/',
 
