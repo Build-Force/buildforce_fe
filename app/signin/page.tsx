@@ -45,7 +45,6 @@ export default function AuthPage() {
 
     const [showVerifyDialog, setShowVerifyDialog] = useState(false);
     const [registeredEmail, setRegisteredEmail] = useState("");
-    const [devVerifyUrl, setDevVerifyUrl] = useState("");
 
     // Form inputs state
     const [identifier, setIdentifier] = useState("");
@@ -199,9 +198,7 @@ export default function AuthPage() {
             });
 
             if (response.data.success) {
-                const targetEmail = email;
-                setRegisteredEmail(targetEmail);
-                setDevVerifyUrl(response.data.devVerifyUrl || "");
+                setRegisteredEmail(email);
                 setShowVerifyDialog(true);
             }
         } catch (error: any) {
@@ -590,19 +587,6 @@ export default function AuthPage() {
                             </span>
                             Đang chờ xác minh...
                         </div>
-
-                        {devVerifyUrl && (
-                            <div className="mb-8 p-3 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 rounded-xl text-center">
-                                <p className="text-xs font-bold text-red-600 dark:text-red-400 mb-2 uppercase tracking-wider">🚧 Chế độ thử nghiệm 🚧</p>
-                                <a
-                                    href={devVerifyUrl}
-                                    target="_blank"
-                                    className="text-sm text-sky-600 dark:text-sky-400 hover:underline font-medium break-all block"
-                                >
-                                    Nhấp vào đây để mô phỏng xác minh email
-                                </a>
-                            </div>
-                        )}
 
                         <button
                             onClick={() => setShowVerifyDialog(false)}
