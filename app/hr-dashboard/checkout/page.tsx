@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import api from "@/utils/api";
@@ -33,7 +33,7 @@ function formatVND(amount: number): string {
     return new Intl.NumberFormat("vi-VN").format(amount) + "đ";
 }
 
-export default function CheckoutPage() {
+function CheckoutContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const packageId = searchParams.get("packageId") || "";
@@ -387,6 +387,20 @@ export default function CheckoutPage() {
                 )}
             </div>
         </div>
+    );
+}
+
+export default function CheckoutPage() {
+    return (
+        <Suspense
+            fallback={
+                <div className="min-h-screen bg-[#f0f4ff] dark:bg-[#040816] pt-24 pb-24 flex items-center justify-center">
+                    <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+                </div>
+            }
+        >
+            <CheckoutContent />
+        </Suspense>
     );
 }
 
