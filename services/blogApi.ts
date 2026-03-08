@@ -110,10 +110,32 @@ export const blogApi = {
             { content }
         ),
 
+    updateComment: (id: string, commentId: string, content: string) =>
+        api.patch<{ success: boolean; data: BlogComment }>(
+            `/api/blogs/${id}/comment/${commentId}`,
+            { content }
+        ),
+
+    deleteComment: (id: string, commentId: string) =>
+        api.delete<{ success: boolean; message: string }>(
+            `/api/blogs/${id}/comment/${commentId}`
+        ),
+
     replyComment: (blogId: string, commentId: string, content: string) =>
         api.post<{ success: boolean; data: CommentReply }>(
             `/api/blogs/${blogId}/comment/${commentId}/reply`,
             { content }
+        ),
+
+    updateReply: (blogId: string, commentId: string, replyId: string, content: string) =>
+        api.patch<{ success: boolean; data: CommentReply }>(
+            `/api/blogs/${blogId}/comment/${commentId}/reply/${replyId}`,
+            { content }
+        ),
+
+    deleteReply: (blogId: string, commentId: string, replyId: string) =>
+        api.delete<{ success: boolean; message: string }>(
+            `/api/blogs/${blogId}/comment/${commentId}/reply/${replyId}`
         ),
 
     // Media upload

@@ -167,6 +167,56 @@ export default function BlogDetailPage() {
         });
     };
 
+    const handleCommentUpdated = (updatedComment: CommentType) => {
+        if (!blog) return;
+        setBlog({
+            ...blog,
+            commentsList: blog.commentsList.map(c => c._id === updatedComment._id ? updatedComment : c)
+        });
+    };
+
+    const handleCommentDeleted = (commentId: string) => {
+        if (!blog) return;
+        setBlog({
+            ...blog,
+            commentsList: blog.commentsList.filter(c => c._id !== commentId),
+            interact: {
+                ...blog.interact,
+                commentsCount: blog.interact.commentsCount - 1 - (blog.commentsList.find(c => c._id === commentId)?.replies.length || 0)
+            }
+        });
+    };
+
+    const handleReplyUpdated = (commentId: string, updatedReply: CommentReply) => {
+        if (!blog) return;
+        setBlog({
+            ...blog,
+            commentsList: blog.commentsList.map(c =>
+                c._id === commentId ? {
+                    ...c,
+                    replies: c.replies.map(r => r._id === updatedReply._id ? updatedReply : r)
+                } : c
+            )
+        });
+    };
+
+    const handleReplyDeleted = (commentId: string, replyId: string) => {
+        if (!blog) return;
+        setBlog({
+            ...blog,
+            commentsList: blog.commentsList.map(c =>
+                c._id === commentId ? {
+                    ...c,
+                    replies: c.replies.filter(r => r._id !== replyId)
+                } : c
+            ),
+            interact: {
+                ...blog.interact,
+                commentsCount: blog.interact.commentsCount - 1
+            }
+        });
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen bg-[#F0F2F5] dark:bg-background-dark">
@@ -443,6 +493,10 @@ export default function BlogDetailPage() {
                                     currentUserId={currentUserId}
                                     onCommentAdded={handleCommentAdded}
                                     onReplyAdded={handleReplyAdded}
+                                    onCommentUpdated={handleCommentUpdated}
+                                    onCommentDeleted={handleCommentDeleted}
+                                    onReplyUpdated={handleReplyUpdated}
+                                    onReplyDeleted={handleReplyDeleted}
                                 />
                             </div>
                         </motion.div>
