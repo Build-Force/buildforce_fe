@@ -74,7 +74,7 @@ export default function JobsPage() {
             if (!salary?.amount) return "Thỏa thuận";
             const unit = salary.unit === "day" ? "ngày" : salary.unit === "month" ? "tháng" : salary.unit === "hour" ? "giờ" : "dự án";
             const amount = Number(salary.amount);
-            const pretty = amount >= 1_000_000 ? `${Math.round(amount / 1_000_000)}tr` : `${Math.round(amount / 1_000)}k`;
+            const pretty = new Intl.NumberFormat("vi-VN").format(amount) + "VNĐ";
             return `${pretty}/${unit}`;
         };
 
@@ -307,8 +307,8 @@ export default function JobsPage() {
                                         {matchModeOnly && mappedJobs.length === 0
                                             ? "Đăng nhập bằng tài khoản lao động và hoàn thành khảo sát để xem việc phù hợp với bạn."
                                             : mappedJobs.length === 0
-                                            ? "Chưa có công việc nào được duyệt."
-                                            : "Không có công việc nào khớp với bộ lọc. Thử bỏ bớt điều kiện."}
+                                                ? "Chưa có công việc nào được duyệt."
+                                                : "Không có công việc nào khớp với bộ lọc. Thử bỏ bớt điều kiện."}
                                     </p>
                                     {matchModeOnly && mappedJobs.length === 0 && (
                                         <a href="/auth/login" className="inline-block mt-4 px-6 py-3 rounded-xl bg-primary text-white font-bold text-sm hover:bg-primary/90">

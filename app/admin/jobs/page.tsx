@@ -137,8 +137,8 @@ const mapStatus = (status: string): JobModerationStatus => {
 function formatSalary(salary: { amount?: number; unit?: string } | undefined): string {
   if (!salary?.amount) return "—";
   const n = new Intl.NumberFormat("vi-VN").format(salary.amount);
-  const u = salary.unit === "day" ? "ngày" : salary.unit === "month" ? "tháng" : salary.unit === "hour" ? "giờ" : salary.unit || "";
-  return `${n} VND/${u}`;
+  const u = salary.unit === "day" ? "ngày" : salary.unit === "month" ? "tháng" : salary.unit === "hour" ? "giờ" : salary.unit === "project" ? "dự án" : salary.unit || "";
+  return `${n}VNĐ/${u}`;
 }
 
 export default function AdminJobsPage() {
@@ -273,8 +273,8 @@ export default function AdminJobsPage() {
                 type="button"
                 onClick={() => setStatusFilter(value)}
                 className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all ${statusFilter === value
-                    ? "bg-primary text-white shadow-md"
-                    : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+                  ? "bg-primary text-white shadow-md"
+                  : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
                   }`}
                 suppressHydrationWarning
               >
@@ -396,7 +396,7 @@ export default function AdminJobsPage() {
         const company = hr?.companyName || (hr?.firstName && hr?.lastName ? `${hr.firstName} ${hr.lastName}`.trim() : "—");
         const salary = j.salary;
         const salaryStr = salary?.amount != null
-          ? `${Number(salary.amount).toLocaleString("vi-VN")} VND/${salary.unit === "day" ? "ngày" : salary.unit === "month" ? "tháng" : salary.unit === "hour" ? "giờ" : "dự án"}`
+          ? `${Number(salary.amount).toLocaleString("vi-VN")}VNĐ/${salary.unit === "day" ? "ngày" : salary.unit === "month" ? "tháng" : salary.unit === "hour" ? "giờ" : "dự án"}`
           : "Thỏa thuận";
         const loc = j.location || {};
         const addr = [loc.province, loc.city, loc.address].filter(Boolean).join(", ") || "—";

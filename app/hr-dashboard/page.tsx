@@ -78,7 +78,7 @@ export default function HRDashboardPage() {
         if (!salary?.amount) return "Thỏa thuận";
         const unit = salary.unit === "day" ? "ngày" : salary.unit === "month" ? "tháng" : salary.unit === "hour" ? "giờ" : "dự án";
         const amount = Number(salary.amount);
-        const pretty = amount >= 1_000_000 ? `${Math.round(amount / 1_000_000)}tr` : `${Math.round(amount / 1_000)}k`;
+        const pretty = new Intl.NumberFormat("vi-VN").format(amount) + "VNĐ";
         return `${pretty}/${unit}`;
     };
 
@@ -223,10 +223,10 @@ export default function HRDashboardPage() {
                     const rawStatus = a.status;
                     const status: UiApplicant["status"] =
                         rawStatus === "APPLIED" ? "pending" :
-                        rawStatus === "ACCEPTED" ? "accepted" :
-                        rawStatus === "REJECTED" ? "rejected" :
-                        rawStatus === "HIRED" || rawStatus === "COMPLETION_PENDING" ? "hired" :
-                        "completed";
+                            rawStatus === "ACCEPTED" ? "accepted" :
+                                rawStatus === "REJECTED" ? "rejected" :
+                                    rawStatus === "HIRED" || rawStatus === "COMPLETION_PENDING" ? "hired" :
+                                        "completed";
                     return {
                         id: a._id,
                         name,
@@ -512,8 +512,8 @@ export default function HRDashboardPage() {
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id as any)}
                             className={`flex items-center gap-2 px-6 py-3 rounded-xl font-black text-sm transition-all ${activeTab === tab.id
-                                    ? "bg-primary text-white shadow-md shadow-primary/30"
-                                    : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+                                ? "bg-primary text-white shadow-md shadow-primary/30"
+                                : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
                                 }`}
                         >
                             <span className="material-symbols-outlined text-xl">{tab.icon}</span>
@@ -669,12 +669,12 @@ export default function HRDashboardPage() {
                     {activeTab === "jobs" && (
                         <motion.div key="jobs" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                             {/* Filter */}
-                            <div className="flex gap-3 mb-6">
+                            <div className="flex gap-3 mb-6 overflow-x-auto pb-2 custom-scrollbar">
                                 {["all", "active", "closed", "draft"].map(s => (
                                     <button
                                         key={s}
                                         onClick={() => setFilterStatus(s)}
-                                        className={`px-5 py-2.5 rounded-2xl font-black text-sm transition-all ${filterStatus === s ? "bg-primary text-white" : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800"
+                                        className={`px-5 py-2.5 rounded-2xl font-black text-sm transition-all whitespace-nowrap ${filterStatus === s ? "bg-primary text-white" : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800"
                                             }`}
                                     >
                                         {s === "all" ? "Tất cả" : STATUS_CONFIG[s as keyof typeof STATUS_CONFIG]?.label}
@@ -682,214 +682,234 @@ export default function HRDashboardPage() {
                                 ))}
                             </div>
 
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                                {loadingJobs ? (
-                                    <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-7 border-2 border-slate-100 dark:border-slate-800">
-                                        <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
-                                    </div>
-                                ) : filteredJobs.map((job, idx) => {
-                                    const cfg = STATUS_CONFIG[job.status as keyof typeof STATUS_CONFIG];
-                                    const progress = Math.round((job.accepted / job.needed) * 100);
-                                    return (
-                                        <motion.div
-                                            key={job.id}
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: idx * 0.06 }}
-                                            onClick={() => {
-                                                const next = selectedJob?.id === job.id ? null : job;
-                                                setSelectedJob(next);
-                                                if (next) loadApplicants(next.id);
-                                            }}
-                                            className={`bg-white dark:bg-slate-900 rounded-[2.5rem] p-7 border-2 cursor-pointer transition-all hover:shadow-xl ${selectedJob?.id === job.id ? "border-primary shadow-lg" : "border-slate-100 dark:border-slate-800"
-                                                }`}
-                                        >
-                                            <div className="flex items-start justify-between mb-5">
-                                                <div className="flex-1">
-                                                    <div className="flex items-center gap-3 mb-2">
-                                                        {job.urgent && <span className="px-2 py-0.5 bg-red-100 text-red-600 text-xs font-black rounded-full animate-pulse">🔥 Gấp</span>}
-                                                        <span className={`px-3 py-1 rounded-full text-xs font-black ${cfg.color} flex items-center gap-1.5`}>
-                                                            <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-                                                            {cfg.label}
-                                                        </span>
+                            <div className="flex flex-col lg:flex-row gap-8 items-start">
+                                {/* Left List: Job Postings */}
+                                <div className="w-full lg:w-[45%] flex flex-col gap-5 max-h-[800px] overflow-y-auto pr-2 custom-scrollbar">
+                                    {loadingJobs ? (
+                                        <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-7 border-2 border-slate-100 dark:border-slate-800 flex justify-center py-12">
+                                            <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+                                        </div>
+                                    ) : filteredJobs.map((job, idx) => {
+                                        const cfg = STATUS_CONFIG[job.status as keyof typeof STATUS_CONFIG];
+                                        const progress = Math.round((job.accepted / job.needed) * 100);
+                                        const isSelected = selectedJob?.id === job.id;
+
+                                        return (
+                                            <motion.div
+                                                key={job.id}
+                                                initial={{ opacity: 0, x: -20 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                transition={{ delay: idx * 0.05 }}
+                                                onClick={() => {
+                                                    const next = isSelected ? null : job;
+                                                    setSelectedJob(next);
+                                                    if (next) loadApplicants(next.id);
+                                                }}
+                                                className={`bg-white dark:bg-slate-900 rounded-[2rem] p-6 border-2 cursor-pointer transition-all hover:shadow-lg relative overflow-hidden ${isSelected ? "border-primary shadow-xl ring-4 ring-primary/10" : "border-slate-100 dark:border-slate-800"}`}
+                                            >
+                                                {/* Selected Indicator line */}
+                                                {isSelected && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-primary" />}
+
+                                                <div className="flex items-start justify-between mb-4 pl-1">
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            {job.urgent && <span className="px-2 py-0.5 bg-red-100 text-red-600 text-[10px] font-black rounded-full animate-pulse uppercase tracking-wider">Gấp</span>}
+                                                            <span className={`px-2.5 py-1 rounded-full text-[10px] uppercase tracking-widest font-black ${cfg.color} flex items-center gap-1.5`}>
+                                                                <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+                                                                {cfg.label}
+                                                            </span>
+                                                        </div>
+                                                        <h3 className="font-black text-slate-900 dark:text-white text-lg leading-tight mb-1 pr-4">{job.title}</h3>
+                                                        <p className="text-xs text-slate-500 dark:text-slate-400 font-bold truncate">📍 {job.location} • 💰 {job.salary}</p>
                                                     </div>
-                                                    <h3 className="font-black text-slate-900 dark:text-white text-lg leading-tight mb-1">{job.title}</h3>
-                                                    <p className="text-sm text-slate-400 font-bold">📍 {job.location} • 💰 {job.salary}</p>
+                                                    <div className="text-right shrink-0 bg-slate-50 dark:bg-slate-800 p-3 rounded-2xl flex flex-col items-center justify-center min-w-[70px]">
+                                                        <p className="text-2xl font-black text-primary leading-none">{job.applicants}</p>
+                                                        <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mt-1">Ứng viên</p>
+                                                    </div>
                                                 </div>
-                                                <div className="text-right">
-                                                    <p className="text-2xl font-black text-primary">{job.applicants}</p>
-                                                    <p className="text-xs text-slate-400 font-bold">ứng tuyển</p>
+
+                                                {/* Progress */}
+                                                <div className="mb-4 pl-1">
+                                                    <div className="flex justify-between mb-1 text-[11px] font-black uppercase tracking-widest text-slate-500">
+                                                        <span>Tiến độ</span>
+                                                        <span className="text-primary">{job.accepted}/{job.needed}</span>
+                                                    </div>
+                                                    <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                                        <div
+                                                            className="h-full bg-gradient-to-r from-primary to-indigo-500 rounded-full transition-all duration-500"
+                                                            style={{ width: `${Math.min(progress, 100)}%` }}
+                                                        />
+                                                    </div>
                                                 </div>
+
+                                                <div className="flex items-center gap-4 text-xs font-bold text-slate-400 pl-1">
+                                                    <span>👁 {job.views} lượt xem</span>
+                                                    <div className="flex gap-3 ml-auto opacity-70 hover:opacity-100 transition-opacity">
+                                                        {job.status === "draft" && (
+                                                            <button type="button" className="text-primary hover:underline" onClick={(e) => { e.stopPropagation(); router.push(`/post-job?edit=${job.id}`); }}>
+                                                                Sửa
+                                                            </button>
+                                                        )}
+                                                        {job.status !== "closed" && (
+                                                            <button type="button" className="text-slate-400 hover:text-red-500" onClick={(e) => { e.stopPropagation(); setJobToClose(job); }}>
+                                                                Đóng
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </motion.div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Right Detail: Applicant Panel */}
+                                <div className="w-full lg:w-[55%] sticky top-24">
+                                    {selectedJob ? (
+                                        <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 sm:p-8 border border-slate-100 dark:border-slate-800 shadow-xl min-h-[600px] flex flex-col">
+                                            <div className="mb-6 pb-6 border-b border-slate-100 dark:border-slate-800">
+                                                <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white leading-tight">Danh sách Ứng viên</h2>
+                                                <p className="text-sm font-bold text-slate-500 mt-2 flex items-center gap-2">
+                                                    <span className="material-symbols-outlined text-[16px]">work</span>
+                                                    {selectedJob.title}
+                                                </p>
                                             </div>
 
-                                            {/* Progress */}
-                                            <div className="mb-5">
-                                                <div className="flex justify-between mb-1.5 text-xs font-black">
-                                                    <span className="text-slate-500">Tiến độ tuyển dụng</span>
-                                                    <span className="text-primary">{job.accepted}/{job.needed} người</span>
-                                                </div>
-                                                <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                                                    <div
-                                                        className="h-full bg-gradient-to-r from-primary to-indigo-500 rounded-full transition-all duration-500"
-                                                        style={{ width: `${Math.min(progress, 100)}%` }}
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <div className="flex items-center gap-4 text-xs font-black text-slate-400">
-                                                <span>👁 {job.views} lượt xem</span>
-                                                <span>📅 {job.startDate}</span>
-                                                <div className="flex gap-3 ml-auto">
-                                                    {job.status === "draft" ? (
-                                                        <button
-                                                            type="button"
-                                                            className="text-primary hover:underline"
-                                                            onClick={(e) => { e.stopPropagation(); router.push(`/post-job?edit=${job.id}`); }}
-                                                        >
-                                                            Chỉnh sửa
-                                                        </button>
-                                                    ) : (
-                                                        <span
-                                                            className="text-slate-400 cursor-not-allowed"
-                                                            title="Chỉ tin trạng thái Nháp mới chỉnh sửa được"
-                                                        >
-                                                            Chỉnh sửa
-                                                        </span>
-                                                    )}
-                                                    {job.status !== "closed" && (
-                                                        <button
-                                                            type="button"
-                                                            className="text-slate-400 hover:text-red-500"
-                                                            onClick={(e) => { e.stopPropagation(); setJobToClose(job); }}
-                                                        >
-                                                            Đóng tin
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {/* Expandable applicant list */}
-                                            <AnimatePresence>
-                                                {selectedJob?.id === job.id && (
-                                                    <motion.div
-                                                        initial={{ height: 0, opacity: 0 }}
-                                                        animate={{ height: "auto", opacity: 1 }}
-                                                        exit={{ height: 0, opacity: 0 }}
-                                                        className="overflow-hidden"
-                                                    >
-                                                        <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800 space-y-3">
-                                                            <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Danh sách ứng viên</p>
-                                                            {loadingApplicants[job.id] ? (
-                                                                <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800">
-                                                                    <div className="animate-spin w-5 h-5 border-2 border-primary border-t-transparent rounded-full" />
-                                                                    <p className="text-sm font-bold text-slate-500">Đang tải ứng viên...</p>
-                                                                </div>
-                                                            ) : (applicantsByJob[job.id] || []).length === 0 ? (
-                                                                <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800">
-                                                                    <p className="text-sm font-bold text-slate-500">Chưa có ứng viên.</p>
-                                                                </div>
-                                                            ) : (applicantsByJob[job.id] || []).map(ap => (
-                                                                <div key={ap.id} className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800">
-                                                                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center text-white font-black text-xs">
+                                            <div className="flex-1">
+                                                {loadingApplicants[selectedJob.id] ? (
+                                                    <div className="flex flex-col items-center justify-center h-full min-h-[300px] space-y-4">
+                                                        <div className="animate-spin w-10 h-10 border-4 border-primary border-t-transparent rounded-full" />
+                                                        <p className="text-sm font-bold text-slate-400">Đang tải hồ sơ...</p>
+                                                    </div>
+                                                ) : (applicantsByJob[selectedJob.id] || []).length === 0 ? (
+                                                    <div className="flex flex-col items-center justify-center h-full min-h-[300px] text-center space-y-3">
+                                                        <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-300 dark:text-slate-700">
+                                                            <span className="material-symbols-outlined text-4xl">inbox</span>
+                                                        </div>
+                                                        <p className="text-sm font-bold text-slate-500">Dự án này chưa có ứng viên nào.</p>
+                                                    </div>
+                                                ) : (
+                                                    <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+                                                        {(applicantsByJob[selectedJob.id] || []).map(ap => (
+                                                            <div key={ap.id} className="flex flex-col p-5 rounded-[1.5rem] bg-[#fcfdff] dark:bg-[#121212] border border-slate-200 dark:border-slate-800 hover:border-primary/30 transition-all hover:shadow-md gap-4">
+                                                                {/* Applicant Info */}
+                                                                <div className="flex items-center gap-4">
+                                                                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 shadow-inner flex items-center justify-center text-white font-black text-lg">
                                                                         {ap.initials}
                                                                     </div>
-                                                                    <div className="flex-1">
-                                                                        <p className="font-black text-sm text-slate-900 dark:text-white">{ap.name}</p>
-                                                                        <p className="text-xs text-slate-400 font-bold">{ap.skill || "—"} {ap.experience ? `• ${ap.experience} năm KN` : ""}</p>
-                                                                    </div>
-                                                                    <div className="flex items-center gap-2 flex-wrap">
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={(e) => { e.stopPropagation(); setCvModal({ jobId: job.id, applicationId: ap.id, applicantName: ap.name }); }}
-                                                                            className="px-3 py-1 rounded-full text-xs font-black bg-primary/10 text-primary hover:bg-primary/20 transition-colors inline-flex items-center gap-1"
-                                                                        >
-                                                                            <span className="material-symbols-outlined text-sm">description</span>
-                                                                            Xem CV
-                                                                        </button>
-                                                                        {ap.rawStatus === "APPLIED" && (
-                                                                            <>
-                                                                                <button
-                                                                                    onClick={(e) => { e.stopPropagation(); acceptReject(job.id, ap.id, "accept"); }}
-                                                                                    className="px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 hover:opacity-90"
-                                                                                >
-                                                                                    Accept
-                                                                                </button>
-                                                                                <button
-                                                                                    onClick={(e) => { e.stopPropagation(); acceptReject(job.id, ap.id, "reject"); }}
-                                                                                    className="px-3 py-1 rounded-full text-xs font-black bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 hover:opacity-90"
-                                                                                >
-                                                                                    Reject
-                                                                                </button>
-                                                                            </>
-                                                                        )}
-                                                                        {ap.rawStatus === "ACCEPTED" && (
-                                                                            <button
-                                                                                onClick={(e) => { e.stopPropagation(); confirmHire(job.id, ap.id); }}
-                                                                                className="px-3 py-1 rounded-full text-xs font-black bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors"
-                                                                            >
-                                                                                Confirm hire
-                                                                            </button>
-                                                                        )}
-                                                                        {ap.rawStatus === "COMPLETION_PENDING" && (
-                                                                            <button
-                                                                                onClick={(e) => { e.stopPropagation(); confirmComplete(job.id, ap.id); }}
-                                                                                disabled={confirmCompleteKey === `${job.id}-${ap.id}`}
-                                                                                className="px-3 py-1 rounded-full text-xs font-black bg-amber-500/20 text-amber-700 dark:text-amber-400 hover:bg-amber-500/30 transition-colors disabled:opacity-70 inline-flex items-center gap-1.5"
-                                                                            >
-                                                                                {confirmCompleteKey === `${job.id}-${ap.id}` ? (
-                                                                                    <>
-                                                                                        <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>
-                                                                                        Đang xác nhận...
-                                                                                    </>
-                                                                                ) : (
-                                                                                    "Xác nhận hoàn thành"
-                                                                                )}
-                                                                            </button>
-                                                                        )}
-                                                                        {ap.rawStatus === "COMPLETED" && !ap.hasHrReviewed && (
-                                                                            <button
-                                                                                onClick={(e) => {
-                                                                                    e.stopPropagation();
-                                                                                    setReviewModalApplicant({ ap, jobId: job.id, jobTitle: job.title });
-                                                                                    setReviewRating(5);
-                                                                                    setReviewComment("");
-                                                                                    setReviewError("");
-                                                                                }}
-                                                                                className="px-3 py-1 rounded-full text-xs font-black bg-amber-500/20 text-amber-700 dark:text-amber-400 hover:bg-amber-500/30 transition-colors"
-                                                                            >
-                                                                                Đánh giá Worker
-                                                                            </button>
-                                                                        )}
-                                                                        {ap.rawStatus === "COMPLETED" && ap.hasHrReviewed && (
-                                                                            <span className="px-3 py-1 rounded-full text-xs font-bold text-slate-500 dark:text-slate-400 inline-flex items-center gap-1">
-                                                                                Đã đánh giá
-                                                                                {(() => {
-                                                                                    const stars = Number(ap.rating);
-                                                                                    if (!Number.isNaN(stars) && stars > 0) return <><span className="text-amber-500"> • ⭐ {stars.toFixed(1)}</span></>;
-                                                                                    return null;
-                                                                                })()}
-                                                                            </span>
-                                                                        )}
-                                                                        {ap.rawStatus === "REJECTED" && (
-                                                                            <span className="px-3 py-1 rounded-full text-xs font-black bg-slate-100 text-slate-500 dark:bg-slate-700">
-                                                                                REJECTED
-                                                                            </span>
-                                                                        )}
-                                                                        {ap.rawStatus === "HIRED" && (
-                                                                            <span className="px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
-                                                                                HIRED
-                                                                            </span>
-                                                                        )}
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <div className="flex items-center justify-between gap-2 mb-1">
+                                                                            <p className="font-black text-lg text-slate-900 dark:text-white truncate">{ap.name}</p>
+                                                                            {/* Status Badge inline */}
+                                                                            {ap.rawStatus === "APPLIED" ? (
+                                                                                <span className="shrink-0 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest bg-amber-100 text-amber-700">Chờ duyệt</span>
+                                                                            ) : ap.rawStatus === "ACCEPTED" || ap.rawStatus === "HIRED" ? (
+                                                                                <span className="shrink-0 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest bg-emerald-100 text-emerald-700 flex items-center gap-1"><span className="material-symbols-outlined text-[12px]">verified</span> {ap.rawStatus}</span>
+                                                                            ) : ap.rawStatus === "REJECTED" ? (
+                                                                                <span className="shrink-0 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest bg-red-100 text-red-700">Đã từ chối</span>
+                                                                            ) : (
+                                                                                <span className="shrink-0 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest bg-slate-100 text-slate-500">{ap.rawStatus}</span>
+                                                                            )}
+                                                                        </div>
+                                                                        <p className="text-xs text-slate-500 font-bold flex items-center gap-2 truncate">
+                                                                            <span className="material-symbols-outlined text-[14px]">psychology</span> {ap.skill || "Chưa cập nhật KN"}
+                                                                            {ap.experience && <span>• {ap.experience} năm KN</span>}
+                                                                        </p>
                                                                     </div>
                                                                 </div>
-                                                            ))}
-                                                        </div>
-                                                    </motion.div>
+
+                                                                {/* Action Buttons uniformly sized */}
+                                                                <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/50">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={(e) => { e.stopPropagation(); setCvModal({ jobId: selectedJob.id, applicationId: ap.id, applicantName: ap.name }); }}
+                                                                        className="h-10 px-5 rounded-xl text-xs font-black bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:opacity-80 transition-opacity flex items-center justify-center gap-2"
+                                                                    >
+                                                                        <span className="material-symbols-outlined text-[18px]">description</span>
+                                                                        Xem CV
+                                                                    </button>
+
+                                                                    {ap.rawStatus === "APPLIED" && (
+                                                                        <>
+                                                                            <button
+                                                                                onClick={(e) => { e.stopPropagation(); acceptReject(selectedJob.id, ap.id, "accept"); }}
+                                                                                className="h-10 px-5 rounded-xl text-xs font-black bg-emerald-500 text-white hover:bg-emerald-600 shadow-[0_4px_15px_rgba(16,185,129,0.3)] transition-all flex items-center justify-center gap-2"
+                                                                            >
+                                                                                <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                                                                                Chấp nhận
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={(e) => { e.stopPropagation(); acceptReject(selectedJob.id, ap.id, "reject"); }}
+                                                                                className="h-10 px-5 rounded-xl text-xs font-black bg-red-500 text-white hover:bg-red-600 shadow-[0_4px_15px_rgba(239,68,68,0.3)] transition-all flex items-center justify-center gap-2"
+                                                                            >
+                                                                                <span className="material-symbols-outlined text-[18px]">cancel</span>
+                                                                                Từ chối
+                                                                            </button>
+                                                                        </>
+                                                                    )}
+
+                                                                    {ap.rawStatus === "ACCEPTED" && (
+                                                                        <button
+                                                                            onClick={(e) => { e.stopPropagation(); confirmHire(selectedJob.id, ap.id); }}
+                                                                            className="h-10 flex-1 min-w-[140px] rounded-xl text-xs font-black bg-indigo-500 text-white hover:bg-indigo-600 shadow-[0_4px_15px_rgba(99,102,241,0.3)] transition-all flex items-center justify-center gap-2"
+                                                                        >
+                                                                            Xác nhận Thuê ngay
+                                                                        </button>
+                                                                    )}
+
+                                                                    {ap.rawStatus === "COMPLETION_PENDING" && (
+                                                                        <button
+                                                                            onClick={(e) => { e.stopPropagation(); confirmComplete(selectedJob.id, ap.id); }}
+                                                                            disabled={confirmCompleteKey === `${selectedJob.id}-${ap.id}`}
+                                                                            className="h-10 px-5 rounded-xl text-xs font-black bg-amber-500 text-white hover:bg-amber-600 shadow-[0_4px_15px_rgba(245,158,11,0.3)] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                                                        >
+                                                                            {confirmCompleteKey === `${selectedJob.id}-${ap.id}` ? (
+                                                                                <><span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span> Đang xử lý...</>
+                                                                            ) : (
+                                                                                <><span className="material-symbols-outlined text-[18px]">star</span> Xác nhận Hoàn thành</>
+                                                                            )}
+                                                                        </button>
+                                                                    )}
+
+                                                                    {ap.rawStatus === "COMPLETED" && !ap.hasHrReviewed && (
+                                                                        <button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                setReviewModalApplicant({ ap, jobId: selectedJob.id, jobTitle: selectedJob.title });
+                                                                                setReviewRating(5);
+                                                                                setReviewComment("");
+                                                                                setReviewError("");
+                                                                            }}
+                                                                            className="h-10 px-5 rounded-xl text-xs font-black bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors flex items-center justify-center gap-2"
+                                                                        >
+                                                                            <span className="material-symbols-outlined text-[18px]">rate_review</span> Đánh giá Worker
+                                                                        </button>
+                                                                    )}
+
+                                                                    {ap.rawStatus === "COMPLETED" && ap.hasHrReviewed && (
+                                                                        <span className="h-10 px-4 rounded-xl text-xs font-bold bg-slate-50 dark:bg-slate-800 text-slate-500 flex items-center justify-center gap-2">
+                                                                            Đã đánh giá
+                                                                            {Number(ap.rating) > 0 && <span className="text-amber-500 font-black tracking-widest bg-amber-50 px-2 py-0.5 rounded">⭐ {Number(ap.rating).toFixed(1)}</span>}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
                                                 )}
-                                            </AnimatePresence>
-                                        </motion.div>
-                                    );
-                                })}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="bg-slate-50 dark:bg-slate-900/50 rounded-[2.5rem] border-2 border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center text-center h-[600px] p-6">
+                                            <div className="w-24 h-24 bg-white dark:bg-slate-800 rounded-full shadow-sm flex items-center justify-center mb-6">
+                                                <span className="material-symbols-outlined text-5xl text-slate-300 dark:text-slate-600">work_history</span>
+                                            </div>
+                                            <h2 className="text-xl font-black text-slate-600 dark:text-slate-300 mb-2">Chưa chọn Tin tuyển dụng</h2>
+                                            <p className="text-sm font-bold text-slate-400 max-w-sm">
+                                                Nhấp vào một dự án bên trái để hiển thị Bảng điều khiển Ứng viên tại đây.
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </motion.div>
                     )}
@@ -958,79 +978,141 @@ export default function HRDashboardPage() {
                                 <div className="flex items-center justify-center py-12">
                                     <div className="animate-spin w-10 h-10 border-2 border-primary border-t-transparent rounded-full" />
                                 </div>
-                            ) : cvModalData?.cv ? (
-                                <div className="space-y-5 text-sm">
-                                    {cvModalData.cv.personalInfo && (
-                                        <div>
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Thông tin cá nhân</p>
-                                            <p className="font-bold text-slate-900 dark:text-white">{cvModalData.cv.personalInfo.name || "—"}</p>
-                                            <p className="text-slate-500">{cvModalData.cv.personalInfo.title || ""}</p>
-                                            {(cvModalData.cv.personalInfo.email || cvModalData.cv.personalInfo.phone) && (
-                                                <p className="text-slate-500 mt-1">{[cvModalData.cv.personalInfo.email, cvModalData.cv.personalInfo.phone].filter(Boolean).join(" • ")}</p>
-                                            )}
-                                            {cvModalData.cv.personalInfo.address && <p className="text-slate-500">{cvModalData.cv.personalInfo.address}</p>}
-                                        </div>
-                                    )}
-                                    {cvModalData.cv.summary && (
-                                        <div>
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Giới thiệu</p>
-                                            <p className="text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">{cvModalData.cv.summary}</p>
-                                        </div>
-                                    )}
-                                    {cvModalData.cv.experiences?.length > 0 && (
-                                        <div>
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Kinh nghiệm</p>
-                                            <ul className="space-y-3">
-                                                {cvModalData.cv.experiences.map((exp: any, i: number) => (
-                                                    <li key={i} className="pl-3 border-l-2 border-primary/30">
-                                                        <p className="font-bold text-slate-900 dark:text-white">{exp.role || exp.company}</p>
-                                                        {(exp.company || exp.duration) && <p className="text-xs text-slate-500">{[exp.company, exp.duration].filter(Boolean).join(" • ")}</p>}
-                                                        {exp.description && <p className="text-slate-600 dark:text-slate-400 mt-1 text-xs leading-relaxed">{exp.description}</p>}
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                    )}
-                                    {cvModalData.cv.education?.length > 0 && (
-                                        <div>
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Học vấn</p>
-                                            <ul className="space-y-2">
-                                                {cvModalData.cv.education.map((edu: any, i: number) => (
-                                                    <li key={i}>
-                                                        <p className="font-bold text-slate-900 dark:text-white">{edu.degree}</p>
-                                                        <p className="text-xs text-slate-500">{edu.school} {edu.duration ? ` • ${edu.duration}` : ""}</p>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                    )}
-                                    {cvModalData.cv.skills?.length > 0 && (
-                                        <div>
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Kỹ năng</p>
-                                            <div className="flex flex-wrap gap-2">
-                                                {cvModalData.cv.skills.map((s: string, i: number) => (
-                                                    <span key={i} className="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold">{s}</span>
-                                                ))}
+                            ) : cvModalData?.cv || cvModalData?.worker ? (
+                                (() => {
+                                    const data = cvModalData.cv || {
+                                        personalInfo: {
+                                            name: `${cvModalData.worker.firstName || ""} ${cvModalData.worker.lastName || ""}`.trim() || "Ứng viên",
+                                            title: "",
+                                            email: cvModalData.worker.email,
+                                            phone: cvModalData.worker.phone,
+                                            address: cvModalData.worker.preferredLocationCity,
+                                        },
+                                        summary: cvModalData.worker.expectedSalary ? `Mức lương mong muốn: ${Number(cvModalData.worker.expectedSalary).toLocaleString("vi-VN")} VNĐ/Tháng.` : "",
+                                        experiences: [],
+                                        education: [],
+                                        skills: cvModalData.worker.skills || []
+                                    };
+
+                                    const avatarInitials = data.personalInfo.name.split(" ").filter(Boolean).map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || "CV";
+
+                                    return (
+                                        <div className="bg-white dark:bg-[#121212] rounded-[1.5rem] border border-slate-200 dark:border-slate-800/60 p-6 sm:p-10 shadow-sm max-w-[210mm] mx-auto w-full">
+                                            {/* Header */}
+                                            <div className="flex flex-col-reverse sm:flex-row sm:justify-between sm:items-start border-b-2 border-slate-900 dark:border-slate-800 pb-8 mb-8 gap-6">
+                                                <div className="flex-1 pr-4">
+                                                    <h2 className="text-3xl sm:text-4xl font-black uppercase text-slate-900 dark:text-white tracking-tighter" style={{ fontFamily: "Inter, sans-serif" }}>
+                                                        {data.personalInfo.name}
+                                                    </h2>
+                                                    {data.personalInfo.title && (
+                                                        <p className="text-base sm:text-lg text-slate-500 dark:text-slate-400 mt-2 uppercase tracking-widest font-bold">
+                                                            {data.personalInfo.title}
+                                                        </p>
+                                                    )}
+                                                    <div className="mt-5 flex flex-wrap gap-4 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                                                        {data.personalInfo.email && (
+                                                            <div className="flex items-center gap-1.5"><span className="material-symbols-outlined text-[16px] text-slate-400">mail</span> {data.personalInfo.email}</div>
+                                                        )}
+                                                        {data.personalInfo.phone && (
+                                                            <div className="flex items-center gap-1.5"><span className="material-symbols-outlined text-[16px] text-slate-400">call</span> {data.personalInfo.phone}</div>
+                                                        )}
+                                                        {data.personalInfo.address && (
+                                                            <div className="flex items-center gap-1.5"><span className="material-symbols-outlined text-[16px] text-slate-400">location_on</span> {data.personalInfo.address}</div>
+                                                        )}
+                                                        {data.personalInfo.website && (
+                                                            <div className="flex items-center gap-1.5"><span className="material-symbols-outlined text-[16px] text-slate-400">language</span> {data.personalInfo.website}</div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden shrink-0 bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black text-3xl shadow-lg border-4 border-white dark:border-[#121212]">
+                                                    {data.personalInfo.avatar ? (
+                                                        <img src={data.personalInfo.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        avatarInitials
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Content Grid */}
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+                                                {/* Main Column */}
+                                                <div className="md:col-span-2 space-y-10 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800 pb-10 md:pb-0 md:pr-10">
+                                                    {data.summary && (
+                                                        <div>
+                                                            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                                                                <span className="material-symbols-outlined text-[16px] text-slate-400">person</span>
+                                                                Mục tiêu nghề nghiệp
+                                                            </h3>
+                                                            <p className="text-sm text-slate-600 dark:text-slate-300 leading-[1.8] text-justify whitespace-pre-wrap">
+                                                                {data.summary}
+                                                            </p>
+                                                        </div>
+                                                    )}
+
+                                                    {data.experiences?.length > 0 && (
+                                                        <div>
+                                                            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white mb-6 flex items-center gap-2">
+                                                                <span className="material-symbols-outlined text-[16px] text-slate-400">work</span>
+                                                                Kinh nghiệm làm việc
+                                                            </h3>
+                                                            <div className="space-y-6">
+                                                                {data.experiences.map((exp: any, i: number) => (
+                                                                    <div key={i} className="relative">
+                                                                        <div className="flex flex-wrap justify-between items-baseline mb-1">
+                                                                            <h4 className="text-[15px] font-bold text-slate-900 dark:text-white mr-2">{exp.role}</h4>
+                                                                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest text-right shrink-0">{exp.duration}</span>
+                                                                        </div>
+                                                                        <p className="text-[13px] font-bold text-slate-500 dark:text-slate-400 mb-2">{exp.company}</p>
+                                                                        <p className="text-[13px] text-slate-600 dark:text-slate-300 leading-relaxed text-justify whitespace-pre-wrap">
+                                                                            {exp.description}
+                                                                        </p>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Sidebar Column */}
+                                                <div className="space-y-10 pl-0 md:pl-2">
+                                                    {data.education?.length > 0 && (
+                                                        <div>
+                                                            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white mb-5 flex items-center gap-2">
+                                                                <span className="material-symbols-outlined text-[16px] text-slate-400">school</span>
+                                                                Học vấn
+                                                            </h3>
+                                                            <div className="space-y-5">
+                                                                {data.education.map((edu: any, i: number) => (
+                                                                    <div key={i}>
+                                                                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">{edu.duration}</p>
+                                                                        <h4 className="text-[13px] font-bold text-slate-900 dark:text-white mb-1 leading-snug">{edu.degree}</h4>
+                                                                        <p className="text-[12px] text-slate-500">{edu.school}</p>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {data.skills?.length > 0 && (
+                                                        <div>
+                                                            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                                                                <span className="material-symbols-outlined text-[16px] text-slate-400">psychology</span>
+                                                                Kỹ năng
+                                                            </h3>
+                                                            <ul className="list-disc list-inside space-y-2">
+                                                                {data.skills.map((s: string, i: number) => (
+                                                                    <li key={i} className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">
+                                                                        {s}
+                                                                    </li>
+                                                                ))}
+                                                            </ul>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
-                                    )}
-                                </div>
-                            ) : cvModalData?.worker ? (
-                                <div className="space-y-3 text-sm">
-                                    <p className="text-slate-500">Ứng viên chưa điền CV. Thông tin từ hồ sơ tài khoản:</p>
-                                    <p className="font-bold text-slate-900 dark:text-white">{cvModalData.worker.firstName} {cvModalData.worker.lastName}</p>
-                                    {(cvModalData.worker.email || cvModalData.worker.phone) && (
-                                        <p className="text-slate-500">{(cvModalData.worker.email || "") + (cvModalData.worker.phone ? ` • ${cvModalData.worker.phone}` : "")}</p>
-                                    )}
-                                    {(cvModalData.worker.skills?.length > 0 || cvModalData.worker.experienceYears || cvModalData.worker.preferredLocationCity) && (
-                                        <div className="pt-2 space-y-1">
-                                            {cvModalData.worker.skills?.length > 0 && <p><span className="font-bold text-slate-500">Kỹ năng:</span> {cvModalData.worker.skills.join(", ")}</p>}
-                                            {cvModalData.worker.experienceYears && <p><span className="font-bold text-slate-500">Kinh nghiệm:</span> {cvModalData.worker.experienceYears}</p>}
-                                            {cvModalData.worker.preferredLocationCity && <p><span className="font-bold text-slate-500">Khu vực:</span> {cvModalData.worker.preferredLocationCity}</p>}
-                                            {cvModalData.worker.expectedSalary && <p><span className="font-bold text-slate-500">Mức lương mong muốn:</span> {cvModalData.worker.expectedSalary} VNĐ/tháng</p>}
-                                        </div>
-                                    )}
-                                </div>
+                                    );
+                                })()
                             ) : (
                                 <div className="text-center py-8 space-y-3">
                                     <p className="text-slate-500">{cvModalError || "Không tải được CV hoặc ứng viên chưa có thông tin."}</p>
