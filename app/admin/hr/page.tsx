@@ -56,34 +56,39 @@ export default function HRManagementPage() {
     setIsLoading(true);
     setErrorMessage(null);
     try {
-      const params: Record<string, string> = {};
-      if (search) params.search = search;
-      if (statusFilter !== "ALL" && statusFilter !== "BLACKLISTED") params.status = statusFilter;
-      if (statusFilter === "BLACKLISTED") params.blacklisted = "true";
+    const params: Record<string, string> = {};
+    if (search) params.search = search;
+    if (statusFilter !== "ALL" && statusFilter !== "BLACKLISTED") params.status = statusFilter;
+    if (statusFilter === "BLACKLISTED") params.blacklisted = "true";
 
-      const res = await adminApi.getHrList(params);
-      const items = res.data?.data?.data || [];
+    const res = await adminApi.getHrList(params);
+    const items = res.data?.data?.data || [];
 
       setRows(
-        items.map((item: any) => ({
-          id: item._id,
-          companyName: item.companyName,
-          taxCode: item.taxCode,
-          region: item.address || "Việt Nam",
-          address: item.address || "--",
-          contactEmail: item.contactInfo || "--",
-          phone: "--",
-          verificationStatus: item.verificationStatus,
-          isBlacklisted: item.isBlacklisted,
-          completedProjects: item.totalJobsCompleted || 0,
-          workersHired: 0,
-          completionRate: 0,
-          avgRating: item.averageRating || 0,
-          reportCount: item.totalReports || 0,
-          popularPaymentMethod: "BANK_TRANSFER",
-          onTimePaymentRate: item.onTimePaymentRate || 0,
-          createdAt: item.createdAt,
-        })),
+        items.map((item: any) => {
+          const totalPosted = item.totalJobsPosted || 0;
+          const totalCompleted = item.totalJobsCompleted || 0;
+          const completionRate = totalPosted > 0 ? Math.round((totalCompleted / totalPosted) * 100) : 0;
+          return {
+            id: item._id,
+            companyName: item.companyName,
+            taxCode: item.taxCode,
+            region: item.address || "Việt Nam",
+            address: item.address || "--",
+            contactEmail: item.contactInfo || "--",
+            phone: item.contactInfo || "--",
+            verificationStatus: item.verificationStatus,
+            isBlacklisted: item.isBlacklisted,
+            completedProjects: totalCompleted,
+            workersHired: totalCompleted,
+            completionRate,
+            avgRating: item.averageRating ?? 0,
+            reportCount: item.totalReports ?? 0,
+            popularPaymentMethod: "BANK_TRANSFER" as const,
+            onTimePaymentRate: item.onTimePaymentRate ?? 0,
+            createdAt: item.createdAt,
+          };
+        }),
       );
     } catch (error) {
       setRows([]);
@@ -118,6 +123,7 @@ export default function HRManagementPage() {
         iconTextClass: "text-emerald-600",
         trend: "Ổn định",
         trendTone: "positive",
+        accentColor: "#10b981",
       },
       {
         title: "Đang chờ duyệt",
@@ -127,6 +133,7 @@ export default function HRManagementPage() {
         iconTextClass: "text-amber-600",
         trend: "Cần xử lý",
         trendTone: "neutral",
+        accentColor: "#f59e0b",
       },
       {
         title: "Bị blacklist",
@@ -136,6 +143,7 @@ export default function HRManagementPage() {
         iconTextClass: "text-red-600",
         trend: "Theo dõi",
         trendTone: "negative",
+        accentColor: "#ef4444",
       },
     ];
   }, [rows]);
@@ -150,9 +158,9 @@ export default function HRManagementPage() {
       if (pendingAction.type === "blacklist") await adminApi.updateHrBlacklist(pendingAction.hr.id, true, "Vi phạm chính sách nền tảng");
       if (pendingAction.type === "reactivate") await adminApi.updateHrBlacklist(pendingAction.hr.id, false, "Khôi phục hoạt động");
 
-      setPendingAction(null);
+    setPendingAction(null);
       setToast({ type: "success", message: "Cập nhật trạng thái HR thành công." });
-      await loadHr();
+    await loadHr();
     } catch (error) {
       setToast({ type: "error", message: getErrorMessage(error) });
     } finally {
@@ -175,7 +183,7 @@ export default function HRManagementPage() {
       {toast ? <AdminToast type={toast.type} message={toast.message} /> : null}
 
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <Topbar locale="vi" />
+        <Topbar />
         <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
           {errorMessage ? <AdminErrorBanner message={errorMessage} className="mb-6" /> : null}
 
@@ -196,7 +204,7 @@ export default function HRManagementPage() {
           {isLoading ? (
             <AdminLoadingState message="Đang tải danh sách HR..." />
           ) : (
-            <HRManagementTable data={rows} onViewDetails={setSelectedProfile} onApprove={(hr) => setPendingAction({ type: "approve", hr })} onReject={(hr) => setPendingAction({ type: "reject", hr })} onBlacklist={(hr) => setPendingAction({ type: "blacklist", hr })} onReactivate={(hr) => setPendingAction({ type: "reactivate", hr })} />
+          <HRManagementTable data={rows} onViewDetails={setSelectedProfile} onApprove={(hr) => setPendingAction({ type: "approve", hr })} onReject={(hr) => setPendingAction({ type: "reject", hr })} onBlacklist={(hr) => setPendingAction({ type: "blacklist", hr })} onReactivate={(hr) => setPendingAction({ type: "reactivate", hr })} />
           )}
         </div>
       </main>

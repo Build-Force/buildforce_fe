@@ -68,6 +68,19 @@ export const ChatWidget: React.FC = () => {
         }
     }, [isLoggedIn, isOpen]);
 
+    useEffect(() => {
+        const handleOpenChat = (e: CustomEvent<{ conversationId: string; participant: Participant }>) => {
+            const { conversationId, participant } = e.detail || {};
+            if (conversationId && participant) {
+                setIsOpen(true);
+                setActiveTab("messages");
+                setActiveConversation({ id: conversationId, participant });
+            }
+        };
+        window.addEventListener("buildforce:openChat", handleOpenChat as EventListener);
+        return () => window.removeEventListener("buildforce:openChat", handleOpenChat as EventListener);
+    }, []);
+
     if (!isLoggedIn) return null;
 
     const handleSelectConversation = (id: string, participant: Participant) => {
@@ -113,8 +126,8 @@ export const ChatWidget: React.FC = () => {
                             <button
                                 onClick={() => setActiveTab("ai")}
                                 className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors relative ${activeTab === "ai"
-                                        ? "text-primary"
-                                        : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                                    ? "text-primary"
+                                    : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                                     }`}
                             >
                                 <span className="material-symbols-outlined text-base">smart_toy</span>
@@ -124,8 +137,8 @@ export const ChatWidget: React.FC = () => {
                             <button
                                 onClick={() => setActiveTab("messages")}
                                 className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors relative ${activeTab === "messages"
-                                        ? "text-primary"
-                                        : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                                    ? "text-primary"
+                                    : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                                     }`}
                             >
                                 <span className="material-symbols-outlined text-base">forum</span>

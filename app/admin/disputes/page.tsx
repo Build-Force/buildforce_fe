@@ -58,15 +58,23 @@ export default function AdminDisputesPage() {
       const items = res.data?.data?.data || [];
 
       setCases(
-        items.map((item: any) => ({
-          id: item._id,
-          reporter: item.reporterId?.fullName || item.reporterId?.email || "Không rõ",
-          target: item.targetId?.fullName || item.targetId?.email || "Không rõ",
-          category: item.category || "Khác",
-          createdAt: item.createdAt,
-          priority: item.priority,
-          status: item.status,
-        })),
+        items.map((item: any) => {
+          const reporterName = item.reporterId
+            ? [item.reporterId.firstName, item.reporterId.lastName].filter(Boolean).join(" ") || item.reporterId.email
+            : "Không rõ";
+          const targetName = item.targetId
+            ? item.targetId.companyName || [item.targetId.firstName, item.targetId.lastName].filter(Boolean).join(" ") || item.targetId.email
+            : "Không rõ";
+          return {
+            id: item._id,
+            reporter: reporterName,
+            target: targetName,
+            category: item.category || "Khác",
+            createdAt: item.createdAt,
+            priority: item.priority,
+            status: item.status,
+          };
+        }),
       );
     } catch (error) {
       setCases([]);
@@ -101,6 +109,7 @@ export default function AdminDisputesPage() {
         iconTextClass: "text-red-600",
         trend: "Ưu tiên xử lý",
         trendTone: "negative",
+        accentColor: "#ef4444",
       },
       {
         title: "Đang điều tra",
@@ -110,6 +119,7 @@ export default function AdminDisputesPage() {
         iconTextClass: "text-amber-600",
         trend: "Theo dõi",
         trendTone: "neutral",
+        accentColor: "#f59e0b",
       },
       {
         title: "Đã giải quyết",
@@ -119,6 +129,7 @@ export default function AdminDisputesPage() {
         iconTextClass: "text-emerald-600",
         trend: "Ổn định",
         trendTone: "positive",
+        accentColor: "#10b981",
       },
     ];
   }, [cases]);
@@ -167,7 +178,7 @@ export default function AdminDisputesPage() {
       {toast ? <AdminToast type={toast.type} message={toast.message} /> : null}
 
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <Topbar locale="vi" />
+        <Topbar />
 
         <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
           <section className="mb-6">
@@ -208,28 +219,28 @@ export default function AdminDisputesPage() {
                     </tr>
                   ) : (
                     cases.map((item) => (
-                      <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                        <td className="px-4 py-4 text-sm font-semibold">{item.id}</td>
-                        <td className="px-4 py-4">{item.reporter}</td>
-                        <td className="px-4 py-4 text-sm">{item.target}</td>
-                        <td className="px-4 py-4 text-sm">{item.category}</td>
-                        <td className="px-4 py-4 text-sm text-slate-500">{new Date(item.createdAt).toLocaleDateString("vi-VN")}</td>
+                    <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                      <td className="px-4 py-4 text-sm font-semibold">{item.id}</td>
+                      <td className="px-4 py-4">{item.reporter}</td>
+                      <td className="px-4 py-4 text-sm">{item.target}</td>
+                      <td className="px-4 py-4 text-sm">{item.category}</td>
+                      <td className="px-4 py-4 text-sm text-slate-500">{new Date(item.createdAt).toLocaleDateString("vi-VN")}</td>
                         <td className={`px-4 py-4 text-sm font-semibold ${priorityClass(item.priority)}`}>{priorityLabel(item.priority)}</td>
-                        <td className="px-4 py-4">
-                          <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass(item.status)}`}>
-                            {statusLabel(item.status)}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4">
-                          <button
+                      <td className="px-4 py-4">
+                        <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass(item.status)}`}>
+                          {statusLabel(item.status)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <button
                             disabled={item.status === "RESOLVED" || isUpdatingId === item.id}
                             onClick={() => setResolved(item.id).catch(() => null)}
                             className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800"
-                          >
+                        >
                             {isUpdatingId === item.id ? "Đang xử lý..." : "Đánh dấu đã xử lý"}
-                          </button>
-                        </td>
-                      </tr>
+                        </button>
+                      </td>
+                    </tr>
                     ))
                   )}
                 </tbody>

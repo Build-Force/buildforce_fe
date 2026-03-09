@@ -56,23 +56,26 @@ export default function AdminUsersPage() {
     setErrorMessage(null);
 
     try {
-      const params: Record<string, string> = {};
-      if (search) params.search = search;
-      if (roleFilter !== "ALL") params.role = roleFilter;
-      if (statusFilter !== "ALL") params.status = statusFilter;
+    const params: Record<string, string> = {};
+    if (search) params.search = search;
+    if (roleFilter !== "ALL") params.role = roleFilter;
+    if (statusFilter !== "ALL") params.status = statusFilter;
 
       const res = await adminApi.getUsers(params);
       const rows = res.data?.data?.data || [];
       setUsers(
-        rows.map((u: any) => ({
-          id: u._id,
-          fullName: u.email?.split("@")[0] || "Người dùng",
-          email: u.email,
-          avatar: `https://i.pravatar.cc/100?u=${u._id}`,
-          role: u.role,
-          status: u.status,
-          createdAt: u.createdAt,
-        })),
+        rows.map((u: any) => {
+          const fullName = [u.firstName, u.lastName].filter(Boolean).join(" ") || u.email?.split("@")[0] || "Người dùng";
+          return {
+            id: u._id,
+            fullName,
+            email: u.email || u.phone || "--",
+            avatar: u.avatar || `https://i.pravatar.cc/100?u=${u._id}`,
+            role: u.role,
+            status: u.status,
+            createdAt: u.createdAt,
+          };
+        }),
       );
     } catch (error) {
       setUsers([]);
@@ -106,6 +109,7 @@ export default function AdminUsersPage() {
         iconTextClass: "text-emerald-600",
         trend: "Ổn định",
         trendTone: "positive",
+        accentColor: "#10b981",
       },
       {
         title: "Tạm khóa",
@@ -115,6 +119,7 @@ export default function AdminUsersPage() {
         iconTextClass: "text-amber-600",
         trend: "Theo dõi",
         trendTone: "neutral",
+        accentColor: "#f59e0b",
       },
     ];
   }, [users]);
@@ -130,10 +135,10 @@ export default function AdminUsersPage() {
 
     setIsUpdating(true);
     try {
-      await adminApi.updateUserStatus(pendingAction.user.id, nextStatus);
-      setPendingAction(null);
+    await adminApi.updateUserStatus(pendingAction.user.id, nextStatus);
+    setPendingAction(null);
       setToast({ type: "success", message: "Cập nhật trạng thái người dùng thành công." });
-      await loadUsers();
+    await loadUsers();
     } catch (error) {
       setToast({ type: "error", message: getErrorMessage(error) });
     } finally {
@@ -156,7 +161,7 @@ export default function AdminUsersPage() {
       {toast ? <AdminToast type={toast.type} message={toast.message} /> : null}
 
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <Topbar locale="vi" />
+        <Topbar />
         <div className="mx-auto w-full max-w-7xl space-y-6 p-8">
           {errorMessage ? <AdminErrorBanner message={errorMessage} /> : null}
 
@@ -177,7 +182,7 @@ export default function AdminUsersPage() {
           {isLoading ? (
             <AdminLoadingState message="Đang tải danh sách người dùng..." />
           ) : (
-            <UserManagementTable users={users} onSuspend={(user) => setPendingAction({ type: "suspend", user })} onReactivate={(user) => setPendingAction({ type: "reactivate", user })} onDelete={(user) => setPendingAction({ type: "delete", user })} onRestore={(user) => setPendingAction({ type: "restore", user })} />
+          <UserManagementTable users={users} onSuspend={(user) => setPendingAction({ type: "suspend", user })} onReactivate={(user) => setPendingAction({ type: "reactivate", user })} onDelete={(user) => setPendingAction({ type: "delete", user })} onRestore={(user) => setPendingAction({ type: "restore", user })} />
           )}
 
           <section className="grid grid-cols-1 gap-6 md:grid-cols-2">{stats.map((stat) => <StatsCard key={stat.title} stat={stat} />)}</section>

@@ -57,15 +57,14 @@ export default function AdminPaymentsPage() {
       const items = res.data?.data?.data || [];
       setRecords(
         items.map((item: any) => ({
-          id: item.id,
-          hrCompany: item.hrCompany,
-          amount: item.amount,
-          method: item.method,
-          createdAt: item.createdAt,
-          status: item.status,
+          id: item._id ?? item.id,
+          hrCompany: item.hrCompany ?? "—",
+          amount: item.amount ?? 0,
+          method: item.method ?? "BANK_TRANSFER",
+          createdAt: item.createdAt ?? "",
+          status: item.status ?? "processing",
         })),
       );
-      setToast({ type: "success", message: "Đã tải dữ liệu thanh toán." });
     } catch (error) {
       setRecords([]);
       setErrorMessage("Không thể tải danh sách thanh toán.");
@@ -99,6 +98,7 @@ export default function AdminPaymentsPage() {
         iconTextClass: "text-emerald-600",
         trend: "Theo dữ liệu API",
         trendTone: "positive",
+        accentColor: "#10b981",
       },
       {
         title: "Đang xử lý",
@@ -108,6 +108,7 @@ export default function AdminPaymentsPage() {
         iconTextClass: "text-amber-600",
         trend: "Theo dõi",
         trendTone: "neutral",
+        accentColor: "#f59e0b",
       },
       {
         title: "Giao dịch lỗi",
@@ -117,6 +118,7 @@ export default function AdminPaymentsPage() {
         iconTextClass: "text-red-600",
         trend: "Cần xử lý",
         trendTone: "negative",
+        accentColor: "#ef4444",
       },
     ];
   }, [records]);
@@ -140,7 +142,7 @@ export default function AdminPaymentsPage() {
       {toast ? <AdminToast type={toast.type} message={toast.message} /> : null}
 
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <Topbar locale="vi" />
+        <Topbar />
 
         <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
           <section className="mb-6">
@@ -179,20 +181,20 @@ export default function AdminPaymentsPage() {
                     </tr>
                   ) : (
                     records.map((record) => (
-                      <tr key={record.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                        <td className="px-4 py-4 text-sm font-semibold">{record.id}</td>
-                        <td className="px-4 py-4">{record.hrCompany}</td>
-                        <td className="px-4 py-4 text-sm">{currency.format(record.amount)}</td>
-                        <td className="px-4 py-4 text-sm">{record.method === "BANK_TRANSFER" ? "Chuyển khoản" : "Tiền mặt"}</td>
-                        <td className="px-4 py-4 text-sm text-slate-500">{new Date(record.createdAt).toLocaleDateString("vi-VN")}</td>
-                        <td className="px-4 py-4">
-                          <span
-                            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${paymentStatusBadge(record.status)}`}
-                          >
-                            {paymentStatusText(record.status)}
-                          </span>
-                        </td>
-                      </tr>
+                    <tr key={record.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                      <td className="px-4 py-4 text-sm font-semibold">{record.id}</td>
+                      <td className="px-4 py-4">{record.hrCompany}</td>
+                      <td className="px-4 py-4 text-sm">{currency.format(record.amount)}</td>
+                      <td className="px-4 py-4 text-sm">{record.method === "BANK_TRANSFER" ? "Chuyển khoản" : "Tiền mặt"}</td>
+                      <td className="px-4 py-4 text-sm text-slate-500">{new Date(record.createdAt).toLocaleDateString("vi-VN")}</td>
+                      <td className="px-4 py-4">
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${paymentStatusBadge(record.status)}`}
+                        >
+                          {paymentStatusText(record.status)}
+                        </span>
+                      </td>
+                    </tr>
                     ))
                   )}
                 </tbody>

@@ -4,9 +4,112 @@ import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import api from "@/utils/api";
 import { SimilarJobCard } from "@/components/jobs/SimilarJobCard";
 import { JOBS as MOCK_JOBS } from "@/data/mockData";
+
+const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN as string | undefined;
+
+const JobMapPreview = dynamic(
+  () => import("@/components/jobs/JobMapPreview").then((m) => m.JobMapPreview),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-48 bg-slate-200 dark:bg-slate-700 animate-pulse rounded-2xl flex items-center justify-center">
+        <span className="text-slate-500 font-bold text-sm">Đang tải bản đồ...</span>
+      </div>
+    ),
+  }
+);
+
+function JobImagesBlock({ images }: { images: string[] }) {
+  const [index, setIndex] = useState(0);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const hasMultiple = images.length > 1;
+
+  if (images.length === 0) return null;
+
+  return (
+    <>
+      <section className="rounded-2xl overflow-hidden border-2 border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800">
+        <div className="relative aspect-video w-full">
+          <button
+            type="button"
+            onClick={() => setLightboxUrl(images[index])}
+            className="absolute inset-0 w-full h-full block cursor-zoom-in focus:outline-none focus:ring-2 focus:ring-primary focus:ring-inset"
+            aria-label="Xem ảnh phóng to"
+          >
+            <Image
+              src={images[index]}
+              alt=""
+              fill
+              className="object-cover pointer-events-none"
+              sizes="(max-width: 1200px) 100vw, 800px"
+              unoptimized={images[index]?.startsWith("http")}
+            />
+          </button>
+          {hasMultiple && (
+            <>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setIndex((i) => (i === 0 ? images.length - 1 : i - 1)); }}
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors z-10"
+                aria-label="Ảnh trước"
+              >
+                <span className="material-symbols-outlined text-3xl">chevron_left</span>
+              </button>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setIndex((i) => (i === images.length - 1 ? 0 : i + 1)); }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors z-10"
+                aria-label="Ảnh sau"
+              >
+                <span className="material-symbols-outlined text-3xl">chevron_right</span>
+              </button>
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 z-10" onClick={(e) => e.stopPropagation()}>
+                {images.map((_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setIndex(i)}
+                    className={`h-2 rounded-full transition-all ${i === index ? "w-8 bg-white" : "w-2 bg-white/50 hover:bg-white/70"}`}
+                    aria-label={`Ảnh ${i + 1}`}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </section>
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4"
+          onClick={() => setLightboxUrl(null)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === "Escape" && setLightboxUrl(null)}
+          aria-label="Đóng xem ảnh"
+        >
+          <button
+            type="button"
+            onClick={() => setLightboxUrl(null)}
+            className="absolute top-4 right-4 w-12 h-12 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20"
+            aria-label="Đóng"
+          >
+            <span className="material-symbols-outlined text-3xl">close</span>
+          </button>
+          <img
+            src={lightboxUrl}
+            alt=""
+            className="max-w-full max-h-[90vh] w-auto h-auto object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+    </>
+  );
+}
 
 interface JobDetailClientProps {
   jobId: string;
@@ -25,6 +128,7 @@ export const JobDetailClient: React.FC<JobDetailClientProps> = ({ jobId }) => {
   >("idle");
   const [error, setError] = useState<string | null>(null);
   const [allJobs, setAllJobs] = useState<any[]>([]);
+  const [chatLoading, setChatLoading] = useState(false);
 
   useEffect(() => {
     if (!jobId) return;
@@ -103,10 +207,7 @@ export const JobDetailClient: React.FC<JobDetailClientProps> = ({ jobId }) => {
             ? "giờ"
             : "dự án";
     const amount = Number(salary.amount);
-    const pretty =
-      amount >= 1_000_000
-        ? `${Math.round(amount / 1_000_000)}tr`
-        : `${Math.round(amount / 1_000)}k`;
+    const pretty = new Intl.NumberFormat("vi-VN").format(amount) + "VNĐ";
     return `${pretty}/${unit}`;
   };
 
@@ -151,6 +252,8 @@ export const JobDetailClient: React.FC<JobDetailClientProps> = ({ jobId }) => {
     try {
       await api.post(`/api/jobs/${jobId}/apply`);
       setApplyStatus("applied");
+      const res = await api.get(`/api/jobs/${jobId}`);
+      if (res.data.success) setJob(res.data.data);
     } catch (err: any) {
       const status = err?.response?.status;
       if (status === 409) setApplyStatus("already");
@@ -188,6 +291,36 @@ export const JobDetailClient: React.FC<JobDetailClientProps> = ({ jobId }) => {
     [job.location?.address, job.location?.province].filter(Boolean).join(", ") || "Việt Nam";
   const salaryText = formatSalary(job.salary);
   const skills = Array.isArray(job.skills) ? job.skills : [];
+  const myApplication = job.myApplication as { status: string; decisionReason?: string } | undefined;
+  const applicationStatusLabel: Record<string, string> = {
+    APPLIED: "Đã gửi",
+    ACCEPTED: "Đã chấp nhận",
+    REJECTED: "Bị từ chối",
+    HIRED: "Đã nhận việc",
+    COMPLETION_PENDING: "Chờ xác nhận hoàn thành",
+    COMPLETED: "Hoàn thành",
+  };
+  const isJobFull = (job.workersHired ?? 0) >= (job.workersNeeded ?? 1) || job.status === "FILLED";
+  const canShowApply = !myApplication && !isJobFull;
+
+  const hrId = (hr as any)?._id ?? (job.hrId as any);
+  const openChatWithHr = async () => {
+    if (!hrId || chatLoading) return;
+    setChatLoading(true);
+    try {
+      const res = await api.post("/api/chat", { participantId: typeof hrId === "string" ? hrId : (hrId as any).toString?.() || hrId });
+      const conv = res.data?.data;
+      if (conv?._id && Array.isArray(conv.participants)) {
+        const hrParticipant = conv.participants.find((p: any) => String(p._id) === String(hrId));
+        const participant = hrParticipant || { _id: hrId, firstName: "", lastName: "", role: "hr", companyName: company };
+        window.dispatchEvent(new CustomEvent("buildforce:openChat", { detail: { conversationId: conv._id, participant } }));
+      }
+    } catch (err) {
+      console.error("Open chat failed", err);
+    } finally {
+      setChatLoading(false);
+    }
+  };
 
   return (
     <div className="bg-white dark:bg-background-dark text-slate-900 dark:text-slate-100 font-sans antialiased transition-colors duration-300 min-h-screen">
@@ -239,6 +372,12 @@ export const JobDetailClient: React.FC<JobDetailClientProps> = ({ jobId }) => {
           </div>
         </header>
 
+        {Array.isArray(job.images) && job.images.length > 0 && (
+          <div className="mb-10">
+            <JobImagesBlock images={job.images} />
+          </div>
+        )}
+
         <div className="flex flex-col lg:flex-row gap-8">
           <article className="flex-1 space-y-10">
             <section className="prose-custom">
@@ -275,44 +414,86 @@ export const JobDetailClient: React.FC<JobDetailClientProps> = ({ jobId }) => {
                 <div>
                   <h4 className="text-xl font-black">{company}</h4>
                   <p className="text-slate-500 font-bold text-sm">Nhà tuyển dụng</p>
+                  {typeof (hr as any)?.averageRating === "number" && (hr as any).averageRating > 0 && (
+                    <p className="text-amber-600 dark:text-amber-400 font-bold text-sm mt-1 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-lg">star</span>
+                      {(hr as any).averageRating.toFixed(1)} (đánh giá từ người lao động)
+                    </p>
+                  )}
                 </div>
               </div>
+              {hrId && (
+                <button
+                  type="button"
+                  onClick={openChatWithHr}
+                  disabled={chatLoading}
+                  className="w-full mb-6 py-3 rounded-xl border-2 border-primary text-primary font-bold text-sm hover:bg-primary/10 disabled:opacity-60 flex items-center justify-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-lg">chat</span>
+                  {chatLoading ? "Đang mở..." : "Nhắn tin với nhà tuyển dụng"}
+                </button>
+              )}
 
-              <div className="rounded-3xl overflow-hidden h-48 mb-8 border border-slate-200 dark:border-slate-700 relative">
-                <Image
-                  src="https://images.unsplash.com/photo-1526772662000-3f88f10c053e?q=80&w=2000&auto=format&fit=crop"
-                  alt="Map Preview"
-                  fill
-                  className="object-cover grayscale opacity-50"
-                  sizes="(max-width: 768px) 100vw, 400px"
-                />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="bg-white/90 backdrop-blur-md px-6 py-3 rounded-full shadow-lg flex items-center gap-2 border border-slate-200">
-                    <span className="material-symbols-outlined text-primary text-xl">location_on</span>
-                    <span className="font-black text-slate-800 text-base">{locationText}</span>
+              <div className="mb-8">
+                {typeof job.location?.lat === "number" &&
+                  typeof job.location?.lng === "number" &&
+                  MAPBOX_TOKEN ? (
+                  <JobMapPreview
+                    lat={job.location.lat}
+                    lng={job.location.lng}
+                    locationText={locationText}
+                  />
+                ) : (
+                  <div className="w-full h-48 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center gap-2">
+                    <span className="material-symbols-outlined text-primary text-4xl">location_on</span>
+                    <p className="text-sm font-bold text-slate-700 dark:text-slate-200 text-center px-4">
+                      {locationText}
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Vị trí công việc
+                    </p>
                   </div>
-                </div>
+                )}
               </div>
 
-              <button
-                onClick={handleApply}
-                disabled={applyLoading}
-                className="w-full bg-[#EF4444] text-white py-6 rounded-2xl font-black text-2xl hover:bg-red-600 disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-xl shadow-red-500/20 active:scale-[0.98] mb-3"
-              >
-                {applyLoading ? "Đang ứng tuyển..." : "Ứng tuyển ngay"}
-              </button>
-              {applyStatus === "applied" && (
-                <p className="text-center text-sm font-bold text-emerald-600">Ứng tuyển thành công!</p>
+              {isJobFull && (
+                <div className="mb-4 p-4 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-center">
+                  <p className="text-sm font-bold text-slate-600 dark:text-slate-300">Tin này đã đủ số lượng tuyển</p>
+                </div>
               )}
-              {applyStatus === "already" && (
-                <p className="text-center text-sm font-bold text-amber-600">
-                  Bạn đã ứng tuyển công việc này rồi.
-                </p>
+              {myApplication && (
+                <div className="mb-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                  <p className="text-sm font-black text-slate-700 dark:text-slate-200 mb-1">
+                    Trạng thái đơn ứng tuyển: {applicationStatusLabel[myApplication.status] ?? myApplication.status}
+                  </p>
+                  {myApplication.status === "REJECTED" && myApplication.decisionReason && (
+                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-2">Lý do: {myApplication.decisionReason}</p>
+                  )}
+                </div>
               )}
-              {applyStatus === "error" && (
-                <p className="text-center text-sm font-bold text-red-600">
-                  Ứng tuyển thất bại. Vui lòng thử lại.
-                </p>
+              {canShowApply && (
+                <>
+                  <button
+                    onClick={handleApply}
+                    disabled={applyLoading}
+                    className="w-full bg-[#EF4444] text-white py-6 rounded-2xl font-black text-2xl hover:bg-red-600 disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-xl shadow-red-500/20 active:scale-[0.98] mb-3"
+                  >
+                    {applyLoading ? "Đang ứng tuyển..." : "Ứng tuyển ngay"}
+                  </button>
+                  {applyStatus === "applied" && (
+                    <p className="text-center text-sm font-bold text-emerald-600">Ứng tuyển thành công!</p>
+                  )}
+                  {applyStatus === "already" && (
+                    <p className="text-center text-sm font-bold text-amber-600">
+                      Bạn đã ứng tuyển công việc này rồi.
+                    </p>
+                  )}
+                  {applyStatus === "error" && (
+                    <p className="text-center text-sm font-bold text-red-600">
+                      Ứng tuyển thất bại. Vui lòng thử lại.
+                    </p>
+                  )}
+                </>
               )}
               <p className="text-center text-sm font-bold text-slate-400">Ứng tuyển mất khoảng 3 phút</p>
             </div>

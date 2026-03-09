@@ -108,7 +108,7 @@ export default function AdminBlogsPage() {
         <div className="flex h-screen overflow-hidden bg-background-light text-slate-900 dark:bg-background-dark dark:text-slate-100">
             <Sidebar navItems={NAV_ITEMS} />
             <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-                <Topbar locale="vi" />
+                <Topbar />
                 <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
                     <div className="max-w-7xl mx-auto">
                         {/* Header */}

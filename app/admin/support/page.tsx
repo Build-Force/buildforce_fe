@@ -55,13 +55,18 @@ export default function AdminSupportPage() {
       const items = res.data?.data?.data || [];
 
       setTickets(
-        items.map((item: any) => ({
-          id: item._id,
-          subject: item.subject || "Không có tiêu đề",
-          requester: item.userId?.fullName || item.userId?.email || "Người dùng",
-          priority: item.priority,
-          status: item.status,
-        })),
+        items.map((item: any) => {
+          const requester = item.userId
+            ? [item.userId.firstName, item.userId.lastName].filter(Boolean).join(" ") || item.userId.email
+            : "Người dùng";
+          return {
+            id: item._id,
+            subject: item.subject || "Không có tiêu đề",
+            requester,
+            priority: item.priority,
+            status: item.status,
+          };
+        }),
       );
     } catch (error) {
       setTickets([]);
@@ -120,7 +125,7 @@ export default function AdminSupportPage() {
       {toast ? <AdminToast type={toast.type} message={toast.message} /> : null}
 
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <Topbar locale="vi" />
+        <Topbar />
 
         <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
           <h1 className="text-2xl font-bold tracking-tight">Support Center</h1>
@@ -151,16 +156,16 @@ export default function AdminSupportPage() {
                     </tr>
                   ) : (
                     tickets.map((ticket) => (
-                      <tr key={ticket.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                        <td className="px-4 py-4 text-sm font-semibold">{ticket.id}</td>
-                        <td className="px-4 py-4">{ticket.subject}</td>
-                        <td className="px-4 py-4 text-sm">{ticket.requester}</td>
+                    <tr key={ticket.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                      <td className="px-4 py-4 text-sm font-semibold">{ticket.id}</td>
+                      <td className="px-4 py-4">{ticket.subject}</td>
+                      <td className="px-4 py-4 text-sm">{ticket.requester}</td>
                         <td className="px-4 py-4 text-sm">{priorityLabel(ticket.priority)}</td>
-                        <td className="px-4 py-4">
-                          <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${badgeClass(ticket.status)}`}>
+                      <td className="px-4 py-4">
+                        <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${badgeClass(ticket.status)}`}>
                             {statusLabel(ticket.status)}
-                          </span>
-                        </td>
+                        </span>
+                      </td>
                         <td className="px-4 py-4">
                           <button
                             disabled={ticket.status === "CLOSED" || isUpdatingId === ticket.id}
@@ -170,7 +175,7 @@ export default function AdminSupportPage() {
                             {isUpdatingId === ticket.id ? "Đang xử lý..." : "Đóng ticket"}
                           </button>
                         </td>
-                      </tr>
+                    </tr>
                     ))
                   )}
                 </tbody>

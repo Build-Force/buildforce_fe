@@ -15,6 +15,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "BuildForce | Nền tảng kết nối nhân lực xây dựng",
   description: "Kết nối những bàn tay lành nghề với các dự án tin cậy. Thị trường nhân lực uy tín nhất ngành xây dựng.",
+  icons: { icon: "/next.svg" },
 };
 
 export default function RootLayout({
@@ -24,7 +25,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="vi" className="light">
-      <body className={`${inter.variable} ${inter.className}`}>
+      <body suppressHydrationWarning className={`${inter.variable} ${inter.className}`}>
         <React.Suspense fallback={null}>
           <PageTransitionLoader />
         </React.Suspense>

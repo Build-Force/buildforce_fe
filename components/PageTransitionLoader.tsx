@@ -15,7 +15,7 @@ const COLS = 12;
 const ROWS = 3;
 const BRICK_COLORS = ['#3B82F6', '#2563EB', '#1D4ED8', '#22C55E', '#16A34A', '#EF4444', '#DC2626'];
 const BRICK_ANIMATION_TIME = COLS * 60 + ROWS * 30 + 300;
-const MIN_VISIBLE_TIME = 900;
+const MIN_VISIBLE_TIME = 400;
 const LOADER_VISIBLE_TIME = Math.max(BRICK_ANIMATION_TIME, MIN_VISIBLE_TIME);
 
 const AUTH_PATH_PREFIXES = ['/signin', '/auth'];
@@ -30,12 +30,13 @@ function generateBricks(): Brick[] {
 
   for (let row = 0; row < ROWS; row++) {
     for (let col = 0; col < COLS; col++) {
+      const colorIndex = (row * COLS + col) % BRICK_COLORS.length;
       bricks.push({
         id: id++,
         row,
         col,
         delay: (col + row * 0.5) * 60,
-        color: BRICK_COLORS[Math.floor(Math.random() * BRICK_COLORS.length)],
+        color: BRICK_COLORS[colorIndex],
       });
     }
   }
