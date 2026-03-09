@@ -57,7 +57,7 @@ export default function BlogPage() {
     // Load popular blogs for sidebar
     useEffect(() => {
         blogApi
-            .getBlogs({ limit: 5, sort: "popular" })
+            .getBlogs({ limit: 3, sort: "popular" })
             .then((res) => setPopularBlogs(res.data.data))
             .catch(() => { });
     }, []);
@@ -103,10 +103,12 @@ export default function BlogPage() {
         if (page > 1) fetchBlogs();
     }, [page]);
 
-    // Real-time new blog notification
+    // Real-time new blog & feed updates notification
     useEffect(() => {
         try {
             const socket = connectSocket();
+
+            // Listen for new blogs
             socket.on(
                 "blog_approved",
                 (data: { slug: string; title: string; author: string }) => {
@@ -114,8 +116,29 @@ export default function BlogPage() {
                     setTimeout(() => setNewBlogNotif(null), 8000);
                 }
             );
+
+            // Listen for real-time feed updates (like/comment counters)
+            socket.emit("subscribe_blog_updates");
+            const handleFeedUpdated = (data: { blogId: string, likesCount?: number, commentsCount?: number }) => {
+                setBlogs(prev => prev.map(b => {
+                    if (b._id === data.blogId) {
+                        return {
+                            ...b,
+                            interact: {
+                                ...b.interact,
+                                likesCount: data.likesCount ?? b.interact.likesCount,
+                                commentsCount: data.commentsCount ?? b.interact.commentsCount
+                            }
+                        };
+                    }
+                    return b;
+                }));
+            };
+            socket.on('feed_blog_updated', handleFeedUpdated);
+
             return () => {
                 socket.off("blog_approved");
+                socket.off('feed_blog_updated', handleFeedUpdated);
             };
         } catch {
             //

@@ -77,9 +77,9 @@ export default function BlogDetailPage() {
         }
     }, []);
 
-    const fetchBlog = useCallback(async () => {
+    const fetchBlog = useCallback(async (silent: boolean = false) => {
         if (!slug) return;
-        setLoading(true);
+        if (!silent) setLoading(true);
         try {
             const res = await blogApi.getBlogBySlug(slug);
             setBlog(res.data.data);
@@ -108,6 +108,31 @@ export default function BlogDetailPage() {
     useEffect(() => {
         fetchBlog();
     }, [fetchBlog]);
+
+    // Socket: Join room to listen for real-time interactions (likes/comments)
+    useEffect(() => {
+        if (!blog) return;
+        try {
+            import('@/utils/socket').then(({ connectSocket }) => {
+                const socket = connectSocket();
+                socket.emit('join_blog_room', blog._id);
+
+                const handleBlogUpdated = () => {
+                    // Refetch data silently when a like or comment happens
+                    fetchBlog(true);
+                };
+
+                socket.on('blog_updated', handleBlogUpdated);
+
+                return () => {
+                    socket.off('blog_updated', handleBlogUpdated);
+                    socket.emit('leave_blog_room', blog._id);
+                };
+            });
+        } catch {
+            // ignore
+        }
+    }, [blog?._id, fetchBlog]);
 
     const handleLike = async () => {
         if (!blog || !currentUserId) return;
@@ -404,6 +429,17 @@ export default function BlogDetailPage() {
                                 </div>
                             )}
 
+                            {/* Content */}
+                            <div
+                                className="px-6 py-5 prose prose-lg dark:prose-invert max-w-none
+                  prose-headings:font-bold prose-headings:text-slate-900 dark:prose-headings:text-white
+                  prose-p:text-[15px] prose-p:text-slate-700 dark:prose-p:text-slate-300 prose-p:leading-relaxed
+                  prose-a:text-primary prose-a:no-underline hover:prose-a:underline
+                  prose-img:rounded-xl prose-img:shadow-md
+                  prose-blockquote:border-l-primary prose-blockquote:text-slate-500"
+                                dangerouslySetInnerHTML={{ __html: blog.content }}
+                            />
+
                             {/* Stats row */}
                             <div className="flex items-center justify-between px-6 py-2.5 text-xs text-slate-500 dark:text-slate-400">
                                 <div className="flex items-center gap-1">
@@ -473,17 +509,6 @@ export default function BlogDetailPage() {
                                     {copied ? "Đã sao chép" : "Chia sẻ"}
                                 </button>
                             </div>
-
-                            {/* Content */}
-                            <div
-                                className="px-6 py-5 prose prose-lg dark:prose-invert max-w-none
-                  prose-headings:font-bold prose-headings:text-slate-900 dark:prose-headings:text-white
-                  prose-p:text-[15px] prose-p:text-slate-700 dark:prose-p:text-slate-300 prose-p:leading-relaxed
-                  prose-a:text-primary prose-a:no-underline hover:prose-a:underline
-                  prose-img:rounded-xl prose-img:shadow-md
-                  prose-blockquote:border-l-primary prose-blockquote:text-slate-500"
-                                dangerouslySetInnerHTML={{ __html: blog.content }}
-                            />
 
                             {/* Comments section */}
                             <div id="comments" className="px-6 pb-6">
