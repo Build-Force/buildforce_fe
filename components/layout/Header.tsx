@@ -7,6 +7,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { NAV_LINKS } from "@/data/mockData";
 import api from "@/utils/api";
+import { connectSocket, disconnectSocket } from "@/utils/socket";
 
 export const Header = () => {
     const router = useRouter();
@@ -17,12 +18,29 @@ export const Header = () => {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [userProfile, setUserProfile] = useState<any>(null);
     const [showDropdown, setShowDropdown] = useState(false);
+    const [showNotifications, setShowNotifications] = useState(false);
+    const [notifications, setNotifications] = useState<any[]>(() => {
+        if (typeof window !== "undefined") {
+            const saved = localStorage.getItem("kf_notifications"); // unique key
+            if (saved) return JSON.parse(saved);
+        }
+        return [];
+    });
+    const [unreadCount, setUnreadCount] = useState<number>(() => {
+        if (typeof window !== "undefined") {
+            const saved = localStorage.getItem("kf_unread_notifications");
+            if (saved) return parseInt(saved);
+        }
+        return 0;
+    });
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const notifRef = useRef<HTMLDivElement>(null);
     const [showHrOnlyDialog, setShowHrOnlyDialog] = useState(false);
-  const [currentPackageName, setCurrentPackageName] = useState<string | null>(null);
-  const [currentPackageLevel, setCurrentPackageLevel] = useState<number | null>(null);
+    const [currentPackageName, setCurrentPackageName] = useState<string | null>(null);
+    const [currentPackageLevel, setCurrentPackageLevel] = useState<number | null>(null);
 
     const handleSignOut = React.useCallback(() => {
+        disconnectSocket();
         localStorage.removeItem('token');
         setIsLoggedIn(false);
         setUserProfile(null);
@@ -125,6 +143,9 @@ export const Header = () => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
                 setShowDropdown(false);
             }
+            if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+                setShowNotifications(false);
+            }
         };
         document.addEventListener("mousedown", handleClickOutside);
 
@@ -137,6 +158,38 @@ export const Header = () => {
             document.removeEventListener("mousedown", handleClickOutside);
         };
     }, [checkAuthStatus]);
+
+    useEffect(() => {
+        if (!isLoggedIn) return;
+        try {
+            const socket = connectSocket();
+            const handleNewNotification = (data: any) => {
+                console.log("🔔 NEW NOTIFICATION RECEIVED IN REACT:", data);
+                setNotifications(prev => [data, ...prev]);
+                setUnreadCount(prev => prev + 1);
+            };
+
+            socket.on("new_notification", handleNewNotification);
+
+            return () => {
+                socket.off("new_notification", handleNewNotification);
+            };
+        } catch {
+            //
+        }
+    }, [isLoggedIn]);
+
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            localStorage.setItem("kf_notifications", JSON.stringify(notifications));
+            localStorage.setItem("kf_unread_notifications", unreadCount.toString());
+        }
+    }, [notifications, unreadCount]);
+
+    const handleMarkAsRead = () => {
+        setUnreadCount(0);
+        // Could also send API request to backend here if notifications are persisted in DB
+    };
 
     const toggleDarkMode = () => {
         document.documentElement.classList.toggle("dark");
@@ -159,25 +212,25 @@ export const Header = () => {
         return <span className="material-symbols-outlined text-white">person</span>;
     };
 
-  const packageNameLower = currentPackageName?.toLowerCase() || "";
-  const normalizedRole = String(userProfile?.role || "").toUpperCase();
-  const effectivePackageLevel =
-    currentPackageLevel ??
-    (packageNameLower.includes("enterprise") ? 2 : packageNameLower.includes("pro") ? 1 : packageNameLower ? 0 : null);
-  const packageRingClass =
-    effectivePackageLevel === 2
-      ? "ring-[3px] ring-amber-400/95 shadow-[0_0_0_3px_rgba(251,191,36,0.22),0_0_24px_rgba(245,158,11,0.32)]"
-      : effectivePackageLevel === 1
-        ? "ring-[3px] ring-sky-400/95 shadow-[0_0_0_3px_rgba(96,165,250,0.2),0_0_22px_rgba(59,130,246,0.28)]"
-        : "";
-  const packageAuraClass =
-    effectivePackageLevel === 2
-      ? "from-amber-300 via-yellow-300 to-orange-400"
-      : effectivePackageLevel === 1
-        ? "from-sky-400 via-blue-500 to-indigo-500"
-        : "from-slate-300 via-slate-400 to-slate-500";
-  const packageIcon =
-    effectivePackageLevel === 2 ? "diamond" : effectivePackageLevel === 1 ? "workspace_premium" : "inventory_2";
+    const packageNameLower = currentPackageName?.toLowerCase() || "";
+    const normalizedRole = String(userProfile?.role || "").toUpperCase();
+    const effectivePackageLevel =
+        currentPackageLevel ??
+        (packageNameLower.includes("enterprise") ? 2 : packageNameLower.includes("pro") ? 1 : packageNameLower ? 0 : null);
+    const packageRingClass =
+        effectivePackageLevel === 2
+            ? "ring-[3px] ring-amber-400/95 shadow-[0_0_0_3px_rgba(251,191,36,0.22),0_0_24px_rgba(245,158,11,0.32)]"
+            : effectivePackageLevel === 1
+                ? "ring-[3px] ring-sky-400/95 shadow-[0_0_0_3px_rgba(96,165,250,0.2),0_0_22px_rgba(59,130,246,0.28)]"
+                : "";
+    const packageAuraClass =
+        effectivePackageLevel === 2
+            ? "from-amber-300 via-yellow-300 to-orange-400"
+            : effectivePackageLevel === 1
+                ? "from-sky-400 via-blue-500 to-indigo-500"
+                : "from-slate-300 via-slate-400 to-slate-500";
+    const packageIcon =
+        effectivePackageLevel === 2 ? "diamond" : effectivePackageLevel === 1 ? "workspace_premium" : "inventory_2";
 
     return (
         <nav suppressHydrationWarning className={`fixed top-0 z-50 w-full border-b transition-all duration-300 glass ${isScrolled
@@ -235,12 +288,66 @@ export const Header = () => {
                             </button>
                         )}
 
+                        {isLoggedIn && (
+                            <div className="relative" ref={notifRef}>
+                                <button
+                                    onClick={() => setShowNotifications(!showNotifications)}
+                                    className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors relative"
+                                    title="Thông báo hệ thống"
+                                >
+                                    <span className="material-symbols-outlined text-slate-600 dark:text-slate-400 text-[26px]">
+                                        notifications
+                                    </span>
+                                    {/* Unread indicator red dot */}
+                                    {unreadCount > 0 && (
+                                        <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-red-500 rounded-full border border-white dark:border-slate-900 flex items-center justify-center text-[9px] font-bold text-white">
+                                            {unreadCount > 99 ? '99+' : unreadCount}
+                                        </span>
+                                    )}
+                                </button>
+
+                                {/* Notifications Dropdown */}
+                                {showNotifications && (
+                                    <div className="absolute right-0 mt-3 w-80 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 overflow-hidden py-2 animate-in fade-in slide-in-from-top-2">
+                                        <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+                                            <h3 className="font-bold text-slate-900 dark:text-white">Thông báo</h3>
+                                            {unreadCount > 0 && (
+                                                <button onClick={handleMarkAsRead} className="text-xs text-primary hover:underline font-medium">Đánh dấu đã đọc</button>
+                                            )}
+                                        </div>
+                                        <div className="max-h-[300px] overflow-y-auto">
+                                            {notifications.length > 0 ? (
+                                                notifications.map((notif, index) => (
+                                                    <div key={index} className="px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer transition-colors border-b border-slate-50 dark:border-slate-700/50 last:border-0 relative">
+                                                        {index < unreadCount && <div className="absolute left-2 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-primary" />}
+                                                        <div className="pl-3" onClick={() => { if (notif.blogSlug) router.push(`/blog/${notif.blogSlug}`); setShowNotifications(false); }}>
+                                                            <p className="text-sm text-slate-800 dark:text-slate-200 line-clamp-2">
+                                                                {notif.message}
+                                                            </p>
+                                                            <p className="text-xs text-slate-500 mt-1">Hệ thống • vừa xong</p>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <div className="px-4 py-8 text-center text-sm text-slate-500 dark:text-slate-400">
+                                                    Không có thông báo mới
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="px-4 py-2 border-t border-slate-100 dark:border-slate-700 text-center">
+                                            <button className="text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-primary transition-colors">Xem tất cả</button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         <button
                             onClick={toggleDarkMode}
                             className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                             title="Chuyển chế độ sáng/tối"
                         >
-                            <span className="material-symbols-outlined text-slate-600 dark:text-slate-400">
+                            <span className="material-symbols-outlined text-[26px] text-slate-600 dark:text-slate-400">
                                 {isDarkMode ? "light_mode" : "dark_mode"}
                             </span>
                         </button>
@@ -251,19 +358,19 @@ export const Header = () => {
                                     onClick={() => setShowDropdown(!showDropdown)}
                                     className="flex items-center gap-2 hover:opacity-80 transition-opacity"
                                 >
-                              <div className="relative">
-                                <div className={`absolute inset-[-5px] rounded-full bg-gradient-to-br ${packageAuraClass} opacity-80 blur-[6px] ${effectivePackageLevel !== null ? "" : "hidden"}`} />
-                                <div className={`relative w-11 h-11 rounded-full bg-primary flex items-center justify-center text-white font-bold overflow-hidden border-[2.5px] border-white dark:border-slate-800 shadow-md ${packageRingClass}`}>
-                                  {getAvatarContent()}
-                                </div>
-                                {effectivePackageLevel !== null && (
-                                  <div className={`absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full border-2 border-white dark:border-slate-900 shadow-lg flex items-center justify-center ${effectivePackageLevel === 2 ? "bg-amber-500" : effectivePackageLevel === 1 ? "bg-sky-500" : "bg-slate-500"}`}>
-                                    <span className="material-symbols-outlined text-[13px] text-white">
-                                      {packageIcon}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
+                                    <div className="relative">
+                                        <div className={`absolute inset-[-5px] rounded-full bg-gradient-to-br ${packageAuraClass} opacity-80 blur-[6px] ${effectivePackageLevel !== null ? "" : "hidden"}`} />
+                                        <div className={`relative w-11 h-11 rounded-full bg-primary flex items-center justify-center text-white font-bold overflow-hidden border-[2.5px] border-white dark:border-slate-800 shadow-md ${packageRingClass}`}>
+                                            {getAvatarContent()}
+                                        </div>
+                                        {effectivePackageLevel !== null && (
+                                            <div className={`absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full border-2 border-white dark:border-slate-900 shadow-lg flex items-center justify-center ${effectivePackageLevel === 2 ? "bg-amber-500" : effectivePackageLevel === 1 ? "bg-sky-500" : "bg-slate-500"}`}>
+                                                <span className="material-symbols-outlined text-[13px] text-white">
+                                                    {packageIcon}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
                                     <span className="material-symbols-outlined text-slate-600 dark:text-slate-400 text-sm">
                                         expand_more
                                     </span>
