@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { AdminErrorBanner } from "@/components/admin/AdminErrorBanner";
 import { AdminLoadingState } from "@/components/admin/AdminLoadingState";
 import { AdminToast } from "@/components/admin/AdminToast";
@@ -136,8 +137,8 @@ const mapStatus = (status: string): JobModerationStatus => {
 function formatSalary(salary: { amount?: number; unit?: string } | undefined): string {
   if (!salary?.amount) return "—";
   const n = new Intl.NumberFormat("vi-VN").format(salary.amount);
-  const u = salary.unit === "day" ? "ngày" : salary.unit === "month" ? "tháng" : salary.unit === "hour" ? "giờ" : salary.unit || "";
-  return `${n} VND/${u}`;
+  const u = salary.unit === "day" ? "ngày" : salary.unit === "month" ? "tháng" : salary.unit === "hour" ? "giờ" : salary.unit === "project" ? "dự án" : salary.unit || "";
+  return `${n}VNĐ/${u}`;
 }
 
 export default function AdminJobsPage() {
@@ -159,8 +160,8 @@ export default function AdminJobsPage() {
     try {
       const res = await adminApi.getJobs(
         (statusFilter ? { status: statusFilter } : undefined) as
-          | Record<string, string | number>
-          | undefined
+        | Record<string, string | number>
+        | undefined
       );
       const items = res.data?.data?.data || [];
       setJobDetailsById(items.reduce((acc: Record<string, any>, j: any) => ({ ...acc, [j._id]: j }), {}));
@@ -212,9 +213,9 @@ export default function AdminJobsPage() {
   const approve = async (id: string) => {
     setIsUpdatingId(id);
     try {
-    await adminApi.approveJob(id);
+      await adminApi.approveJob(id);
       setToast({ type: "success", message: "Duyệt tin thành công." });
-    await loadJobs();
+      await loadJobs();
     } catch (error) {
       setToast({ type: "error", message: getErrorMessage(error) });
     } finally {
@@ -254,103 +255,136 @@ export default function AdminJobsPage() {
         <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
           {errorMessage ? <AdminErrorBanner message={errorMessage} className="mb-6" /> : null}
 
-          <section className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-3">{stats.map((stat) => <StatsCard key={stat.title} stat={stat} />)}</section>
+          <section className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-3">
+            {stats.map((stat) => (
+              <StatsCard key={stat.title} stat={stat} />
+            ))}
+          </section>
 
-          <div className="flex gap-2 mb-4">
+          {/* Filter tabs giống trang duyệt blog */}
+          <div className="flex items-center gap-2 mb-6 bg-white dark:bg-slate-800 p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 w-fit">
             {[
-              { value: "PENDING" as const, label: "Chờ duyệt" },
-              { value: "APPROVED" as const, label: "Đã duyệt" },
-              { value: "" as const, label: "Tất cả" },
-            ].map(({ value, label }) => (
+              { value: "PENDING" as const, label: "Chờ duyệt", icon: "hourglass_top" },
+              { value: "APPROVED" as const, label: "Đã duyệt", icon: "check_circle" },
+              { value: "" as const, label: "Tất cả", icon: "list" },
+            ].map(({ value, label, icon }) => (
               <button
                 key={value || "all"}
                 type="button"
                 onClick={() => setStatusFilter(value)}
-                className={`rounded-xl px-4 py-2 text-sm font-semibold transition-all ${statusFilter === value ? "bg-primary text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"}`}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all ${statusFilter === value
+                  ? "bg-primary text-white shadow-md"
+                  : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+                  }`}
                 suppressHydrationWarning
               >
+                <span className="material-symbols-outlined text-base">{icon}</span>
                 {label}
               </button>
             ))}
           </div>
 
-          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900/50">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[720px] border-collapse text-left">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50/80 dark:border-slate-700 dark:bg-slate-800/50">
-                    {["Vị trí tuyển dụng", "Công ty", "Khu vực", "Mức lương", "Số lượng", "Ngày đăng", "Trạng thái", "Thao tác"].map((h) => (
-                      <th key={h} className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {isLoading ? (
-                    <AdminLoadingState asTableRow colSpan={8} />
-                  ) : rows.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="px-5 py-12 text-center text-sm text-slate-500 dark:text-slate-400">
-                        Chưa có tin tuyển dụng.
-                      </td>
-                    </tr>
-                  ) : (
-                    rows.map((job) => (
-                      <tr key={job.id} className="transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/40">
-                        <td className="px-5 py-4">
-                          <button
-                            type="button"
-                            onClick={() => setDetailJobId(job.id)}
-                            className="text-left font-semibold text-slate-900 dark:text-white hover:text-primary dark:hover:text-primary transition-colors underline-offset-2 hover:underline"
-                          >
-                            {job.title}
-                          </button>
-                        </td>
-                        <td className="px-5 py-4 text-sm text-slate-600 dark:text-slate-300">{job.company}</td>
-                        <td className="px-5 py-4 text-sm text-slate-600 dark:text-slate-300">{job.region}</td>
-                        <td className="px-5 py-4 text-sm font-medium text-slate-700 dark:text-slate-200">{job.salaryRange}</td>
-                        <td className="px-5 py-4 text-sm text-slate-600 dark:text-slate-300">{job.vacancies}</td>
-                        <td className="px-5 py-4 text-sm text-slate-500 dark:text-slate-400">
-                          {new Date(job.postedAt).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" })}
-                        </td>
-                        <td className="px-5 py-4">
+          {/* Danh sách việc làm dạng thẻ giống blog */}
+          {isLoading ? (
+            <div className="space-y-3">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="h-24 bg-white dark:bg-slate-800 rounded-xl animate-pulse border border-slate-200 dark:border-slate-700" />
+              ))}
+            </div>
+          ) : rows.length === 0 ? (
+            <div className="text-center py-16">
+              <span className="material-symbols-outlined text-5xl text-slate-300 dark:text-slate-600 mb-3 block">
+                inbox
+              </span>
+              <p className="text-slate-500 dark:text-slate-400 font-medium">Chưa có tin tuyển dụng nào.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <AnimatePresence>
+                {rows.map((job) => {
+                  const detail = jobDetailsById[job.id];
+                  const thumbImg = Array.isArray(detail?.images) && detail.images.length > 0 ? detail.images[0] : null;
+                  return (
+                    <motion.div
+                      key={job.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      className="bg-white dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-700 p-4 flex flex-col md:flex-row md:items-center gap-4 hover:shadow-md transition-shadow"
+                    >
+                      {/* Thumbnail ảnh */}
+                      {thumbImg && (
+                        <div
+                          className="w-full md:w-24 h-20 md:h-16 rounded-lg overflow-hidden flex-shrink-0 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 cursor-pointer"
+                          onClick={() => setDetailJobId(job.id)}
+                          title="Xem chi tiết"
+                        >
+                          <img
+                            src={thumbImg}
+                            alt="Ảnh việc làm"
+                            className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
+                          />
+                        </div>
+                      )}
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
                           <StatusBadge status={job.status} />
-                        </td>
-                        <td className="px-5 py-4">
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setDetailJobId(job.id)}
-                              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-                            >
-                              Chi tiết
-                            </button>
+                          <span className="text-xs text-slate-400">
+                            {new Date(job.postedAt).toLocaleDateString("vi-VN", {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "numeric",
+                            })}
+                          </span>
+                        </div>
+                        <h3 className="font-bold text-slate-900 dark:text-white truncate">{job.title}</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 truncate">
+                          {job.company} • {job.region}
+                        </p>
+                        <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+                          <span className="px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-800 font-semibold text-slate-700 dark:text-slate-200">
+                            {job.salaryRange}
+                          </span>
+                          <span>Số lượng: {job.vacancies}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 md:flex-col md:items-stretch md:gap-2 flex-shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setDetailJobId(job.id)}
+                          className="w-28 h-9 rounded-lg bg-slate-900 dark:bg-slate-700 text-white text-xs font-semibold transition-colors hover:bg-slate-700 dark:hover:bg-slate-600 flex items-center justify-center"
+                        >
+                          Chi tiết
+                        </button>
+                        {job.status === "pending" && (
+                          <>
                             <button
                               type="button"
                               disabled={isUpdatingId === job.id}
                               onClick={() => approve(job.id).catch(() => null)}
-                              className="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                              className="w-28 h-9 rounded-lg bg-emerald-600 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center"
                             >
-                              {isUpdatingId === job.id ? "Đang xử lý..." : "Duyệt"}
+                              {isUpdatingId === job.id ? "Đang xử lý..." : "Accept"}
                             </button>
                             <button
                               type="button"
                               disabled={isUpdatingId === job.id}
                               onClick={() => openRejectModal(job.id)}
-                              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                              className="w-28 h-9 rounded-lg bg-red-600 text-xs font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center"
                             >
-                              Từ chối
+                              Reject
                             </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                          </>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
             </div>
-          </section>
+          )}
         </div>
       </main>
 
@@ -362,7 +396,7 @@ export default function AdminJobsPage() {
         const company = hr?.companyName || (hr?.firstName && hr?.lastName ? `${hr.firstName} ${hr.lastName}`.trim() : "—");
         const salary = j.salary;
         const salaryStr = salary?.amount != null
-          ? `${Number(salary.amount).toLocaleString("vi-VN")} VND/${salary.unit === "day" ? "ngày" : salary.unit === "month" ? "tháng" : salary.unit === "hour" ? "giờ" : "dự án"}`
+          ? `${Number(salary.amount).toLocaleString("vi-VN")}VNĐ/${salary.unit === "day" ? "ngày" : salary.unit === "month" ? "tháng" : salary.unit === "hour" ? "giờ" : "dự án"}`
           : "Thỏa thuận";
         const loc = j.location || {};
         const addr = [loc.province, loc.city, loc.address].filter(Boolean).join(", ") || "—";
@@ -458,7 +492,7 @@ export default function AdminJobsPage() {
                 <button
                   type="button"
                   onClick={() => setDetailJobId(null)}
-                  className="flex-1 py-2.5 rounded-xl font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                  className="flex-1 py-2.5 rounded-xl font-semibold text-white bg-slate-900 dark:bg-slate-700 hover:bg-slate-700 dark:hover:bg-slate-600 transition-colors"
                 >
                   Đóng
                 </button>
@@ -470,15 +504,15 @@ export default function AdminJobsPage() {
                       onClick={() => { approve(detailJobId).catch(() => null); setDetailJobId(null); }}
                       className="flex-1 py-2.5 rounded-xl font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 transition-colors"
                     >
-                      Duyệt tin
+                      Accept
                     </button>
                     <button
                       type="button"
                       disabled={isUpdatingId === detailJobId}
                       onClick={() => { setDetailJobId(null); openRejectModal(detailJobId); }}
-                      className="flex-1 py-2.5 rounded-xl font-semibold text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                      className="flex-1 py-2.5 rounded-xl font-semibold text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 transition-colors"
                     >
-                      Từ chối
+                      Reject
                     </button>
                   </>
                 )}

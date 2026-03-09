@@ -207,10 +207,7 @@ export const JobDetailClient: React.FC<JobDetailClientProps> = ({ jobId }) => {
             ? "giờ"
             : "dự án";
     const amount = Number(salary.amount);
-    const pretty =
-      amount >= 1_000_000
-        ? `${Math.round(amount / 1_000_000)}tr`
-        : `${Math.round(amount / 1_000)}k`;
+    const pretty = new Intl.NumberFormat("vi-VN").format(amount) + "VNĐ";
     return `${pretty}/${unit}`;
   };
 
@@ -439,8 +436,8 @@ export const JobDetailClient: React.FC<JobDetailClientProps> = ({ jobId }) => {
 
               <div className="mb-8">
                 {typeof job.location?.lat === "number" &&
-                typeof job.location?.lng === "number" &&
-                MAPBOX_TOKEN ? (
+                  typeof job.location?.lng === "number" &&
+                  MAPBOX_TOKEN ? (
                   <JobMapPreview
                     lat={job.location.lat}
                     lng={job.location.lng}
