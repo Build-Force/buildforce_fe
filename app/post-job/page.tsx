@@ -22,6 +22,11 @@ type WardOption = { name: string; code: number };
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN as string | undefined;
 
+const formatVnd = (amount: number) => {
+    if (!amount || Number.isNaN(amount)) return "—";
+    return amount.toLocaleString("vi-VN") + " VNĐ";
+};
+
 function PostJobContent() {
     const searchParams = useSearchParams();
     const editJobId = searchParams.get("edit") || null;
@@ -303,6 +308,18 @@ function PostJobContent() {
         } finally {
             setSubmitting(false);
         }
+    };
+
+    const getSalaryDisplay = () => {
+        const base = Number(form.salary || 0);
+        if (!base || Number.isNaN(base)) return "Chưa nhập";
+        if (form.salaryType === "day") {
+            const perDay = base * 1_000;
+            const perMonth = base * 25 * 1_000;
+            return `${formatVnd(perDay)} /ngày  (~${formatVnd(perMonth)} /tháng)`;
+        }
+        const perMonth = base * 1_000_000;
+        return `${formatVnd(perMonth)} /tháng`;
     };
 
     // Geocode địa chỉ cụ thể (số nhà, đường + phường/quận/tỉnh) để cập nhật marker bản đồ. Debounce 500ms để tránh gọi API liên tục khi gõ.
@@ -816,7 +833,7 @@ function PostJobContent() {
                                             </div>
                                         </div>
                                         <p className="mt-2 text-sm font-bold text-emerald-600 dark:text-emerald-400">
-                                            💰 {form.salary}k/{form.salaryType === 'day' ? 'ngày' : 'tháng'} (~{form.salaryType === 'day' ? Number(form.salary) * 25 : form.salary}k/tháng)
+                                            {getSalaryDisplay()}
                                         </p>
                                     </div>
 
@@ -873,11 +890,15 @@ function PostJobContent() {
 
                             {/* Preview card */}
                             <div className="bg-gradient-to-br from-sky-500/10 to-indigo-500/10 dark:from-sky-500/5 dark:to-indigo-500/5 rounded-3xl p-6 border border-primary/20">
-                                <p className="text-xs font-black text-primary uppercase tracking-widest mb-4">👁 Xem trước tin đăng</p>
+                                <p className="text-xs font-black text-primary uppercase tracking-widest mb-4">Xem trước tin đăng</p>
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <h3 className="font-black text-slate-900 dark:text-white text-xl">{form.title || "Tiêu đề công việc"}</h3>
-                                        <p className="text-slate-500 font-bold text-sm mt-1">📍 {[form.ward, form.district, form.province].filter(Boolean).join(", ") || form.province || "—"} • 👥 {form.workers} người • 💰 {form.salary}k/{form.salaryType === 'day' ? 'ngày' : 'tháng'}</p>
+                                        <p className="text-slate-500 font-bold text-sm mt-1">
+                                            Vị trí: {[form.ward, form.district, form.province].filter(Boolean).join(", ") || form.province || "—"} •
+                                            {" "}Số lượng: {form.workers} người •
+                                            {" "}Lương: {getSalaryDisplay()}
+                                        </p>
                                     </div>
                                     <div className="bg-emerald-500 text-white rounded-2xl px-4 py-2 text-sm font-black">Đang tuyển</div>
                                 </div>
@@ -945,7 +966,7 @@ function PostJobContent() {
                                         { label: "Tiêu đề", value: form.title || "Chưa nhập" },
                                         { label: "Vị trí", value: [form.address, form.ward, form.district, form.province].filter(Boolean).join(", ") || form.province || "—" },
                                         { label: "Số lượng", value: `${form.workers} người` },
-                                        { label: "Lương", value: `${form.salary}k/${form.salaryType === 'day' ? 'ngày' : 'tháng'}` },
+                                        { label: "Lương", value: getSalaryDisplay() },
                                         { label: "Kỹ năng", value: selectedSkills.length > 0 ? selectedSkills.join(", ") : "Chưa chọn" },
                                         { label: "Bắt đầu", value: form.startDate },
                                         { label: "KN tối thiểu", value: form.minExperienceYears !== "" ? `${form.minExperienceYears} năm` : "Không yêu cầu" },

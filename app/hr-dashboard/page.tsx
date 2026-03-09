@@ -258,11 +258,23 @@ export default function HRDashboardPage() {
     const acceptReject = async (jobId: string, applicationId: string, action: "accept" | "reject") => {
         try {
             await api.put(`/api/jobs/${jobId}/applicants/${applicationId}`, { action });
-            updateApplicant(jobId, applicationId, (a) => ({
-                ...a,
-                rawStatus: action === "accept" ? "ACCEPTED" : "REJECTED",
-                status: action === "accept" ? "accepted" : "rejected",
-            }));
+            if (action === "reject") {
+                setApplicantsByJob((prev) => ({
+                    ...prev,
+                    [jobId]: (prev[jobId] || []).filter((a) => a.id !== applicationId),
+                }));
+                setJobPosts((prev) =>
+                    prev.map((j) =>
+                        j.id === jobId ? { ...j, applicants: Math.max(0, j.applicants - 1) } : j
+                    )
+                );
+            } else {
+                updateApplicant(jobId, applicationId, (a) => ({
+                    ...a,
+                    rawStatus: "ACCEPTED",
+                    status: "accepted",
+                }));
+            }
         } catch (err) {
             console.error("Failed to update applicant", err);
         }
@@ -310,6 +322,12 @@ export default function HRDashboardPage() {
         }
     };
 
+    // CV modal (HR xem CV ứng viên)
+    const [cvModal, setCvModal] = useState<{ jobId: string; applicationId: string; applicantName: string } | null>(null);
+    const [cvModalData, setCvModalData] = useState<{ cv: any; worker: any } | null>(null);
+    const [cvModalLoading, setCvModalLoading] = useState(false);
+    const [cvModalError, setCvModalError] = useState<string | null>(null);
+
     // Review worker modal (HR rates worker after completed job)
     const [reviewModalApplicant, setReviewModalApplicant] = useState<{ ap: UiApplicant; jobId: string; jobTitle: string } | null>(null);
     const [reviewRating, setReviewRating] = useState(5);
@@ -337,6 +355,27 @@ export default function HRDashboardPage() {
             setReviewSubmitting(false);
         }
     };
+
+    // Load CV when HR mở modal Xem CV
+    useEffect(() => {
+        if (!cvModal) {
+            setCvModalData(null);
+            setCvModalError(null);
+            return;
+        }
+        setCvModalLoading(true);
+        setCvModalData(null);
+        setCvModalError(null);
+        api.get(`/api/jobs/${cvModal.jobId}/applicants/${cvModal.applicationId}/cv`)
+            .then((res) => {
+                if (res.data?.success) setCvModalData(res.data.data || null);
+            })
+            .catch((err: any) => {
+                setCvModalData(null);
+                setCvModalError(err?.response?.data?.message || "Không tải được CV. Vui lòng thử lại.");
+            })
+            .finally(() => setCvModalLoading(false));
+    }, [cvModal]);
 
     const filteredJobs = useMemo(() => {
         if (filterStatus === "all") return jobPosts;
@@ -758,7 +797,15 @@ export default function HRDashboardPage() {
                                                                         <p className="font-black text-sm text-slate-900 dark:text-white">{ap.name}</p>
                                                                         <p className="text-xs text-slate-400 font-bold">{ap.skill || "—"} {ap.experience ? `• ${ap.experience} năm KN` : ""}</p>
                                                                     </div>
-                                                                    <div className="flex items-center gap-2">
+                                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={(e) => { e.stopPropagation(); setCvModal({ jobId: job.id, applicationId: ap.id, applicantName: ap.name }); }}
+                                                                            className="px-3 py-1 rounded-full text-xs font-black bg-primary/10 text-primary hover:bg-primary/20 transition-colors inline-flex items-center gap-1"
+                                                                        >
+                                                                            <span className="material-symbols-outlined text-sm">description</span>
+                                                                            Xem CV
+                                                                        </button>
                                                                         {ap.rawStatus === "APPLIED" && (
                                                                             <>
                                                                                 <button
@@ -895,6 +942,112 @@ export default function HRDashboardPage() {
                     )}
                 </AnimatePresence>
             </div>
+
+            {/* Modal: Xem CV ứng viên */}
+            {cvModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setCvModal(null)}>
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+                            <h3 className="text-lg font-black text-slate-900 dark:text-white">CV — {cvModal.applicantName}</h3>
+                            <button type="button" onClick={() => setCvModal(null)} className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600">
+                                <span className="material-symbols-outlined">close</span>
+                            </button>
+                        </div>
+                        <div className="p-6 overflow-y-auto flex-1">
+                            {cvModalLoading ? (
+                                <div className="flex items-center justify-center py-12">
+                                    <div className="animate-spin w-10 h-10 border-2 border-primary border-t-transparent rounded-full" />
+                                </div>
+                            ) : cvModalData?.cv ? (
+                                <div className="space-y-5 text-sm">
+                                    {cvModalData.cv.personalInfo && (
+                                        <div>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Thông tin cá nhân</p>
+                                            <p className="font-bold text-slate-900 dark:text-white">{cvModalData.cv.personalInfo.name || "—"}</p>
+                                            <p className="text-slate-500">{cvModalData.cv.personalInfo.title || ""}</p>
+                                            {(cvModalData.cv.personalInfo.email || cvModalData.cv.personalInfo.phone) && (
+                                                <p className="text-slate-500 mt-1">{[cvModalData.cv.personalInfo.email, cvModalData.cv.personalInfo.phone].filter(Boolean).join(" • ")}</p>
+                                            )}
+                                            {cvModalData.cv.personalInfo.address && <p className="text-slate-500">{cvModalData.cv.personalInfo.address}</p>}
+                                        </div>
+                                    )}
+                                    {cvModalData.cv.summary && (
+                                        <div>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Giới thiệu</p>
+                                            <p className="text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">{cvModalData.cv.summary}</p>
+                                        </div>
+                                    )}
+                                    {cvModalData.cv.experiences?.length > 0 && (
+                                        <div>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Kinh nghiệm</p>
+                                            <ul className="space-y-3">
+                                                {cvModalData.cv.experiences.map((exp: any, i: number) => (
+                                                    <li key={i} className="pl-3 border-l-2 border-primary/30">
+                                                        <p className="font-bold text-slate-900 dark:text-white">{exp.role || exp.company}</p>
+                                                        {(exp.company || exp.duration) && <p className="text-xs text-slate-500">{[exp.company, exp.duration].filter(Boolean).join(" • ")}</p>}
+                                                        {exp.description && <p className="text-slate-600 dark:text-slate-400 mt-1 text-xs leading-relaxed">{exp.description}</p>}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
+                                    {cvModalData.cv.education?.length > 0 && (
+                                        <div>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Học vấn</p>
+                                            <ul className="space-y-2">
+                                                {cvModalData.cv.education.map((edu: any, i: number) => (
+                                                    <li key={i}>
+                                                        <p className="font-bold text-slate-900 dark:text-white">{edu.degree}</p>
+                                                        <p className="text-xs text-slate-500">{edu.school} {edu.duration ? ` • ${edu.duration}` : ""}</p>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
+                                    {cvModalData.cv.skills?.length > 0 && (
+                                        <div>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Kỹ năng</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {cvModalData.cv.skills.map((s: string, i: number) => (
+                                                    <span key={i} className="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold">{s}</span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : cvModalData?.worker ? (
+                                <div className="space-y-3 text-sm">
+                                    <p className="text-slate-500">Ứng viên chưa điền CV. Thông tin từ hồ sơ tài khoản:</p>
+                                    <p className="font-bold text-slate-900 dark:text-white">{cvModalData.worker.firstName} {cvModalData.worker.lastName}</p>
+                                    {(cvModalData.worker.email || cvModalData.worker.phone) && (
+                                        <p className="text-slate-500">{(cvModalData.worker.email || "") + (cvModalData.worker.phone ? ` • ${cvModalData.worker.phone}` : "")}</p>
+                                    )}
+                                    {(cvModalData.worker.skills?.length > 0 || cvModalData.worker.experienceYears || cvModalData.worker.preferredLocationCity) && (
+                                        <div className="pt-2 space-y-1">
+                                            {cvModalData.worker.skills?.length > 0 && <p><span className="font-bold text-slate-500">Kỹ năng:</span> {cvModalData.worker.skills.join(", ")}</p>}
+                                            {cvModalData.worker.experienceYears && <p><span className="font-bold text-slate-500">Kinh nghiệm:</span> {cvModalData.worker.experienceYears}</p>}
+                                            {cvModalData.worker.preferredLocationCity && <p><span className="font-bold text-slate-500">Khu vực:</span> {cvModalData.worker.preferredLocationCity}</p>}
+                                            {cvModalData.worker.expectedSalary && <p><span className="font-bold text-slate-500">Mức lương mong muốn:</span> {cvModalData.worker.expectedSalary} VNĐ/tháng</p>}
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="text-center py-8 space-y-3">
+                                    <p className="text-slate-500">{cvModalError || "Không tải được CV hoặc ứng viên chưa có thông tin."}</p>
+                                    <button
+                                        type="button"
+                                        onClick={() => setCvModal((prev) => (prev ? { ...prev } : prev))}
+                                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-bold hover:opacity-90 transition-all"
+                                    >
+                                        <span className="material-symbols-outlined text-lg">refresh</span>
+                                        Thử lại
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Modal: Xác nhận đóng tin */}
             {jobToClose && (

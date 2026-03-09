@@ -3,58 +3,39 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import api from "@/utils/api";
 
-// --- MOCK INITIAL DATA ---
+// --- INITIAL DATA (empty, worker tự nhập) ---
 const INITIAL_CV_DATA = {
     personalInfo: {
-        name: "Nguyễn Đình Thi",
-        title: "Kỹ sư Kết cấu Cao cấp",
-        email: "thi.nguyen@example.com",
-        phone: "0901 234 567",
-        address: "Sơn Trà, Đà Nẵng",
-        website: "vn.linkedin.com/in/nguyendinhthi",
+        name: "",
+        title: "",
+        email: "",
+        phone: "",
+        address: "",
+        website: "",
         avatar: ""
     },
-    summary: "Kỹ sư kết cấu tận tâm với hơn 6 năm kinh nghiệm thực chiến trong các dự án nhà cao tầng, khu đô thị và công trình công nghiệp. Am hiểu toàn bộ vòng đời dự án từ bóc tách khối lượng, thiết kế biện pháp thi công, tổ chức nhân lực đến kiểm soát chất lượng và an toàn lao động. Luôn theo đuổi tiêu chuẩn thi công chính xác, tiến độ ổn định và chi phí tối ưu cho chủ đầu tư.",
-    experiences: [
-        {
-            id: "1",
-            role: "Kỹ sư kết cấu chính",
-            company: "Delta Group - Đà Nẵng",
-            duration: "01/2021 - Hiện tại",
-            description: "Chỉ đạo thiết kế, kiểm tra và hiệu chỉnh phương án kết cấu cho 5 dự án nhà cao tầng và tổ hợp thương mại với tổng mức đầu tư trên 1000 tỷ VNĐ. Tổ chức phối hợp giữa bộ phận thiết kế – thi công – giám sát hiện trường để xử lý kịp thời các xung đột bản vẽ. Tối ưu hóa khoảng 10–15% khối lượng thép và vật liệu hoàn thiện mà vẫn đảm bảo tiêu chuẩn an toàn. Quản lý nhóm 10–15 kỹ sư/đội trưởng thi công, lập kế hoạch tiến độ tuần/tháng và báo cáo trực tiếp cho chỉ huy trưởng công trình."
-        },
-        {
-            id: "2",
-            role: "Kỹ sư giám sát",
-            company: "Coteccons - Quảng Nam",
-            duration: "06/2018 - 12/2020",
-            description: "Giám sát thi công hạ tầng và phần kết cấu khu đô thị Smart City Zone A, trực tiếp theo dõi các hạng mục móng, cọc, sàn và hệ tường vách. Thiết lập quy trình kiểm tra cốt thép, cốp pha, cấp phối bê tông và nghiệm thu cùng tư vấn giám sát. Phối hợp với nhà thầu phụ xử lý các lỗi hiện trường, hạn chế tối đa phát sinh chi phí và thời gian."
-        }
-    ],
-    education: [
-        {
-            id: "1",
-            degree: "Cử nhân Kỹ thuật Xây dựng – Kết cấu công trình",
-            school: "Đại học Bách Khoa Đà Nẵng",
-            duration: "2014 - 2018"
-        },
-        {
-            id: "2",
-            degree: "Chứng chỉ An toàn lao động & Chỉ huy trưởng công trình",
-            school: "Bộ Xây dựng / Bộ Lao động – Thương binh & Xã hội",
-            duration: "2019 - 2022"
-        }
-    ],
-    skills: [
-        "Thiết kế & kiểm tra kết cấu (SAP2000, ETABS)",
-        "Triển khai bản vẽ thi công chi tiết (AutoCAD, Revit/BIM cơ bản)",
-        "Lập và kiểm soát tiến độ thi công (MS Project / Excel)",
-        "Quản lý chất lượng & hồ sơ nghiệm thu",
-        "Tổ chức, phân công và hướng dẫn đội nhóm thi công",
-        "Giao tiếp & làm việc với chủ đầu tư, tư vấn giám sát",
-        "Tiếng Anh chuyên ngành kỹ thuật ở mức khá"
-    ]
+    // Basic fields used for matching/fallback on HR side
+    experienceYears: "",
+    preferredLocationCity: "",
+    expectedSalary: "",
+    availability: "",
+    summary: "",
+    experiences: [] as {
+        id: string;
+        role: string;
+        company: string;
+        duration: string;
+        description: string;
+    }[],
+    education: [] as {
+        id: string;
+        degree: string;
+        school: string;
+        duration: string;
+    }[],
+    skills: [] as string[]
 };
 
 export default function CVBuilderPage() {
@@ -63,6 +44,11 @@ export default function CVBuilderPage() {
     const [activeSection, setActiveSection] = useState("personalInfo");
     const [mounted, setMounted] = useState(false);
     const avatarInputRef = useRef<HTMLInputElement | null>(null);
+    const [saveState, setSaveState] = useState<{ saving: boolean; lastSavedAt: string | null; error: string | null }>({
+        saving: false,
+        lastSavedAt: null,
+        error: null,
+    });
 
     const getInitials = (name: string) => {
         if (!name) return "ND";
@@ -75,22 +61,59 @@ export default function CVBuilderPage() {
 
     useEffect(() => {
         setMounted(true);
-        // We could load from localStorage here or API
-        const saved = localStorage.getItem("buildforce_cv_data");
-        if (saved) {
-            try {
-                setCvData(JSON.parse(saved));
-            } catch (e) {
-                console.error("Failed to parse saved CV data", e);
-            }
-        }
     }, []);
 
-    // Auto-save
-    useEffect(() => {
-        if (mounted) {
-            localStorage.setItem("buildforce_cv_data", JSON.stringify(cvData));
+    const saveNow = async (content: any) => {
+        setSaveState((s) => ({ ...s, saving: true, error: null }));
+        try {
+            await api.put("/api/users/cv", { content });
+            const now = new Date();
+            setSaveState({ saving: false, lastSavedAt: now.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }), error: null });
+        } catch (err: any) {
+            setSaveState((s) => ({
+                ...s,
+                saving: false,
+                error: err?.response?.data?.message || "Lưu CV thất bại. Vui lòng thử lại.",
+            }));
         }
+    };
+
+    // Load CV from API (worker); fallback to localStorage
+    useEffect(() => {
+        if (!mounted) return;
+        const load = async () => {
+            try {
+                const res = await api.get("/api/users/cv");
+                if (res.data?.success && res.data?.data && typeof res.data.data === "object") {
+                    setCvData((prev) => ({ ...prev, ...res.data.data }));
+                    return;
+                }
+            } catch {
+                // not logged in or no CV yet
+            }
+            const saved = localStorage.getItem("buildforce_cv_data");
+            if (saved) {
+                try {
+                    setCvData(JSON.parse(saved));
+                } catch (e) {
+                    console.error("Failed to parse saved CV data", e);
+                }
+            }
+        };
+        load();
+    }, [mounted]);
+
+    // Auto-save: localStorage always + API (debounced)
+    const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    useEffect(() => {
+        if (!mounted) return;
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = setTimeout(() => {
+            saveTimeoutRef.current = null;
+            localStorage.setItem("buildforce_cv_data", JSON.stringify(cvData));
+            saveNow(cvData);
+        }, 800);
+        return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); };
     }, [cvData, mounted]);
 
     const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -122,6 +145,10 @@ export default function CVBuilderPage() {
     // --- RENDER HELPERS ---
     const updatePersonalInfo = (field: string, value: string) => {
         setCvData(prev => ({ ...prev, personalInfo: { ...prev.personalInfo, [field]: value } }));
+    };
+
+    const updateBasicField = (field: "experienceYears" | "preferredLocationCity" | "expectedSalary" | "availability", value: string) => {
+        setCvData((prev: any) => ({ ...prev, [field]: value }));
     };
 
     const handleSkillAdd = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -190,6 +217,24 @@ export default function CVBuilderPage() {
                     </div>
                 </div>
                 <div className="flex gap-3">
+                    <div className="flex items-center gap-3">
+                        {saveState.error ? (
+                            <span className="text-xs font-bold text-red-500">{saveState.error}</span>
+                        ) : saveState.lastSavedAt ? (
+                            <span className="text-xs font-bold text-slate-400">Đã lưu lúc {saveState.lastSavedAt}</span>
+                        ) : (
+                            <span className="text-xs font-bold text-slate-400">Chưa lưu</span>
+                        )}
+                        <button
+                            type="button"
+                            onClick={() => saveNow(cvData)}
+                            disabled={saveState.saving}
+                            className="h-11 px-5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold text-sm shadow-sm flex items-center gap-2 hover:opacity-90 disabled:opacity-50 transition-all"
+                        >
+                            <span className={"material-symbols-outlined text-lg " + (saveState.saving ? "animate-spin" : "")}>save</span>
+                            {saveState.saving ? "Đang lưu..." : "Lưu CV"}
+                        </button>
+                    </div>
                     <button onClick={handlePrint} className="h-11 px-6 bg-primary text-white rounded-xl font-bold text-sm shadow-[0_8px_25px_rgba(59,130,246,0.3)] flex items-center gap-2 hover:bg-blue-600 transition-all">
                         <span className="material-symbols-outlined text-lg">picture_as_pdf</span>
                         Tải xuống PDF
@@ -203,21 +248,20 @@ export default function CVBuilderPage() {
                 <div className="lg:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden print:hidden lg:sticky lg:top-24 max-h-[calc(100vh-120px)] overflow-y-auto">
                     <div className="flex border-b border-slate-200 dark:border-slate-800 overflow-x-auto custom-scrollbar">
                         {[
-                            { id: "personalInfo", label: "Cá nhân", icon: "person" },
-                            { id: "summary", label: "Tóm tắt", icon: "edit_note" },
-                            { id: "experiences", label: "Kinh nghiệm", icon: "work" },
-                            { id: "education", label: "Học vấn", icon: "school" },
-                            { id: "skills", label: "Kỹ năng", icon: "psychology" }
+                            { id: "personalInfo", label: "Cá nhân" },
+                            { id: "summary", label: "Tóm tắt" },
+                            { id: "experiences", label: "Kinh nghiệm" },
+                            { id: "education", label: "Học vấn" },
+                            { id: "skills", label: "Kỹ năng" }
                         ].map(tab => (
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveSection(tab.id)}
-                                className={`flex-1 min-w-[100px] flex flex-col items-center justify-center gap-1.5 py-4 px-2 text-xs font-bold transition-colors select-none ${activeSection === tab.id
+                                className={`flex-1 min-w-[100px] flex items-center justify-center py-4 px-2 text-xs font-bold transition-colors select-none ${activeSection === tab.id
                                     ? "text-primary border-b-2 border-primary bg-primary/5"
                                     : "text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/50"
                                     }`}
                             >
-                                <span className="material-symbols-outlined text-[20px]">{tab.icon}</span>
                                 {tab.label}
                             </button>
                         ))}
@@ -241,7 +285,6 @@ export default function CVBuilderPage() {
                                             onClick={() => avatarInputRef.current?.click()}
                                             className="inline-flex items-center justify-center px-3 py-2 rounded-full text-xs font-bold bg-slate-900 text-white hover:bg-slate-800 transition-colors"
                                         >
-                                            <span className="material-symbols-outlined text-[16px] mr-1">photo_camera</span>
                                             Tải ảnh đại diện
                                         </button>
                                         <span className="text-[10px] text-slate-500 dark:text-slate-400">
@@ -280,6 +323,62 @@ export default function CVBuilderPage() {
                                 <div>
                                     <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">Website / Linked in</label>
                                     <input value={cvData.personalInfo.website} onChange={e => updatePersonalInfo("website", e.target.value)} type="text" className="w-full h-11 px-4 rounded-xl bg-slate-50 dark:bg-slate-800 border-none text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/50 transition-all font-medium" placeholder="linkedin.com/in/username" />
+                                </div>
+
+                                <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Thông tin cơ bản để ứng tuyển</p>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">Số năm kinh nghiệm</label>
+                                            <input
+                                                value={(cvData as any).experienceYears || ""}
+                                                onChange={(e) => updateBasicField("experienceYears", e.target.value)}
+                                                type="text"
+                                                className="w-full h-11 px-4 rounded-xl bg-slate-50 dark:bg-slate-800 border-none text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/50 transition-all font-medium"
+                                                placeholder="VD: 2"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">Khu vực muốn làm</label>
+                                            <input
+                                                value={(cvData as any).preferredLocationCity || ""}
+                                                onChange={(e) => updateBasicField("preferredLocationCity", e.target.value)}
+                                                type="text"
+                                                className="w-full h-11 px-4 rounded-xl bg-slate-50 dark:bg-slate-800 border-none text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/50 transition-all font-medium"
+                                                placeholder="VD: Đà Nẵng"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">Mức lương mong muốn (VNĐ/tháng)</label>
+                                            <input
+                                                value={(cvData as any).expectedSalary || ""}
+                                                onChange={(e) => {
+                                                    const raw = e.target.value;
+                                                    const digits = raw.replace(/\D/g, "");
+                                                    if (!digits) {
+                                                        updateBasicField("expectedSalary", "");
+                                                        return;
+                                                    }
+                                                    const formatted = Number(digits).toLocaleString("vi-VN");
+                                                    updateBasicField("expectedSalary", formatted);
+                                                }}
+                                                type="text"
+                                                className="w-full h-11 px-4 rounded-xl bg-slate-50 dark:bg-slate-800 border-none text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/50 transition-all font-medium"
+                                                placeholder="VD: 15.000.000"
+                                            />
+                                            <p className="mt-1 text-[10px] text-slate-400">Đơn vị: VNĐ trên 1 tháng.</p>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">Trạng thái</label>
+                                            <input
+                                                value={(cvData as any).availability || ""}
+                                                onChange={(e) => updateBasicField("availability", e.target.value)}
+                                                type="text"
+                                                className="w-full h-11 px-4 rounded-xl bg-slate-50 dark:bg-slate-800 border-none text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/50 transition-all font-medium"
+                                                placeholder="VD: Sẵn sàng nhận việc"
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
                             </motion.div>
                         )}
