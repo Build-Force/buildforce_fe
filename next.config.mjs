@@ -6,7 +6,7 @@ const nextConfig = {
   transpilePackages: ["recharts"],
 
   async redirects() {
-    return [{ source: "/favicon.ico", destination: "/next.svg", permanent: false }];
+  return [{ source: "/favicon.ico", destination: "/buildforce-monogram.svg", permanent: false }];
   },
 
   images: {

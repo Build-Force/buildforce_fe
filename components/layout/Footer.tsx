@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import Link from "next/link";
 
 export const Footer = () => {
@@ -10,8 +11,8 @@ export const Footer = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-16 mb-24">
                     <div className="lg:col-span-1">
                         <div className="flex items-center gap-3 mb-8">
-                            <div className="bg-primary p-2 rounded-lg">
-                                <span className="material-symbols-outlined text-white text-2xl">construction</span>
+                            <div className="group transition-transform hover:scale-110">
+                                <Image src="/buildforce-monogram.svg" alt="BuildForce Logo" width={40} height={40} className="rounded-lg shadow-md" />
                             </div>
                             <span className="font-display font-bold text-2xl tracking-tight text-slate-800 dark:text-white">
                                 Build<span className="text-primary">Force</span>

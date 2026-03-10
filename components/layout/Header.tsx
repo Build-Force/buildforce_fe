@@ -240,12 +240,17 @@ export const Header = () => {
             <div suppressHydrationWarning className="max-w-7xl mx-auto px-6">
                 <div suppressHydrationWarning className="flex justify-between h-20 items-center">
                     <Link href="/" className="flex items-center gap-3 group">
-                        <div className="bg-primary p-2 rounded-lg transition-transform group-hover:scale-110">
-                            <span className="material-symbols-outlined text-white text-3xl">construction</span>
+                        <div className="transition-transform group-hover:scale-110">
+                            <Image src="/buildforce-monogram.svg" alt="BuildForce Logo" width={48} height={48} className="rounded-xl shadow-lg shadow-sky-500/10" />
                         </div>
-                        <span className="font-display font-bold text-2xl tracking-tight text-slate-800 dark:text-white">
-                            Build<span className="text-primary">Force</span>
-                        </span>
+                        <div className="flex flex-col">
+                            <span className="font-display font-bold text-2xl tracking-tight text-slate-800 dark:text-white leading-tight">
+                                Build<span className="text-primary">Force</span>
+                            </span>
+                            <span className="text-[10px] md:text-[11px] text-slate-500 dark:text-slate-400 tracking-[0.16em] uppercase">
+                                Cung ứng & kết nối nguồn lực tại địa phương
+                            </span>
+                        </div>
                     </Link>
 
                     <div className="hidden md:flex items-center space-x-10">

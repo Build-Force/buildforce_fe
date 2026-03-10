@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import api from "@/utils/api";
-import { getSocket } from "@/utils/socket";
+import { getSocket, connectSocket } from "@/utils/socket";
 
 interface Participant {
     _id: string;
@@ -47,7 +47,14 @@ export const ConversationList: React.FC<ConversationListProps> = ({ onSelectConv
     useEffect(() => {
         loadConversations();
 
-        const socket = getSocket();
+        let socket: any;
+        try {
+            socket = connectSocket();
+        } catch (err) {
+            console.error("Socket error", err);
+            socket = getSocket();
+        }
+
         if (socket) {
             const handleUpdate = (data: { conversationId: string; lastMessage: any; unreadCount: number }) => {
                 setConversations((prev) => {

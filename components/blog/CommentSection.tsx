@@ -184,11 +184,10 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
 
             {/* Comment list */}
             <div className="space-y-6">
-                <AnimatePresence mode="popLayout">
-                    {comments.map((comment, index) => (
+                <AnimatePresence>
+                    {comments.map((comment) => (
                         <motion.div
-                            key={comment._id || `comment-${index}`}
-                            layout
+                            key={comment._id}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}

@@ -306,17 +306,49 @@ export const JobDetailClient: React.FC<JobDetailClientProps> = ({ jobId }) => {
   const hrId = (hr as any)?._id ?? (job.hrId as any);
   const openChatWithHr = async () => {
     if (!hrId || chatLoading) return;
+
+    // 1. Check if mock job (demo data doesn't support chat)
+    if (!isMongoId) {
+      alert("Tin tuyển dụng demo không hỗ trợ tính năng chat. Vui lòng thử trên tin tuyển dụng thực tế.");
+      return;
+    }
+
+    // 2. Check if logged in
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    if (!token) {
+      router.push("/signin");
+      return;
+    }
+
     setChatLoading(true);
     try {
-      const res = await api.post("/api/chat", { participantId: typeof hrId === "string" ? hrId : (hrId as any).toString?.() || hrId });
+      // Ensure participantId is a clean string ID
+      const targetParticipantId = typeof hrId === "string" ? hrId : (hrId as any)?._id || String(hrId);
+
+      const res = await api.post("/api/chat", { participantId: targetParticipantId });
       const conv = res.data?.data;
+
       if (conv?._id && Array.isArray(conv.participants)) {
-        const hrParticipant = conv.participants.find((p: any) => String(p._id) === String(hrId));
-        const participant = hrParticipant || { _id: hrId, firstName: "", lastName: "", role: "hr", companyName: company };
-        window.dispatchEvent(new CustomEvent("buildforce:openChat", { detail: { conversationId: conv._id, participant } }));
+        const hrParticipant = conv.participants.find((p: any) => String(p._id) === String(targetParticipantId));
+        const participant = hrParticipant || {
+          _id: targetParticipantId,
+          firstName: "",
+          lastName: "",
+          role: "hr",
+          companyName: company
+        };
+
+        window.dispatchEvent(new CustomEvent("buildforce:openChat", {
+          detail: {
+            conversationId: conv._id,
+            participant
+          }
+        }));
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Open chat failed", err);
+      const errorMsg = err?.response?.data?.message || "Không thể nhắn tin cho nhà tuyển dụng lúc này.";
+      alert(errorMsg);
     } finally {
       setChatLoading(false);
     }

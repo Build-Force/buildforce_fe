@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import api from "@/utils/api";
-import { getSocket } from "@/utils/socket";
+import { getSocket, connectSocket } from "@/utils/socket";
 import { MessageBubble } from "./MessageBubble";
 
 interface Participant {
@@ -58,9 +58,16 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ conversationId, participant,
         };
 
         loadMessages();
-        api.put(`/api/chat/${conversationId}/read`).catch(() => {});
+        api.put(`/api/chat/${conversationId}/read`).catch(() => { });
 
-        const socket = getSocket();
+        let socket: any;
+        try {
+            socket = connectSocket();
+        } catch (err) {
+            console.error("Socket error", err);
+            socket = getSocket();
+        }
+
         if (socket) {
             socket.emit("join_conversation", conversationId);
 
@@ -70,7 +77,7 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ conversationId, participant,
                     return [...prev, msg];
                 });
                 if (msg.sender._id !== currentUserId) {
-                    api.put(`/api/chat/${conversationId}/read`).catch(() => {});
+                    api.put(`/api/chat/${conversationId}/read`).catch(() => { });
                 }
             };
 
@@ -91,6 +98,8 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ conversationId, participant,
                 socket.off("new_message", handleNewMessage);
                 socket.off("user_typing", handleTyping);
                 socket.off("user_stop_typing", handleStopTyping);
+                setIsTyping(false);
+                if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
             };
         }
     }, [conversationId, currentUserId]);
@@ -116,7 +125,14 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ conversationId, participant,
         if (socket) socket.emit("stop_typing", { conversationId });
 
         try {
-            await api.post(`/api/chat/${conversationId}`, { content: text });
+            const res = await api.post(`/api/chat/${conversationId}`, { content: text });
+            if (res.data.success) {
+                const newMsg = res.data.data;
+                setMessages((prev) => {
+                    if (prev.some((m) => m._id === newMsg._id)) return prev;
+                    return [...prev, newMsg];
+                });
+            }
         } catch (err) {
             console.error("Failed to send message", err);
         }
