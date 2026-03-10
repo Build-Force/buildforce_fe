@@ -64,6 +64,14 @@ export const BlogCard: React.FC<BlogCardProps> = ({
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
+    // Sync external changes (like from websockets) into local state
+    useEffect(() => {
+        setLikesCount(blog.interact.likesCount);
+        if (currentUserId && blog.interact.likes) {
+            setLiked(blog.interact.likes.includes(currentUserId));
+        }
+    }, [blog.interact.likesCount, blog.interact.likes, currentUserId]);
+
     const handleLike = async (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();

@@ -10,6 +10,10 @@ interface CommentSectionProps {
     currentUserId?: string;
     onCommentAdded?: (comment: CommentType) => void;
     onReplyAdded?: (commentId: string, reply: CommentReply) => void;
+    onCommentUpdated?: (comment: CommentType) => void;
+    onCommentDeleted?: (commentId: string) => void;
+    onReplyUpdated?: (commentId: string, reply: CommentReply) => void;
+    onReplyDeleted?: (commentId: string, replyId: string) => void;
 }
 
 const formatTimeAgo = (dateStr: string) => {
@@ -48,12 +52,21 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
     currentUserId,
     onCommentAdded,
     onReplyAdded,
+    onCommentUpdated,
+    onCommentDeleted,
+    onReplyUpdated,
+    onReplyDeleted,
 }) => {
     const [newComment, setNewComment] = useState("");
     const [submitting, setSubmitting] = useState(false);
     const [replyingTo, setReplyingTo] = useState<string | null>(null);
     const [replyContent, setReplyContent] = useState("");
     const [replySubmitting, setReplySubmitting] = useState(false);
+
+    const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+    const [editCommentContent, setEditCommentContent] = useState("");
+    const [editingReplyId, setEditingReplyId] = useState<{ commentId: string, replyId: string } | null>(null);
+    const [editReplyContent, setEditReplyContent] = useState("");
 
     const handleSubmitComment = async () => {
         if (!newComment.trim() || submitting) return;
@@ -85,6 +98,50 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
             // handle error
         } finally {
             setReplySubmitting(false);
+        }
+    };
+
+    const handleUpdateComment = async (commentId: string) => {
+        if (!editCommentContent.trim()) return;
+        try {
+            const res = await blogApi.updateComment(blogId, commentId, editCommentContent.trim());
+            onCommentUpdated?.(res.data.data);
+            setEditingCommentId(null);
+            setEditCommentContent("");
+        } catch {
+            // handle error
+        }
+    };
+
+    const handleDeleteComment = async (commentId: string) => {
+        if (!confirm("Bạn có chắc muốn xóa bình luận này?")) return;
+        try {
+            await blogApi.deleteComment(blogId, commentId);
+            onCommentDeleted?.(commentId);
+        } catch {
+            // handle error
+        }
+    };
+
+    const handleUpdateReply = async (commentId: string, replyId: string) => {
+        if (!editReplyContent.trim()) return;
+        try {
+            const res = await blogApi.updateReply(blogId, commentId, replyId, editReplyContent.trim());
+            onReplyUpdated?.(commentId, res.data.data);
+            setEditingReplyId(null);
+            setEditReplyContent("");
+        } catch {
+            // handle error
+        }
+    };
+
+    const handleDeleteReply = async (commentId: string, replyId: string) => {
+        if (!confirm("Bạn có chắc muốn xóa phản hồi này?")) return;
+        try {
+            await blogApi.deleteReply(blogId, commentId, replyId);
+            onReplyDeleted?.(commentId, replyId);
+        } catch {
+            // handle error
         }
     };
 
@@ -128,12 +185,12 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
             {/* Comment list */}
             <div className="space-y-6">
                 <AnimatePresence>
-                    {comments.map((comment, commentIdx) => (
+                    {comments.map((comment) => (
                         <motion.div
-                            key={comment._id || `comment-${commentIdx}`}
+                            key={comment._id}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
+                            exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
                             className="bg-white dark:bg-slate-800/60 rounded-2xl p-5 border border-slate-100 dark:border-slate-700/50"
                         >
                             {/* Comment */}
@@ -143,17 +200,39 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                                     avatar={comment.author.avatar}
                                 />
                                 <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <span className="font-bold text-slate-900 dark:text-white text-sm">
-                                            {comment.author.name}
-                                        </span>
-                                        <span className="text-xs text-slate-400">
-                                            {formatTimeAgo(comment.createdAt)}
-                                        </span>
+                                    <div className="flex items-center justify-between mb-1">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-bold text-slate-900 dark:text-white text-sm">
+                                                {comment.author.name}
+                                            </span>
+                                            <span className="text-xs text-slate-400">
+                                                {formatTimeAgo(comment.createdAt)}
+                                            </span>
+                                        </div>
+                                        {currentUserId === comment.author.id && (
+                                            <div className="flex items-center gap-2">
+                                                <button onClick={() => { setEditingCommentId(comment._id); setEditCommentContent(comment.content); }} className="text-xs text-slate-500 hover:text-primary transition-colors">Sửa</button>
+                                                <button onClick={() => handleDeleteComment(comment._id)} className="text-xs text-slate-500 hover:text-red-500 transition-colors">Xóa</button>
+                                            </div>
+                                        )}
                                     </div>
-                                    <p className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed">
-                                        {comment.content}
-                                    </p>
+                                    {editingCommentId === comment._id ? (
+                                        <div className="mt-2 mb-2">
+                                            <textarea
+                                                value={editCommentContent}
+                                                onChange={(e) => setEditCommentContent(e.target.value)}
+                                                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/30 min-h-[60px] resize-none"
+                                            />
+                                            <div className="flex justify-end gap-2 mt-2">
+                                                <button onClick={() => setEditingCommentId(null)} className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">Hủy</button>
+                                                <button onClick={() => handleUpdateComment(comment._id)} disabled={!editCommentContent.trim()} className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary text-white hover:bg-primary/90 disabled:opacity-50 transition-colors">Lưu</button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <p className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed">
+                                            {comment.content}
+                                        </p>
+                                    )}
                                     <div className="flex items-center gap-4 mt-2">
                                         <button className="text-xs text-slate-500 hover:text-primary transition-colors flex items-center gap-1 font-medium">
                                             <span className="material-symbols-outlined text-sm">
@@ -223,17 +302,39 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                                                 size="w-7 h-7"
                                             />
                                             <div className="flex-1">
-                                                <div className="flex items-center gap-2 mb-0.5">
-                                                    <span className="font-bold text-slate-900 dark:text-white text-xs">
-                                                        {reply.author.name}
-                                                    </span>
-                                                    <span className="text-xs text-slate-400">
-                                                        {formatTimeAgo(reply.createdAt)}
-                                                    </span>
+                                                <div className="flex items-center justify-between mb-0.5">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-bold text-slate-900 dark:text-white text-xs">
+                                                            {reply.author.name}
+                                                        </span>
+                                                        <span className="text-xs text-slate-400">
+                                                            {formatTimeAgo(reply.createdAt)}
+                                                        </span>
+                                                    </div>
+                                                    {currentUserId === reply.author.id && (
+                                                        <div className="flex items-center gap-2">
+                                                            <button onClick={() => { setEditingReplyId({ commentId: comment._id, replyId: reply._id! }); setEditReplyContent(reply.content); }} className="text-[11px] text-slate-500 hover:text-primary transition-colors">Sửa</button>
+                                                            <button onClick={() => handleDeleteReply(comment._id, reply._id!)} className="text-[11px] text-slate-500 hover:text-red-500 transition-colors">Xóa</button>
+                                                        </div>
+                                                    )}
                                                 </div>
-                                                <p className="text-slate-700 dark:text-slate-300 text-sm">
-                                                    {reply.content}
-                                                </p>
+                                                {editingReplyId?.commentId === comment._id && editingReplyId?.replyId === reply._id ? (
+                                                    <div className="mt-1 mb-1">
+                                                        <textarea
+                                                            value={editReplyContent}
+                                                            onChange={(e) => setEditReplyContent(e.target.value)}
+                                                            className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/30 min-h-[50px] resize-none"
+                                                        />
+                                                        <div className="flex justify-end gap-2 mt-2">
+                                                            <button onClick={() => setEditingReplyId(null)} className="px-3 py-1 rounded-md text-[11px] font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">Hủy</button>
+                                                            <button onClick={() => handleUpdateReply(comment._id, reply._id!)} disabled={!editReplyContent.trim()} className="px-3 py-1 rounded-md text-[11px] font-semibold bg-primary text-white hover:bg-primary/90 disabled:opacity-50 transition-colors">Lưu</button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-slate-700 dark:text-slate-300 text-sm">
+                                                        {reply.content}
+                                                    </p>
+                                                )}
                                             </div>
                                         </div>
                                     ))}
