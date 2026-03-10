@@ -7,6 +7,8 @@ import "mapbox-gl/dist/mapbox-gl.css";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN as string | undefined;
 
+type SiteCategory = "engineer" | "worker";
+
 type Site = {
   id: number;
   name: string;
@@ -15,6 +17,10 @@ type Site = {
   lat: number;
   lng: number;
   progress: number;
+  category: SiteCategory;
+  roleTitle: string;
+  rate: string;
+  daysLeft: number;
 };
 
 const MOCK_SITES: Site[] = [
@@ -26,6 +32,10 @@ const MOCK_SITES: Site[] = [
     lat: 16.0205,
     lng: 108.2346,
     progress: 45,
+    category: "worker",
+    roleTitle: "Thợ xây kết cấu",
+    rate: "450k/ngày",
+    daysLeft: 5,
   },
   {
     id: 2,
@@ -35,6 +45,10 @@ const MOCK_SITES: Site[] = [
     lat: 16.0678,
     lng: 108.2208,
     progress: 70,
+    category: "engineer",
+    roleTitle: "Kỹ sư hiện trường",
+    rate: "18tr/tháng",
+    daysLeft: 2,
   },
   {
     id: 3,
@@ -44,6 +58,10 @@ const MOCK_SITES: Site[] = [
     lat: 16.091,
     lng: 108.159,
     progress: 30,
+    category: "worker",
+    roleTitle: "Thợ hàn kết cấu",
+    rate: "500k/ngày",
+    daysLeft: 7,
   },
   {
     id: 4,
@@ -53,6 +71,10 @@ const MOCK_SITES: Site[] = [
     lat: 15.9064,
     lng: 108.2547,
     progress: 55,
+    category: "engineer",
+    roleTitle: "Giám sát cơ khí",
+    rate: "22tr/tháng",
+    daysLeft: 10,
   },
   {
     id: 5,
@@ -62,6 +84,10 @@ const MOCK_SITES: Site[] = [
     lat: 16.067,
     lng: 108.196,
     progress: 35,
+    category: "worker",
+    roleTitle: "Công nhân cầu đường",
+    rate: "430k/ngày",
+    daysLeft: 3,
   },
   {
     id: 6,
@@ -71,6 +97,10 @@ const MOCK_SITES: Site[] = [
     lat: 16.001,
     lng: 108.265,
     progress: 60,
+    category: "worker",
+    roleTitle: "Thợ hoàn thiện nội thất",
+    rate: "480k/ngày",
+    daysLeft: 14,
   },
   {
     id: 7,
@@ -80,6 +110,10 @@ const MOCK_SITES: Site[] = [
     lat: 16.1305,
     lng: 108.149,
     progress: 40,
+    category: "engineer",
+    roleTitle: "Kỹ sư điện công nghiệp",
+    rate: "20tr/tháng",
+    daysLeft: 4,
   },
   {
     id: 8,
@@ -89,6 +123,10 @@ const MOCK_SITES: Site[] = [
     lat: 15.8805,
     lng: 108.335,
     progress: 25,
+    category: "worker",
+    roleTitle: "Thợ điện thương mại",
+    rate: "460k/ngày",
+    daysLeft: 9,
   },
 ];
 
@@ -225,6 +263,7 @@ export const ConstructionMapSection = () => {
   const [selectedSite, setSelectedSite] = useState<Site | null>(null);
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [roleFilter, setRoleFilter] = useState<"all" | SiteCategory>("all");
   const mapRef = useRef<MapRef>(null);
   const modalMapRef = useRef<MapRef>(null);
 
@@ -282,6 +321,14 @@ export const ConstructionMapSection = () => {
     };
   }, []);
 
+  const filteredSites = useMemo(
+    () =>
+      roleFilter === "all"
+        ? MOCK_SITES
+        : MOCK_SITES.filter((site) => site.category === roleFilter),
+    [roleFilter]
+  );
+
   return (
     <section className="py-28 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-white/5 transition-colors duration-500">
       <div className="max-w-7xl mx-auto px-6">
@@ -314,7 +361,7 @@ export const ConstructionMapSection = () => {
             </motion.p>
 
             <div className="space-y-3 overflow-y-auto max-h-[460px] pr-2 py-4 px-1 custom-scrollbar">
-              {MOCK_SITES.map((site) => {
+              {filteredSites.map((site) => {
                 const isActive = selectedSite?.id === site.id;
                 return (
                   <button
@@ -381,7 +428,7 @@ export const ConstructionMapSection = () => {
                   >
                     <NavigationControl position="top-right" showCompass={false} />
 
-                    {MOCK_SITES.map((site) => (
+                    {filteredSites.map((site) => (
                       <ConstructionMarker
                         key={site.id}
                         site={site}
@@ -437,7 +484,7 @@ export const ConstructionMapSection = () => {
                         <span className="text-[10px] font-black text-slate-600 dark:text-white/70 uppercase tracking-widest">In Progress</span>
                       </div>
                       <div className="w-[1px] h-3 bg-slate-200 dark:bg-white/10" />
-                      <span className="text-[10px] font-black text-slate-400 dark:text-white/40 uppercase tracking-widest">{MOCK_SITES.length} Sites</span>
+                      <span className="text-[10px] font-black text-slate-400 dark:text-white/40 uppercase tracking-widest">{filteredSites.length} Sites</span>
                     </motion.div>
                   </div>
 
@@ -496,7 +543,7 @@ export const ConstructionMapSection = () => {
                 >
                   <NavigationControl position="top-right" showCompass={false} />
 
-                  {MOCK_SITES.map((site) => (
+                  {filteredSites.map((site) => (
                     <ConstructionMarker
                       key={site.id}
                       site={site}

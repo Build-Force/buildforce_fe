@@ -128,9 +128,9 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
             {/* Comment list */}
             <div className="space-y-6">
                 <AnimatePresence>
-                    {comments.map((comment) => (
+                    {comments.map((comment, commentIdx) => (
                         <motion.div
-                            key={comment._id}
+                            key={comment._id || `comment-${commentIdx}`}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -10 }}

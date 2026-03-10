@@ -15,7 +15,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "BuildForce | Nền tảng kết nối nhân lực xây dựng",
   description: "Kết nối những bàn tay lành nghề với các dự án tin cậy. Thị trường nhân lực uy tín nhất ngành xây dựng.",
-  icons: { icon: "/next.svg" },
+  icons: { icon: "/buildforce-monogram.svg" },
 };
 
 export default function RootLayout({

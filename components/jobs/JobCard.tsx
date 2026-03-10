@@ -2,211 +2,321 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-
 import Link from "next/link";
+import { MapPin, CalendarDays, Users2, BadgeCheck, Bolt, ArrowRight, BriefcaseBusiness } from "lucide-react";
 
-interface JobCardProps {
-    job: {
-        id: string | number;
-        title: string;
-        company: string;
-        location: string;
-        compensation: string;
-        postedAt: string;
-        image?: string;
-        /** Nhiều ảnh: hiển thị carousel; 1 ảnh: hiển thị 1 ảnh */
-        images?: string[];
-        applicants?: number;
-        verified?: boolean;
-        onTimePayment?: boolean;
-        /** Auto Match score 0–100 (Buildforce rule-based match) */
-        matchScore?: number;
-        urgent?: boolean;
-        skills?: string[];
-        workersNeeded?: number;
-    };
-    index?: number;
-    variant?: "compact" | "expanded";
+type JobCategory = "engineer" | "worker";
+
+interface EnhancedJob {
+  id: string | number;
+  title: string;
+  company: string;
+  location: string;
+  compensation: string;
+  postedAt: string;
+  image?: string;
+  /** Nhiều ảnh: hiển thị carousel; 1 ảnh: hiển thị 1 ảnh */
+  images?: string[];
+  applicants?: number;
+  verified?: boolean;
+  onTimePayment?: boolean;
+  /** Auto Match score 0–100 (Buildforce rule-based match) */
+  matchScore?: number;
+  urgent?: boolean;
+  skills?: string[];
+  workersNeeded?: number;
+  /** Phân loại vai trò: Kỹ sư / Công nhân (tuỳ chọn, có thể suy ra từ title). */
+  jobType?: JobCategory;
+  /** Số ngày còn lại đến hạn — dùng cho badge gấp. */
+  daysLeft?: number;
 }
 
-export const JobCard: React.FC<JobCardProps> = ({ job, index = 0, variant = "expanded" }) => {
-    const isExpanded = variant === "expanded";
-    const imageList = Array.isArray(job.images) && job.images.length > 0 ? job.images : job.image ? [job.image] : [];
-    const [imgIndex, setImgIndex] = React.useState(0);
-    const [lightboxUrl, setLightboxUrl] = React.useState<string | null>(null);
-    const hasMultiple = imageList.length > 1;
+interface JobCardProps {
+  job: EnhancedJob;
+  index?: number;
+  variant?: "compact" | "expanded";
+}
 
-    return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            viewport={{ once: true }}
-            className={`bg-white dark:bg-slate-900 ${isExpanded ? "p-8 rounded-[2rem]" : "p-6 rounded-[1.5rem]"} flex flex-col lg:flex-row gap-8 border-2 border-slate-100 dark:border-slate-800 hover:border-primary transition-all shadow-xl shadow-slate-200/50 dark:shadow-none group relative`}
-        >
-            <Link href={`/jobs/${job.id}`} className="absolute inset-0 z-0" aria-label={`Xem chi tiết ${job.title}`} />
+export const JobCard: React.FC<JobCardProps> = ({ job, index = 0 }) => {
+  const imageList = Array.isArray(job.images) && job.images.length > 0 ? job.images : job.image ? [job.image] : [];
+  const [imgIndex, setImgIndex] = React.useState(0);
+  const [lightboxUrl, setLightboxUrl] = React.useState<string | null>(null);
+  const hasMultiple = imageList.length > 1;
 
-            {/* Ảnh: click mở lightbox */}
-            <div className={`w-full lg:w-48 h-48 rounded-[1.5rem] bg-slate-100 dark:bg-slate-800 overflow-hidden shrink-0 relative shadow-inner z-10 flex items-center justify-center`}>
-                {imageList.length > 0 ? (
-                    <>
-                        <button
-                            type="button"
-                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setLightboxUrl(imageList[imgIndex]); }}
-                            className="absolute inset-0 w-full h-full block cursor-zoom-in focus:outline-none focus:ring-2 focus:ring-primary focus:ring-inset z-10"
-                            aria-label="Xem ảnh phóng to"
-                        >
-                            <img
-                                alt={job.title}
-                                className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-500 pointer-events-none"
-                                src={imageList[imgIndex]}
-                            />
-                        </button>
-                        {hasMultiple && (
-                            <>
-                                <button
-                                    type="button"
-                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setImgIndex((i) => (i === 0 ? imageList.length - 1 : i - 1)); }}
-                                    className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 z-20"
-                                    aria-label="Ảnh trước"
-                                >
-                                    <span className="material-symbols-outlined text-xl">chevron_left</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setImgIndex((i) => (i === imageList.length - 1 ? 0 : i + 1)); }}
-                                    className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 z-20"
-                                    aria-label="Ảnh sau"
-                                >
-                                    <span className="material-symbols-outlined text-xl">chevron_right</span>
-                                </button>
-                                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 z-20" onClick={(e) => e.stopPropagation()}>
-                                    {imageList.map((_, i) => (
-                                        <button
-                                            key={i}
-                                            type="button"
-                                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setImgIndex(i); }}
-                                            className={`w-2 h-2 rounded-full transition-all ${i === imgIndex ? "bg-white scale-125" : "bg-white/50"}`}
-                                            aria-label={`Ảnh ${i + 1}`}
-                                        />
-                                    ))}
-                                </div>
-                            </>
-                        )}
-                    </>
-                ) : (
-                    <span className="material-symbols-outlined text-6xl text-slate-300 dark:text-slate-600">work</span>
-                )}
-            </div>
-            {lightboxUrl && (
-                <div
-                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4"
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setLightboxUrl(null); }}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => e.key === "Escape" && setLightboxUrl(null)}
-                    aria-label="Đóng xem ảnh"
+  const derivedType: JobCategory = React.useMemo(() => {
+    if (job.jobType) return job.jobType;
+    const lower = job.title.toLowerCase();
+    if (lower.includes("kỹ sư") || lower.includes("kỹ thuật")) return "engineer";
+    return "worker";
+  }, [job.jobType, job.title]);
+
+  const accentColor =
+    job.urgent && typeof job.daysLeft === "number"
+      ? "var(--urgent)"
+      : derivedType === "engineer"
+      ? "var(--primary)"
+      : "var(--amber)";
+
+  const jobTypeLabel = derivedType === "engineer" ? "Kỹ sư" : "Công nhân / Thợ";
+  const urgencyBadge = getUrgencyBadge(job.urgent, job.daysLeft);
+
+  return (
+    <motion.article
+      initial={{ opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ delay: index * 0.08 }}
+      whileHover={{ y: -2 }}
+      className="relative group overflow-hidden rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-sm hover:shadow-xl transition-all duration-200"
+    >
+      <Link
+        href={`/jobs/${job.id}`}
+        className="absolute inset-0 z-0"
+        aria-label={`Xem chi tiết ${job.title}`}
+      />
+
+      <div className="relative flex gap-4 p-4 md:p-5">
+        {/* Left accent */}
+        <span
+          aria-hidden="true"
+          className="absolute inset-y-3 left-0 w-1 rounded-full"
+          style={{ backgroundColor: accentColor }}
+        />
+
+        {/* Logo / thumbnail */}
+        <div className="relative z-10 flex-shrink-0">
+          <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-slate-100 dark:bg-slate-800 shadow-inner">
+            {imageList.length > 0 ? (
+              <>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setLightboxUrl(imageList[imgIndex]);
+                  }}
+                  className="absolute inset-0 block h-full w-full cursor-zoom-in focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-slate-900/50"
+                  aria-label="Xem ảnh phóng to"
                 >
-                    <button
+                  <img
+                    alt={job.title}
+                    src={imageList[imgIndex]}
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110 pointer-events-none"
+                  />
+                </button>
+                {hasMultiple && (
+                  <div
+                    className="pointer-events-none absolute inset-x-0 bottom-1 flex justify-center gap-1"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {imageList.map((_, i) => (
+                      <button
+                        key={i}
                         type="button"
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setLightboxUrl(null); }}
-                        className="absolute top-4 right-4 w-12 h-12 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20"
-                        aria-label="Đóng"
-                    >
-                        <span className="material-symbols-outlined text-3xl">close</span>
-                    </button>
-                    <img
-                        src={lightboxUrl}
-                        alt=""
-                        className="max-w-full max-h-[90vh] w-auto h-auto object-contain"
-                        onClick={(e) => e.stopPropagation()}
-                    />
-                </div>
-            )}
-
-            <div className="flex-1 z-10">
-                <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
-                    <div>
-                        <div className="flex items-center gap-3 mb-3 flex-wrap">
-                            {typeof job.matchScore === "number" && (
-                                <span className={`px-4 py-1.5 rounded-full border text-sm font-black flex items-center gap-1 ${
-                                    job.matchScore >= 85 ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800" :
-                                    job.matchScore >= 65 ? "bg-primary/10 text-primary border-primary/20" :
-                                    "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800"
-                                }`}>
-                                    <span className="material-symbols-outlined text-base">psychology</span>
-                                    {job.matchScore}% phù hợp
-                                </span>
-                            )}
-                            {job.verified && (
-                                <span className="px-4 py-1.5 bg-green-50 dark:bg-green-900/30 text-secondary text-sm font-black rounded-full border border-green-100 dark:border-green-800 flex items-center gap-1">
-                                    <span className="material-symbols-outlined text-base">verified</span> Nhà thầu đã xác minh
-                                </span>
-                            )}
-                            {job.urgent && (
-                                <span className="px-4 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-primary text-sm font-black rounded-full border border-blue-100 dark:border-blue-800 flex items-center gap-1">
-                                    <span className="material-symbols-outlined text-base">bolt</span> Khẩn cấp
-                                </span>
-                            )}
-                        </div>
-                        <h3 className={`${isExpanded ? "text-3xl" : "text-2xl"} font-black text-slate-900 dark:text-white mb-2`}>{job.title}</h3>
-                        <p className={`${isExpanded ? "text-xl" : "text-lg"} text-slate-500 font-bold`}>{job.company}</p>
-                    </div>
-                    <div className="bg-slate-50 dark:bg-slate-800/80 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 text-center min-w-[150px]">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Mức lương</p>
-                        <p className={`${isExpanded ? "text-3xl" : "text-2xl"} font-black text-secondary`}>{job.compensation}</p>
-                    </div>
-                </div>
-
-                {/* Chỉ hiển thị thông tin thật: địa điểm, ngày đăng, số lượng tuyển, kỹ năng */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-center text-slate-400">
-                            <span className="material-symbols-outlined text-2xl">location_on</span>
-                        </div>
-                        <div>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Địa điểm</p>
-                            <p className="text-lg font-bold">{job.location}</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-center text-slate-400">
-                            <span className="material-symbols-outlined text-2xl">calendar_today</span>
-                        </div>
-                        <div>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ngày đăng</p>
-                            <p className="text-lg font-bold">{job.postedAt}</p>
-                        </div>
-                    </div>
-                    {typeof job.workersNeeded === "number" && job.workersNeeded > 0 && (
-                        <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-center text-slate-400">
-                                <span className="material-symbols-outlined text-2xl">groups</span>
-                            </div>
-                            <div>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Số lượng</p>
-                                <p className="text-lg font-bold">Cần {job.workersNeeded} người</p>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {Array.isArray(job.skills) && job.skills.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-6">
-                        {job.skills.slice(0, 5).map((s, i) => (
-                            <span key={i} className="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm font-bold">
-                                {s}
-                            </span>
-                        ))}
-                    </div>
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setImgIndex(i);
+                        }}
+                        className={`pointer-events-auto h-1.5 w-3 rounded-full transition-all ${
+                          i === imgIndex ? "bg-white" : "bg-white/50"
+                        }`}
+                        aria-label={`Ảnh ${i + 1}`}
+                      />
+                    ))}
+                  </div>
                 )}
+              </>
+            ) : (
+              <BriefcaseBusiness className="h-8 w-8 text-slate-400" />
+            )}
+          </div>
+        </div>
 
-                <div className="flex flex-col sm:flex-row items-center justify-end gap-4">
-                    <Link href={`/jobs/${job.id}`} className="w-full sm:w-auto bg-primary text-white px-8 py-4 rounded-xl font-black text-lg hover:bg-sky-600 transition-all shadow-xl shadow-sky-500/20 active:scale-95 text-center relative z-20">
-                        Chi tiết & Ứng tuyển
-                    </Link>
-                </div>
+        {/* Main content */}
+        <div className="relative z-10 flex min-w-0 flex-1 flex-col gap-3">
+          {/* Top row: title + salary */}
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div className="min-w-0">
+              <div className="mb-1 flex flex-wrap items-center gap-2 text-[11px] font-semibold">
+                {typeof job.matchScore === "number" && (
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 border text-[11px] ${
+                      job.matchScore >= 85
+                        ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+                        : job.matchScore >= 65
+                        ? "bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800"
+                        : "bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
+                    }`}
+                  >
+                    {job.matchScore}% phù hợp
+                  </span>
+                )}
+                {job.verified && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-900/30 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                    <BadgeCheck className="h-3.5 w-3.5" />
+                    Nhà thầu đã xác minh
+                  </span>
+                )}
+                {job.onTimePayment && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-[11px] font-semibold text-slate-700 dark:text-slate-200">
+                    <Users2 className="h-3.5 w-3.5" />
+                    Thanh toán đúng hạn
+                  </span>
+                )}
+              </div>
+
+              <h3 className="truncate font-semibold text-[18px] md:text-[20px] text-[var(--text-primary)]">
+                {job.title}
+              </h3>
+              <p className="mt-0.5 text-[14px] font-medium text-[var(--text-secondary)]">
+                {job.company} · <span className="text-amber-500 font-semibold">⭐ 4.8</span>
+              </p>
             </div>
-        </motion.div>
-    );
+
+            <div className="shrink-0 text-right">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-secondary)] mb-0.5">
+                Mức lương
+              </p>
+              <p className="text-[18px] md:text-[20px] font-extrabold text-[var(--success)]">
+                {job.compensation}
+              </p>
+            </div>
+          </div>
+
+          {/* Meta row */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-[var(--text-secondary)]">
+            <span className="inline-flex items-center gap-1.5">
+              <MapPin className="h-3.5 w-3.5 text-sky-500" />
+              {job.location}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <BriefcaseBusiness className="h-3.5 w-3.5 text-slate-500" />
+              {jobTypeLabel}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <CalendarDays className="h-3.5 w-3.5 text-slate-500" />
+              {job.postedAt}
+            </span>
+            {typeof job.workersNeeded === "number" && job.workersNeeded > 0 && (
+              <span className="inline-flex items-center gap-1.5">
+                <Users2 className="h-3.5 w-3.5 text-slate-500" />
+                Cần {job.workersNeeded} người
+              </span>
+            )}
+          </div>
+
+          {/* Skills */}
+          {Array.isArray(job.skills) && job.skills.length > 0 && (
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {job.skills.slice(0, 4).map((s, i) => (
+                <span
+                  key={i}
+                  className="rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-[11px] font-medium text-slate-700 dark:text-slate-200"
+                >
+                  {s}
+                </span>
+              ))}
+              {job.skills.length > 4 && (
+                <span className="text-[11px] text-[var(--text-secondary)]">+{job.skills.length - 4} kỹ năng</span>
+              )}
+            </div>
+          )}
+
+          {/* Bottom row: badges + actions */}
+          <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/60 px-3 py-1 text-[11px] font-semibold text-slate-800 dark:text-slate-100">
+                {jobTypeLabel}
+              </span>
+
+              {urgencyBadge && (
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold ${
+                    urgencyBadge.variant === "urgent"
+                      ? "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300"
+                      : "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                  }`}
+                >
+                  <Bolt className="h-3.5 w-3.5" />
+                  {urgencyBadge.label}
+                </span>
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              <Link
+                href={`/jobs/${job.id}`}
+                onClick={(e) => e.stopPropagation()}
+                className="relative z-10 inline-flex items-center justify-center rounded-full border border-slate-300 dark:border-slate-700 px-4 py-1.5 text-[13px] font-semibold text-[var(--text-primary)] hover:bg-slate-50 dark:hover:bg-slate-800/70"
+              >
+                Xem chi tiết
+              </Link>
+              <Link
+                href={`/jobs/${job.id}`}
+                onClick={(e) => e.stopPropagation()}
+                className="relative z-10 inline-flex items-center justify-center gap-1.5 rounded-full bg-[var(--primary)] px-4 py-1.5 text-[13px] font-semibold text-white shadow-sm hover:bg-sky-500"
+              >
+                Ứng tuyển
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Lightbox */}
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setLightboxUrl(null);
+          }}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === "Escape" && setLightboxUrl(null)}
+          aria-label="Đóng xem ảnh"
+        >
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setLightboxUrl(null);
+            }}
+            className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
+            aria-label="Đóng"
+          >
+            ✕
+          </button>
+          <img
+            src={lightboxUrl}
+            alt=""
+            className="max-h-[90vh] w-auto max-w-full object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+    </motion.article>
+  );
 };
+
+function getUrgencyBadge(urgent?: boolean, daysLeft?: number) {
+  if (!urgent || typeof daysLeft !== "number") return null;
+  if (daysLeft <= 3) {
+    return {
+      variant: "urgent" as const,
+      label: `🔴 Gấp - Còn ${daysLeft} ngày`,
+    };
+  }
+  if (daysLeft <= 7) {
+    return {
+      variant: "soon" as const,
+      label: "🟡 Còn 1 tuần",
+    };
+  }
+  return null;
+}
+

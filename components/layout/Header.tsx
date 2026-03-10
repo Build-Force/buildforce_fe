@@ -19,8 +19,8 @@ export const Header = () => {
     const [showDropdown, setShowDropdown] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const [showHrOnlyDialog, setShowHrOnlyDialog] = useState(false);
-  const [currentPackageName, setCurrentPackageName] = useState<string | null>(null);
-  const [currentPackageLevel, setCurrentPackageLevel] = useState<number | null>(null);
+    const [currentPackageName, setCurrentPackageName] = useState<string | null>(null);
+    const [currentPackageLevel, setCurrentPackageLevel] = useState<number | null>(null);
 
     const handleSignOut = React.useCallback(() => {
         localStorage.removeItem('token');
@@ -159,25 +159,25 @@ export const Header = () => {
         return <span className="material-symbols-outlined text-white">person</span>;
     };
 
-  const packageNameLower = currentPackageName?.toLowerCase() || "";
-  const normalizedRole = String(userProfile?.role || "").toUpperCase();
-  const effectivePackageLevel =
-    currentPackageLevel ??
-    (packageNameLower.includes("enterprise") ? 2 : packageNameLower.includes("pro") ? 1 : packageNameLower ? 0 : null);
-  const packageRingClass =
-    effectivePackageLevel === 2
-      ? "ring-[3px] ring-amber-400/95 shadow-[0_0_0_3px_rgba(251,191,36,0.22),0_0_24px_rgba(245,158,11,0.32)]"
-      : effectivePackageLevel === 1
-        ? "ring-[3px] ring-sky-400/95 shadow-[0_0_0_3px_rgba(96,165,250,0.2),0_0_22px_rgba(59,130,246,0.28)]"
-        : "";
-  const packageAuraClass =
-    effectivePackageLevel === 2
-      ? "from-amber-300 via-yellow-300 to-orange-400"
-      : effectivePackageLevel === 1
-        ? "from-sky-400 via-blue-500 to-indigo-500"
-        : "from-slate-300 via-slate-400 to-slate-500";
-  const packageIcon =
-    effectivePackageLevel === 2 ? "diamond" : effectivePackageLevel === 1 ? "workspace_premium" : "inventory_2";
+    const packageNameLower = currentPackageName?.toLowerCase() || "";
+    const normalizedRole = String(userProfile?.role || "").toUpperCase();
+    const effectivePackageLevel =
+        currentPackageLevel ??
+        (packageNameLower.includes("enterprise") ? 2 : packageNameLower.includes("pro") ? 1 : packageNameLower ? 0 : null);
+    const packageRingClass =
+        effectivePackageLevel === 2
+            ? "ring-[3px] ring-amber-400/95 shadow-[0_0_0_3px_rgba(251,191,36,0.22),0_0_24px_rgba(245,158,11,0.32)]"
+            : effectivePackageLevel === 1
+                ? "ring-[3px] ring-sky-400/95 shadow-[0_0_0_3px_rgba(96,165,250,0.2),0_0_22px_rgba(59,130,246,0.28)]"
+                : "";
+    const packageAuraClass =
+        effectivePackageLevel === 2
+            ? "from-amber-300 via-yellow-300 to-orange-400"
+            : effectivePackageLevel === 1
+                ? "from-sky-400 via-blue-500 to-indigo-500"
+                : "from-slate-300 via-slate-400 to-slate-500";
+    const packageIcon =
+        effectivePackageLevel === 2 ? "diamond" : effectivePackageLevel === 1 ? "workspace_premium" : "inventory_2";
 
     return (
         <nav suppressHydrationWarning className={`fixed top-0 z-50 w-full border-b transition-all duration-300 glass ${isScrolled
@@ -187,12 +187,17 @@ export const Header = () => {
             <div suppressHydrationWarning className="max-w-7xl mx-auto px-6">
                 <div suppressHydrationWarning className="flex justify-between h-20 items-center">
                     <Link href="/" className="flex items-center gap-3 group">
-                        <div className="bg-primary p-2 rounded-lg transition-transform group-hover:scale-110">
-                            <span className="material-symbols-outlined text-white text-3xl">construction</span>
+                        <div className="transition-transform group-hover:scale-110">
+                            <Image src="/buildforce-monogram.svg" alt="BuildForce Logo" width={48} height={48} className="rounded-xl shadow-lg shadow-sky-500/10" />
                         </div>
-                        <span className="font-display font-bold text-2xl tracking-tight text-slate-800 dark:text-white">
-                            Build<span className="text-primary">Force</span>
-                        </span>
+                        <div className="flex flex-col">
+                            <span className="font-display font-bold text-2xl tracking-tight text-slate-800 dark:text-white leading-tight">
+                                Build<span className="text-primary">Force</span>
+                            </span>
+                            <span className="text-[10px] md:text-[11px] text-slate-500 dark:text-slate-400 tracking-[0.16em] uppercase">
+                                Cung ứng & kết nối nguồn lực tại địa phương
+                            </span>
+                        </div>
                     </Link>
 
                     <div className="hidden md:flex items-center space-x-10">
@@ -251,19 +256,19 @@ export const Header = () => {
                                     onClick={() => setShowDropdown(!showDropdown)}
                                     className="flex items-center gap-2 hover:opacity-80 transition-opacity"
                                 >
-                              <div className="relative">
-                                <div className={`absolute inset-[-5px] rounded-full bg-gradient-to-br ${packageAuraClass} opacity-80 blur-[6px] ${effectivePackageLevel !== null ? "" : "hidden"}`} />
-                                <div className={`relative w-11 h-11 rounded-full bg-primary flex items-center justify-center text-white font-bold overflow-hidden border-[2.5px] border-white dark:border-slate-800 shadow-md ${packageRingClass}`}>
-                                  {getAvatarContent()}
-                                </div>
-                                {effectivePackageLevel !== null && (
-                                  <div className={`absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full border-2 border-white dark:border-slate-900 shadow-lg flex items-center justify-center ${effectivePackageLevel === 2 ? "bg-amber-500" : effectivePackageLevel === 1 ? "bg-sky-500" : "bg-slate-500"}`}>
-                                    <span className="material-symbols-outlined text-[13px] text-white">
-                                      {packageIcon}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
+                                    <div className="relative">
+                                        <div className={`absolute inset-[-5px] rounded-full bg-gradient-to-br ${packageAuraClass} opacity-80 blur-[6px] ${effectivePackageLevel !== null ? "" : "hidden"}`} />
+                                        <div className={`relative w-11 h-11 rounded-full bg-primary flex items-center justify-center text-white font-bold overflow-hidden border-[2.5px] border-white dark:border-slate-800 shadow-md ${packageRingClass}`}>
+                                            {getAvatarContent()}
+                                        </div>
+                                        {effectivePackageLevel !== null && (
+                                            <div className={`absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full border-2 border-white dark:border-slate-900 shadow-lg flex items-center justify-center ${effectivePackageLevel === 2 ? "bg-amber-500" : effectivePackageLevel === 1 ? "bg-sky-500" : "bg-slate-500"}`}>
+                                                <span className="material-symbols-outlined text-[13px] text-white">
+                                                    {packageIcon}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
                                     <span className="material-symbols-outlined text-slate-600 dark:text-slate-400 text-sm">
                                         expand_more
                                     </span>

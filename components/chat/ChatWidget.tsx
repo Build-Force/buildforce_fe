@@ -66,9 +66,10 @@ export const ChatWidget: React.FC = () => {
                 // token might be missing
             }
         }
-        return () => {
-            if (!isOpen) disconnectSocket();
-        };
+        // Cleanup on logout
+        if (!isLoggedIn) {
+            disconnectSocket();
+        }
     }, [isLoggedIn, isOpen]);
 
     useEffect(() => {
@@ -128,11 +129,10 @@ export const ChatWidget: React.FC = () => {
                         <div className="flex border-b border-slate-100 dark:border-slate-700">
                             <button
                                 onClick={() => setActiveTab("ai")}
-                                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors relative ${
-                                    activeTab === "ai"
+                                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors relative ${activeTab === "ai"
                                         ? "text-primary"
                                         : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-                                }`}
+                                    }`}
                             >
                                 <span className="material-symbols-outlined text-base">smart_toy</span>
                                 AI Assistant
@@ -140,11 +140,10 @@ export const ChatWidget: React.FC = () => {
                             </button>
                             <button
                                 onClick={() => setActiveTab("messages")}
-                                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors relative ${
-                                    activeTab === "messages"
+                                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors relative ${activeTab === "messages"
                                         ? "text-primary"
                                         : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-                                }`}
+                                    }`}
                             >
                                 <span className="material-symbols-outlined text-base">forum</span>
                                 Tin nhắn

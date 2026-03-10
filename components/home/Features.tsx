@@ -3,96 +3,218 @@
 import React from "react";
 import { FEATURES } from "@/data/mockData";
 import { motion } from "framer-motion";
+import { ShieldCheck, WalletCards, HardHat } from "lucide-react";
+
+const useInViewOnce = <T extends HTMLElement>(): [React.RefObject<T>, boolean] => {
+    const ref = React.useRef<T | null>(null);
+    const [inView, setInView] = React.useState(false);
+
+    React.useEffect(() => {
+        if (!ref.current || inView) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        setInView(true);
+                        observer.disconnect();
+                    }
+                });
+            },
+            { threshold: 0.35 }
+        );
+
+        observer.observe(ref.current);
+        return () => observer.disconnect();
+    }, [inView]);
+
+    return [ref, inView];
+};
+
+interface AnimatedCounterProps {
+    value: number;
+    durationMs?: number;
+    decimals?: number;
+    suffix?: string;
+    className?: string;
+}
+
+const AnimatedCounter: React.FC<AnimatedCounterProps> = ({
+    value,
+    durationMs = 1500,
+    decimals = 0,
+    suffix,
+    className,
+}) => {
+    const [ref, inView] = useInViewOnce<HTMLDivElement>();
+    const [displayValue, setDisplayValue] = React.useState(0);
+
+    React.useEffect(() => {
+        if (!inView) return;
+
+        let start: number | null = null;
+        const startValue = 0;
+        const diff = value - startValue;
+
+        const step = (timestamp: number) => {
+            if (start === null) start = timestamp;
+            const progress = Math.min((timestamp - start) / durationMs, 1);
+            const current = startValue + diff * progress;
+            setDisplayValue(current);
+            if (progress < 1) {
+                requestAnimationFrame(step);
+            }
+        };
+
+        const frame = requestAnimationFrame(step);
+        return () => cancelAnimationFrame(frame);
+    }, [inView, value, durationMs]);
+
+    const formatted =
+        decimals > 0
+            ? displayValue.toFixed(decimals)
+            : new Intl.NumberFormat("vi-VN").format(Math.round(displayValue));
+
+    return (
+        <div
+            ref={ref}
+            className={className}
+        >
+            {formatted}
+            {suffix}
+        </div>
+    );
+};
 
 export const Features = () => {
     return (
-        <section className="py-32 px-6 bg-white dark:bg-slate-900 transition-colors duration-300">
-            <div className="max-w-7xl mx-auto">
-                <div className="text-center mb-24">
-                    <motion.span
-                        initial={{ opacity: 0 }}
-                        whileInView={{ opacity: 1 }}
-                        className="text-secondary font-bold uppercase tracking-[0.2em] text-base block mb-4"
-                    >
-                        Minh bạch hàng đầu
-                    </motion.span>
-                    <motion.h2
-                        initial={{ opacity: 0, y: 20 }}
+        <section className="pt-28 pb-32 bg-[var(--bg)] text-[var(--text-primary)] transition-colors duration-300">
+            <div className="max-w-7xl mx-auto px-6">
+                {/* SECTION HEADER */}
+                <div className="text-center mb-14">
+                    <motion.p
+                        initial={{ opacity: 0, y: 10 }}
                         whileInView={{ opacity: 1, y: 0 }}
-                        className="text-4xl md:text-5xl font-display font-bold text-slate-900 dark:text-white mb-6"
+                        viewport={{ once: true }}
+                        className="text-[11px] font-semibold tracking-[0.2em] uppercase text-[var(--primary)] mb-3"
                     >
-                        Chỉ số nhân sự đáng tin cậy
+                        TẠI SAO CHỌN BUILDFORCE
+                    </motion.p>
+                    <motion.h2
+                        initial={{ opacity: 0, y: 18 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        className="text-[32px] md:text-[36px] font-display font-bold mb-4"
+                    >
+                        Minh bạch & đáng tin cậy cho cả thợ và HR
                     </motion.h2>
                     <motion.p
-                        initial={{ opacity: 0, y: 20 }}
+                        initial={{ opacity: 0, y: 18 }}
                         whileInView={{ opacity: 1, y: 0 }}
-                        className="text-slate-600 dark:text-slate-400 text-xl max-w-2xl mx-auto leading-relaxed"
+                        viewport={{ once: true }}
+                        transition={{ delay: 0.1 }}
+                        className="max-w-2xl mx-auto text-[15px] leading-relaxed text-[var(--text-secondary)]"
                     >
-                        Chúng tôi giám sát độ uy tín, tính đúng hạn của thanh toán và trình độ chuyên môn của mọi thành viên trong mạng lưới.
+                        Số liệu thời gian thực về công trình, tỉ lệ hoàn thành và đánh giá giúp cả người lao động lẫn nhà thầu
+                        ra quyết định nhanh hơn, tự tin hơn.
                     </motion.p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-                    {FEATURES.map((feature, idx) => (
-                        <motion.div
-                            key={feature.title}
-                            initial={{ opacity: 0, y: 30 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            transition={{ delay: idx * 0.1 }}
-                            className="bg-slate-50 dark:bg-slate-800 p-12 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-xl transition-all duration-300"
-                        >
-                            <div className={`w-16 h-16 ${feature.bgClass} rounded-2xl flex items-center justify-center mb-8`}>
-                                <span className={`material-symbols-outlined ${feature.iconClass} text-4xl`}>{feature.icon}</span>
-                            </div>
-                            <h3 className="text-2xl font-black mb-2 text-slate-900 dark:text-white">{feature.title}</h3>
-                            <p className={`text-xl font-bold ${feature.iconClass} mb-6`}>{feature.highlight}</p>
-                            <p className="text-slate-600 dark:text-slate-400 text-lg mb-8 leading-relaxed">
-                                {feature.description}
-                            </p>
-
-                            {feature.footer.type === "rating" && (
-                                <div className="flex items-center gap-3 bg-white dark:bg-slate-700/50 p-4 rounded-xl inline-flex shadow-sm">
-                                    <div className="flex text-yellow-400">
-                                        {[1, 2, 3, 4].map(i => (
-                                            <span key={i} className="material-symbols-outlined fill-current">star</span>
-                                        ))}
-                                        <span className="material-symbols-outlined">star_half</span>
-                                    </div>
-                                    <span className="text-lg font-bold text-slate-700 dark:text-slate-300">{feature.footer.value}</span>
-                                </div>
-                            )}
-
-                            {feature.footer.type === "progress" && (
-                                <div className="w-full bg-slate-200 dark:bg-slate-700 h-4 rounded-full overflow-hidden">
-                                    <motion.div
-                                        initial={{ width: 0 }}
-                                        whileInView={{ width: `${feature.footer.value}%` }}
-                                        transition={{ duration: 1, delay: 0.5 }}
-                                        className="bg-secondary h-full"
-                                    />
-                                </div>
-                            )}
-
-                            {feature.footer.type === "tags" && Array.isArray(feature.footer.value) && (
-                                <div className="flex flex-wrap gap-3">
-                                    {feature.footer.value.map(tag => (
-                                        <span key={tag} className="px-5 py-2 bg-white dark:bg-slate-700 rounded-lg text-sm font-black text-slate-700 dark:text-slate-200 shadow-sm">
-                                            {tag}
-                                        </span>
-                                    ))}
-                                </div>
-                            )}
-                        </motion.div>
-                    ))}
+                {/* STATS ROW */}
+                <div className="rounded-3xl bg-[color:rgba(15,23,42,0.02)] dark:bg-slate-900/40 border border-[var(--border)]/70 px-4 sm:px-8 py-8 sm:py-10 mb-16">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+                        {[
+                            { labelTop: "Công", labelBottom: "trình đang tuyển", value: 1240, suffix: "+" },
+                            { labelTop: "Tỷ lệ", labelBottom: "hoàn thành đúng hạn", value: 98, suffix: "%" },
+                            { labelTop: "Đánh giá", labelBottom: "trung bình", value: 4.8, suffix: " ★", decimals: 1 },
+                            { labelTop: "Tỉnh", labelBottom: "thành trên toàn quốc", value: 63 },
+                        ].map((stat, idx) => (
+                            <StatItem
+                                key={idx}
+                                index={idx}
+                                {...stat}
+                            />
+                        ))}
+                    </div>
                 </div>
 
-                <div className="mt-16 text-center">
-                    <a className="inline-flex items-center gap-3 text-primary font-bold text-xl hover:underline underline-offset-8 group" href="#">
-                        Cách chúng tôi xác minh
-                        <span className="material-symbols-outlined transition-transform group-hover:translate-x-1 group-hover:-translate-y-1">arrow_outward</span>
-                    </a>
+                {/* TRUST PILLARS */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+                    {FEATURES.map((feature, idx) => {
+                        const IconComponent = idx === 0 ? ShieldCheck : idx === 1 ? WalletCards : HardHat;
+                        const iconColor =
+                            idx === 0
+                                ? "text-[var(--primary)]"
+                                : idx === 1
+                                ? "text-[var(--success)]"
+                                : "text-[var(--amber)]";
+
+                        return (
+                            <motion.div
+                                key={feature.title}
+                                initial={{ opacity: 0, y: 24 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true }}
+                                transition={{ delay: idx * 0.08 }}
+                                className="flex items-start gap-4 md:gap-5"
+                            >
+                                <div
+                                    className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-white dark:bg-slate-900 shadow-sm ${idx === 0 ? "ring-2 ring-sky-100 dark:ring-sky-900/40" : idx === 1 ? "ring-2 ring-emerald-100 dark:ring-emerald-900/40" : "ring-2 ring-amber-100 dark:ring-amber-900/40"
+                                        }`}
+                                >
+                                    <IconComponent className={`w-6 h-6 ${iconColor}`} />
+                                </div>
+                                <div>
+                                    <h3 className="text-[16px] font-semibold mb-1.5">
+                                        {feature.title}
+                                    </h3>
+                                    <p className="text-[13px] font-semibold text-[var(--text-secondary)] mb-1.5 line-clamp-2">
+                                        {feature.highlight}
+                                    </p>
+                                    <p className="text-[14px] text-[var(--text-secondary)] leading-relaxed line-clamp-3">
+                                        {feature.description}
+                                    </p>
+                                </div>
+                            </motion.div>
+                        );
+                    })}
                 </div>
             </div>
         </section>
+    );
+};
+
+interface StatItemProps {
+    labelTop: string;
+    labelBottom: string;
+    value: number;
+    suffix?: string;
+    decimals?: number;
+    index: number;
+}
+
+const StatItem: React.FC<StatItemProps> = ({ labelTop, labelBottom, value, suffix, decimals = 0, index }) => {
+    const [ref, inView] = useInViewOnce<HTMLDivElement>();
+
+    return (
+        <div
+            ref={ref}
+            className={`relative flex flex-col items-start md:items-center gap-1.5 md:gap-2 border-slate-200 dark:border-slate-700 ${
+                index > 0 ? "md:border-l md:pl-6" : ""
+            }`}
+            style={{ transition: "opacity 0.5s ease, transform 0.5s ease", transitionDelay: `${index * 80}ms` }}
+        >
+            <AnimatedCounter
+                value={value}
+                decimals={decimals}
+                suffix={suffix}
+                className={`text-[32px] sm:text-[40px] md:text-[48px] font-extrabold leading-none text-sky-500`}
+            />
+            <p className="text-[13px] text-[var(--text-secondary)] leading-snug">
+                {labelTop}
+                <br />
+                {labelBottom}
+            </p>
+        </div>
     );
 };
