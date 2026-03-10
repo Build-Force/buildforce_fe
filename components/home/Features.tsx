@@ -5,7 +5,7 @@ import { FEATURES } from "@/data/mockData";
 import { motion } from "framer-motion";
 import { ShieldCheck, WalletCards, HardHat } from "lucide-react";
 
-const useInViewOnce = <T extends HTMLElement>(): [React.RefObject<T>, boolean] => {
+const useInViewOnce = <T extends HTMLElement>(): [React.RefObject<T | null>, boolean] => {
     const ref = React.useRef<T | null>(null);
     const [inView, setInView] = React.useState(false);
 
