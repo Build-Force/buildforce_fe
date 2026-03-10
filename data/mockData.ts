@@ -10,6 +10,7 @@ export const JOBS = [
         id: 1,
         title: "Thợ hàn kết cấu cao cấp",
         company: "Tập đoàn Hạ tầng Mainland",
+        hrId: "hr_001",
         location: "Trung tâm Thành phố",
         compensation: "45$/giờ",
         urgent: true,

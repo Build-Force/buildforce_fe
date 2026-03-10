@@ -20,6 +20,8 @@ const config: Config = {
         display: ["var(--font-inter)", "Inter", "sans-serif"],
         sans: ["var(--font-inter)", "Inter", "sans-serif"],
         inter: ["var(--font-inter)", "sans-serif"],
+        "be-vietnam": ["'Be Vietnam Pro'", "'DM Sans'", "sans-serif"],
+        sora: ["'Sora'", "'Be Vietnam Pro'", "sans-serif"],
       },
       borderRadius: {
         DEFAULT: "0.5rem",

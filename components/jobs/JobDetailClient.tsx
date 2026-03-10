@@ -155,6 +155,7 @@ export const JobDetailClient: React.FC<JobDetailClientProps> = ({ jobId }) => {
               salary: undefined,
               skills: [],
               hrId: {
+                _id: (mock as any).hrId || undefined,
                 companyName: mock.company,
                 avatar: undefined,
                 firstName: "",
@@ -303,7 +304,20 @@ export const JobDetailClient: React.FC<JobDetailClientProps> = ({ jobId }) => {
   const isJobFull = (job.workersHired ?? 0) >= (job.workersNeeded ?? 1) || job.status === "FILLED";
   const canShowApply = !myApplication && !isJobFull;
 
-  const hrId = (hr as any)?._id ?? (job.hrId as any);
+  // resolveId: safely extract a plain-string ID from a Mongoose ObjectId, populated object, or raw string
+  const resolveId = (val: any): string => {
+    if (!val) return "";
+    if (typeof val === "string") return val;
+    if (typeof val?._id === "string") return val._id;
+    const s = val?._id?.toString?.() ?? val?.toString?.() ?? String(val);
+    return s === "[object Object]" ? "" : s;
+  };
+
+  const hrIdRaw = (hr as any)?._id !== undefined ? (hr as any) : (job.hrId as any);
+  const hrId = resolveId(hrIdRaw?._id ?? hrIdRaw);
+  // profileHrId: best-effort string ID for the profile link (works for both API and mock data)
+  const profileHrId = hrId || (typeof job.hrId === "string" ? job.hrId : "");
+
   const openChatWithHr = async () => {
     if (!hrId || chatLoading) return;
 
@@ -354,17 +368,39 @@ export const JobDetailClient: React.FC<JobDetailClientProps> = ({ jobId }) => {
     }
   };
 
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: job.title,
+        text: `Đang tuyển: ${job.title} tại ${company}. Xem ngay!`,
+        url: window.location.href,
+      }).catch(console.error);
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      alert("Đã sao chép đường dẫn!");
+    }
+  };
+
   return (
     <div className="bg-white dark:bg-background-dark text-slate-900 dark:text-slate-100 font-sans antialiased transition-colors duration-300 min-h-screen">
       <main className="max-w-[1200px] mx-auto px-6 py-8">
         <header className="mb-10">
-          <nav className="flex mb-6 text-base font-bold text-slate-400">
-            <Link href="/jobs" className="hover:text-primary transition-colors">
-              Tìm kiếm việc làm
-            </Link>
-            <span className="mx-2">/</span>
-            <span className="text-slate-600 dark:text-slate-300">{job.title}</span>
-          </nav>
+          <div className="flex justify-between items-center mb-6">
+            <nav className="flex text-base font-bold text-slate-400">
+              <Link href="/jobs" className="hover:text-primary transition-colors">
+                Tìm kiếm việc làm
+              </Link>
+              <span className="mx-2">/</span>
+              <span className="text-slate-600 dark:text-slate-300 line-clamp-1 max-w-[200px] sm:max-w-none">{job.title}</span>
+            </nav>
+            <button 
+              onClick={handleShare}
+              className="flex items-center gap-2 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 px-4 py-2 rounded-full text-sm font-bold text-slate-600 dark:text-slate-300 transition-colors"
+            >
+              <span className="material-symbols-outlined text-lg">share</span>
+              <span className="hidden sm:inline">Chia sẻ mạng xã hội</span>
+            </button>
+          </div>
 
           <div className="flex flex-col lg:flex-row justify-between items-start gap-8">
             <div className="flex-1">
@@ -433,27 +469,69 @@ export const JobDetailClient: React.FC<JobDetailClientProps> = ({ jobId }) => {
 
           <aside className="w-full lg:w-[400px] space-y-6">
             <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border-2 border-slate-100 dark:border-slate-800 shadow-2xl shadow-slate-200/50 dark:shadow-none">
-              <div className="flex items-center gap-5 mb-6">
-                <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center overflow-hidden">
-                  {hr?.avatar ? (
-                    <div className="relative w-full h-full">
-                      <Image src={hr.avatar} alt="" fill className="object-cover" />
-                    </div>
-                  ) : (
-                    <span className="material-symbols-outlined text-primary text-3xl">domain</span>
-                  )}
+              {/* HR Company card */}
+              <div className="mb-5 rounded-2xl border-2 border-slate-100 dark:border-slate-800 overflow-hidden">
+                {/* Header strip */}
+                <div className="bg-gradient-to-r from-slate-800 to-slate-700 px-5 py-3 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-emerald-400 text-base">domain_verification</span>
+                  <span className="text-xs font-bold text-white/80 uppercase tracking-widest">Nhà tuyển dụng</span>
                 </div>
-                <div>
-                  <h4 className="text-xl font-black">{company}</h4>
-                  <p className="text-slate-500 font-bold text-sm">Nhà tuyển dụng</p>
-                  {typeof (hr as any)?.averageRating === "number" && (hr as any).averageRating > 0 && (
-                    <p className="text-amber-600 dark:text-amber-400 font-bold text-sm mt-1 flex items-center gap-1">
-                      <span className="material-symbols-outlined text-lg">star</span>
-                      {(hr as any).averageRating.toFixed(1)} (đánh giá từ người lao động)
-                    </p>
+
+                {/* Body */}
+                <div className="p-5">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0 border border-slate-200 dark:border-slate-700">
+                      {hr?.avatar ? (
+                        <div className="relative w-full h-full">
+                          <Image src={hr.avatar} alt="" fill className="object-cover" />
+                        </div>
+                      ) : (
+                        <span className="material-symbols-outlined text-primary text-3xl">domain</span>
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="text-lg font-black text-slate-900 dark:text-white leading-tight">{company}</h4>
+                      {typeof (hr as any)?.averageRating === "number" && (hr as any).averageRating > 0 ? (
+                        <p className="text-amber-500 font-bold text-sm mt-0.5 flex items-center gap-1">
+                          <span className="material-symbols-outlined text-base">star</span>
+                          {(hr as any).averageRating.toFixed(1)} · đánh giá từ lao động
+                        </p>
+                      ) : (
+                        <p className="text-slate-400 text-sm mt-0.5">Đang hoạt động trên BuildForce</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Trust badges */}
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
+                      <span className="material-symbols-outlined text-[13px]">verified</span>
+                      Đã xác minh
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300 px-2.5 py-1 rounded-full border border-sky-200 dark:border-sky-800">
+                      <span className="material-symbols-outlined text-[13px]">payments</span>
+                      Thanh toán đúng hạn
+                    </span>
+                  </div>
+
+                  {/* CTA button - always shown */}
+                  {profileHrId ? (
+                    <Link
+                      href={`/hr/${profileHrId}/profile?from=jobs`}
+                      className="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 dark:bg-slate-700 dark:hover:bg-slate-600 text-white font-bold text-sm py-3 rounded-xl transition-all"
+                    >
+                      <span className="material-symbols-outlined text-base">person_search</span>
+                      Xem hồ sơ năng lực nhà thầu
+                    </Link>
+                  ) : (
+                    <span className="w-full flex items-center justify-center gap-2 bg-slate-200 dark:bg-slate-700 text-slate-400 font-bold text-sm py-3 rounded-xl cursor-not-allowed">
+                      <span className="material-symbols-outlined text-base">person_search</span>
+                      Hồ sơ chưa được liên kết
+                    </span>
                   )}
                 </div>
               </div>
+
               {hrId && (
                 <button
                   type="button"

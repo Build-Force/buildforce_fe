@@ -87,6 +87,7 @@ export default function JobsPage() {
                 id: j._id,
                 title: j.title,
                 company,
+                hrId: typeof hr === "object" && hr !== null ? (hr._id || hr.id || undefined) : undefined,
                 location,
                 locationRaw: j.location,
                 compensation: formatSalary(j.salary),

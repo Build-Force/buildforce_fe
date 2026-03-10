@@ -11,6 +11,8 @@ interface EnhancedJob {
   id: string | number;
   title: string;
   company: string;
+  /** HR user ID — dùng để link sang trang hồ sơ năng lực nhà thầu */
+  hrId?: string;
   location: string;
   compensation: string;
   postedAt: string;
@@ -37,7 +39,16 @@ interface JobCardProps {
   variant?: "compact" | "expanded";
 }
 
+const resolveId = (val: any): string => {
+  if (!val) return "";
+  if (typeof val === "string") return val;
+  if (typeof val?._id === "string") return val._id;
+  const s = val?._id?.toString?.() ?? val?.toString?.() ?? String(val);
+  return s === "[object Object]" ? "" : s;
+};
+
 export const JobCard: React.FC<JobCardProps> = ({ job, index = 0 }) => {
+  const safeHrId = resolveId(job.hrId);
   const imageList = Array.isArray(job.images) && job.images.length > 0 ? job.images : job.image ? [job.image] : [];
   const [imgIndex, setImgIndex] = React.useState(0);
   const [lightboxUrl, setLightboxUrl] = React.useState<string | null>(null);
@@ -54,8 +65,8 @@ export const JobCard: React.FC<JobCardProps> = ({ job, index = 0 }) => {
     job.urgent && typeof job.daysLeft === "number"
       ? "var(--urgent)"
       : derivedType === "engineer"
-      ? "var(--primary)"
-      : "var(--amber)";
+        ? "var(--primary)"
+        : "var(--amber)";
 
   const jobTypeLabel = derivedType === "engineer" ? "Kỹ sư" : "Công nhân / Thợ";
   const urgencyBadge = getUrgencyBadge(job.urgent, job.daysLeft);
@@ -118,9 +129,8 @@ export const JobCard: React.FC<JobCardProps> = ({ job, index = 0 }) => {
                           e.stopPropagation();
                           setImgIndex(i);
                         }}
-                        className={`pointer-events-auto h-1.5 w-3 rounded-full transition-all ${
-                          i === imgIndex ? "bg-white" : "bg-white/50"
-                        }`}
+                        className={`pointer-events-auto h-1.5 w-3 rounded-full transition-all ${i === imgIndex ? "bg-white" : "bg-white/50"
+                          }`}
                         aria-label={`Ảnh ${i + 1}`}
                       />
                     ))}
@@ -141,13 +151,12 @@ export const JobCard: React.FC<JobCardProps> = ({ job, index = 0 }) => {
               <div className="mb-1 flex flex-wrap items-center gap-2 text-[11px] font-semibold">
                 {typeof job.matchScore === "number" && (
                   <span
-                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 border text-[11px] ${
-                      job.matchScore >= 85
-                        ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
-                        : job.matchScore >= 65
+                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 border text-[11px] ${job.matchScore >= 85
+                      ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+                      : job.matchScore >= 65
                         ? "bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800"
                         : "bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
-                    }`}
+                      }`}
                   >
                     {job.matchScore}% phù hợp
                   </span>
@@ -169,9 +178,31 @@ export const JobCard: React.FC<JobCardProps> = ({ job, index = 0 }) => {
               <h3 className="truncate font-semibold text-[18px] md:text-[20px] text-[var(--text-primary)]">
                 {job.title}
               </h3>
-              <p className="mt-0.5 text-[14px] font-medium text-[var(--text-secondary)]">
-                {job.company} · <span className="text-amber-500 font-semibold">⭐ 4.8</span>
-              </p>
+              <div className="mt-0.5 flex flex-col gap-0.5">
+                <p className="text-[14px] font-medium text-[var(--text-secondary)]">
+                  {safeHrId ? (
+                    <Link
+                      href={`/hr/${safeHrId}/profile?from=jobs`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="hover:text-[var(--primary)] hover:underline transition-colors relative z-10"
+                    >
+                      {job.company}
+                    </Link>
+                  ) : (
+                    job.company
+                  )}
+                  {" "}· <span className="text-amber-500 font-semibold">⭐ 4.8</span>
+                </p>
+                {safeHrId && (
+                  <Link
+                    href={`/hr/${safeHrId}/profile?from=jobs`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="relative z-10 text-[12px] text-[var(--text-secondary)] hover:text-[var(--primary)] hover:underline transition-colors w-fit"
+                  >
+                    Xem hồ sơ nhà thầu →
+                  </Link>
+                )}
+              </div>
             </div>
 
             <div className="shrink-0 text-right">
@@ -232,11 +263,10 @@ export const JobCard: React.FC<JobCardProps> = ({ job, index = 0 }) => {
 
               {urgencyBadge && (
                 <span
-                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold ${
-                    urgencyBadge.variant === "urgent"
-                      ? "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300"
-                      : "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
-                  }`}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold ${urgencyBadge.variant === "urgent"
+                    ? "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300"
+                    : "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                    }`}
                 >
                   <Bolt className="h-3.5 w-3.5" />
                   {urgencyBadge.label}
