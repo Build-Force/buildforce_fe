@@ -691,71 +691,72 @@ export default function HRDashboardPage() {
                                         </div>
                                     ) : filteredJobs.map((job, idx) => {
                                         const cfg = STATUS_CONFIG[job.status as keyof typeof STATUS_CONFIG];
-                                        const progress = Math.round((job.accepted / job.needed) * 100);
+                                        const needed = Number(job.needed) || 0;
+                                        const accepted = Number(job.accepted) || 0;
                                         const isSelected = selectedJob?.id === job.id;
 
                                         return (
                                             <motion.div
                                                 key={job.id}
-                                                initial={{ opacity: 0, x: -20 }}
+                                                initial={{ opacity: 0, x: -10 }}
                                                 animate={{ opacity: 1, x: 0 }}
                                                 transition={{ delay: idx * 0.05 }}
+                                                className={`flex items-center gap-3 p-3 sm:px-4 sm:py-3.5 rounded-xl border cursor-pointer transition-all hover:bg-slate-50 dark:hover:bg-slate-800/50 ${isSelected ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20" : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"}`}
                                                 onClick={() => {
                                                     const next = isSelected ? null : job;
                                                     setSelectedJob(next);
                                                     if (next) loadApplicants(next.id);
                                                 }}
-                                                className={`bg-white dark:bg-slate-900 rounded-[2rem] p-6 border-2 cursor-pointer transition-all hover:shadow-lg relative overflow-hidden ${isSelected ? "border-primary shadow-xl ring-4 ring-primary/10" : "border-slate-100 dark:border-slate-800"}`}
                                             >
-                                                {/* Selected Indicator line */}
-                                                {isSelected && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-primary" />}
-
-                                                <div className="flex items-start justify-between mb-4 pl-1">
-                                                    <div className="flex-1">
-                                                        <div className="flex items-center gap-2 mb-2">
-                                                            {job.urgent && <span className="px-2 py-0.5 bg-red-100 text-red-600 text-[10px] font-black rounded-full animate-pulse uppercase tracking-wider">Gấp</span>}
-                                                            <span className={`px-2.5 py-1 rounded-full text-[10px] uppercase tracking-widest font-black ${cfg.color} flex items-center gap-1.5`}>
-                                                                <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-                                                                {cfg.label}
-                                                            </span>
+                                                {/* Left Info */}
+                                                <div className="flex-1 min-w-0 flex flex-col justify-center">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <span className={`px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] uppercase font-black ${cfg.color} flex items-center gap-1 shrink-0`}>
+                                                            <span className={`w-1 h-1 rounded-full ${cfg.dot}`} />
+                                                            {cfg.label}
+                                                        </span>
+                                                        {job.urgent && <span className="px-1.5 py-0.5 bg-red-100 text-red-600 text-[8px] sm:text-[9px] font-black rounded uppercase tracking-wider shrink-0">Gấp</span>}
+                                                        <h3 className="font-bold text-slate-900 dark:text-white text-sm line-clamp-1 truncate pr-2" title={job.title}>{job.title}</h3>
+                                                    </div>
+                                                    <div className="flex items-center gap-3 text-[11px] text-slate-500 font-medium">
+                                                        <div className="flex items-center gap-1 min-w-0 pr-1">
+                                                            <span className="material-symbols-outlined text-[14px]">location_on</span>
+                                                            <span className="truncate">{job.location}</span>
                                                         </div>
-                                                        <h3 className="font-black text-slate-900 dark:text-white text-lg leading-tight mb-1 pr-4">{job.title}</h3>
-                                                        <p className="text-xs text-slate-500 dark:text-slate-400 font-bold truncate">📍 {job.location} • 💰 {job.salary}</p>
+                                                        <div className="flex items-center gap-1 shrink-0">
+                                                            <span className="material-symbols-outlined text-[14px]">payments</span>
+                                                            <span>{job.salary}</span>
+                                                        </div>
                                                     </div>
-                                                    <div className="text-right shrink-0 bg-slate-50 dark:bg-slate-800 p-3 rounded-2xl flex flex-col items-center justify-center min-w-[70px]">
-                                                        <p className="text-2xl font-black text-primary leading-none">{job.applicants}</p>
-                                                        <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mt-1">Ứng viên</p>
+                                                </div>
+                                                
+                                                {/* Center Stats */}
+                                                <div className="flex items-center gap-4 sm:gap-6 text-center shrink-0 border-l border-slate-100 dark:border-slate-800 pl-4 sm:pl-6">
+                                                    <div className="flex flex-col items-center justify-center min-w-[40px]">
+                                                        <span className="text-sm font-black text-slate-900 dark:text-white leading-none mb-1">{job.applicants}</span>
+                                                        <span className="text-[8px] uppercase tracking-widest text-slate-400 font-bold">Ứng viên</span>
+                                                    </div>
+                                                    <div className="flex flex-col items-center justify-center min-w-[40px]">
+                                                        <span className="text-sm font-black text-primary leading-none mb-1">{accepted}/{needed === 0 ? "∞" : needed}</span>
+                                                        <span className="text-[8px] uppercase tracking-widest text-slate-400 font-bold">Tiến độ</span>
                                                     </div>
                                                 </div>
 
-                                                {/* Progress */}
-                                                <div className="mb-4 pl-1">
-                                                    <div className="flex justify-between mb-1 text-[11px] font-black uppercase tracking-widest text-slate-500">
-                                                        <span>Tiến độ</span>
-                                                        <span className="text-primary">{job.accepted}/{job.needed}</span>
-                                                    </div>
-                                                    <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                                                        <div
-                                                            className="h-full bg-gradient-to-r from-primary to-indigo-500 rounded-full transition-all duration-500"
-                                                            style={{ width: `${Math.min(progress, 100)}%` }}
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex items-center gap-4 text-xs font-bold text-slate-400 pl-1">
-                                                    <span>👁 {job.views} lượt xem</span>
-                                                    <div className="flex gap-3 ml-auto opacity-70 hover:opacity-100 transition-opacity">
-                                                        {job.status === "draft" && (
-                                                            <button type="button" className="text-primary hover:underline" onClick={(e) => { e.stopPropagation(); router.push(`/post-job?edit=${job.id}`); }}>
-                                                                Sửa
-                                                            </button>
-                                                        )}
-                                                        {job.status !== "closed" && (
-                                                            <button type="button" className="text-slate-400 hover:text-red-500" onClick={(e) => { e.stopPropagation(); setJobToClose(job); }}>
-                                                                Đóng
-                                                            </button>
-                                                        )}
-                                                    </div>
+                                                {/* Right Actions */}
+                                                <div className="flex items-center gap-0.5 shrink-0 ml-2">
+                                                    {job.status === "draft" && (
+                                                        <button type="button" className="p-1.5 text-slate-400 hover:text-primary transition-colors flex items-center justify-center rounded-lg" onClick={(e) => { e.stopPropagation(); router.push(`/post-job?edit=${job.id}`); }} title="Sửa tin">
+                                                            <span className="material-symbols-outlined text-[16px]">edit</span>
+                                                        </button>
+                                                    )}
+                                                    {job.status !== "closed" && (
+                                                        <button type="button" className="p-1.5 text-slate-400 hover:text-red-500 transition-colors flex items-center justify-center rounded-lg" onClick={(e) => { e.stopPropagation(); setJobToClose(job); }} title="Đóng tin">
+                                                            <span className="material-symbols-outlined text-[16px]">block</span>
+                                                        </button>
+                                                    )}
+                                                    <span className={`material-symbols-outlined ml-1.5 transition-colors ${isSelected ? "text-primary" : "text-slate-300 dark:text-slate-600"}`}>
+                                                        {isSelected ? "keyboard_double_arrow_right" : "chevron_right"}
+                                                    </span>
                                                 </div>
                                             </motion.div>
                                         );

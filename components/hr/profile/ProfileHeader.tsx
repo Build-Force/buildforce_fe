@@ -13,6 +13,7 @@ interface HRProps {
     name: string;
     logo: string | null;
     profileDocumentImage?: string;
+    profileDocumentImages?: string[];
     initials: string;
     verified: boolean;
     verifiedMST: boolean;
@@ -37,6 +38,7 @@ export default function ProfileHeader({ hr }: { hr: HRProps }) {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [showSuccessDialog, setShowSuccessDialog] = useState(false);
     const [dontShowAgain, setDontShowAgain] = useState(false);
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
     React.useEffect(() => {
         const token = localStorage.getItem('token');
@@ -264,36 +266,63 @@ export default function ProfileHeader({ hr }: { hr: HRProps }) {
                 </div>
             </div>
 
-            {/* Profile Document Image — shown if HR has uploaded one */}
-            {hr.profileDocumentImage && (
+            {/* Profile Document Images */}
+            {((hr.profileDocumentImages && hr.profileDocumentImages.length > 0) || hr.profileDocumentImage) && (
                 <>
                     <div className="h-px w-full bg-gray-100 dark:bg-gray-700 my-6" />
-                    <div className="flex items-start gap-5">
-                        <a
-                            href={hr.profileDocumentImage}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex-shrink-0 group"
-                        >
-                            <img
-                                src={hr.profileDocumentImage}
-                                alt="Hồ sơ năng lực"
-                                className="w-28 h-36 object-cover rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm group-hover:shadow-md transition-shadow"
-                            />
-                        </a>
-                        <div className="flex flex-col justify-center h-36">
-                            <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">Hồ sơ năng lực</p>
-                            <p className="text-sm font-bold text-gray-800 dark:text-gray-200 mb-1">{hr.name}</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Tài liệu năng lực đã được đăng tải bởi nhà tuyển dụng.</p>
-                            <a
-                                href={hr.profileDocumentImage}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline"
-                            >
-                                <ExternalLink className="w-3.5 h-3.5" />
-                                Xem đầy đủ
-                            </a>
+                    <div className="flex flex-col md:flex-row items-center md:items-start gap-6 p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                        {/* Images Gallery */}
+                        <div className="flex flex-wrap gap-3 flex-shrink-0 justify-center md:justify-start">
+                            {(hr.profileDocumentImages && hr.profileDocumentImages.length > 0
+                                ? hr.profileDocumentImages
+                                : hr.profileDocumentImage
+                                ? [hr.profileDocumentImage]
+                                : []
+                            ).map((img, idx) => {
+                                const isPdf = img.toLowerCase().endsWith('.pdf');
+                                return (
+                                <a
+                                    key={idx}
+                                    href={isPdf ? img : '#'}
+                                    onClick={(e) => {
+                                        if (!isPdf) {
+                                            e.preventDefault();
+                                            setSelectedImage(img);
+                                        }
+                                    }}
+                                    target={isPdf ? "_blank" : undefined}
+                                    rel={isPdf ? "noopener noreferrer" : undefined}
+                                    className="group overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white relative block shadow-sm hover:shadow-md transition-all hover:border-primary/30"
+                                >
+                                    {isPdf ? (
+                                        <div className="w-24 h-32 flex flex-col items-center justify-center bg-red-50 text-red-500 group-hover:bg-red-100 transition-colors">
+                                            <svg className="w-10 h-10 mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                                            </svg>
+                                            <span className="text-[10px] font-black uppercase tracking-wider">PDF</span>
+                                        </div>
+                                    ) : (
+                                        <img
+                                            src={img}
+                                            alt={`Hồ sơ năng lực ${idx + 1}`}
+                                            className="w-24 h-32 object-cover group-hover:scale-105 transition-transform duration-500"
+                                        />
+                                    )}
+                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center">
+                                        <ExternalLink className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 drop-shadow-md transition-opacity scale-75 group-hover:scale-100 duration-300" />
+                                    </div>
+                                </a>
+                                );
+                            })}
+                        </div>
+                        
+                        {/* Info */}
+                        <div className="flex flex-col justify-center min-h-[8rem] text-center md:text-left">
+                            <p className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1.5">Hồ sơ năng lực</p>
+                            <p className="text-sm font-black text-gray-900 dark:text-gray-100 mb-2">{hr.name}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed font-medium mb-3">
+                                Tài liệu năng lực đã được kiểm duyệt. Nhấp vào từng ảnh để mở lớn và xem chi tiết đầy đủ.
+                            </p>
                         </div>
                     </div>
                 </>
@@ -334,6 +363,27 @@ export default function ProfileHeader({ hr }: { hr: HRProps }) {
                             Đã hiểu
                         </button>
                     </div>
+                </div>
+            )}
+
+            {/* Image Viewer Dialog */}
+            {selectedImage && (
+                <div 
+                    className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 p-4 transition-opacity animate-in fade-in duration-300"
+                    onClick={() => setSelectedImage(null)}
+                >
+                    <button
+                        onClick={() => setSelectedImage(null)}
+                        className="absolute top-6 right-6 w-12 h-12 bg-white/10 hover:bg-white/20 hover:scale-110 active:scale-95 transition-all rounded-full flex items-center justify-center z-10 backdrop-blur-md"
+                    >
+                        <span className="material-symbols-outlined text-white text-2xl font-light">close</span>
+                    </button>
+                    <img 
+                        src={selectedImage} 
+                        alt="Document Preview" 
+                        className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl relative select-none"
+                        onClick={(e) => e.stopPropagation()}
+                    />
                 </div>
             )}
         </div>
