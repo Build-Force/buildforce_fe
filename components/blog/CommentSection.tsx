@@ -53,7 +53,7 @@ const Avatar: React.FC<{ name: string; avatar?: string; size?: string; id?: stri
 
     if (id) {
         return (
-            <Link href={role === 'hr' || role === 'contractor' ? `/hr/${id}/profile` : `/profile/${id}`}>
+            <Link href={`/profile/${id}`}>
                 {content}
             </Link>
         );
@@ -220,7 +220,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                                     <div className="flex items-center justify-between mb-1">
                                         <div className="flex items-center gap-2">
                                             <Link
-                                                href={comment.author.role === 'hr' || comment.author.role === 'contractor' ? `/hr/${comment.author.id}/profile` : `/profile/${comment.author.id}`}
+                                                href={`/profile/${comment.author.id}`}
                                                 className="font-bold text-slate-900 dark:text-white text-sm hover:text-primary transition-colors"
                                             >
                                                 {comment.author.name}
@@ -327,7 +327,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                                                 <div className="flex items-center justify-between mb-0.5">
                                                     <div className="flex items-center gap-2">
                                                         <Link
-                                                            href={reply.author.role === 'hr' || reply.author.role === 'contractor' ? `/hr/${reply.author.id}/profile` : `/profile/${reply.author.id}`}
+                                                            href={`/profile/${reply.author.id}`}
                                                             className="font-bold text-slate-900 dark:text-white text-xs hover:text-primary transition-colors"
                                                         >
                                                             {reply.author.name}

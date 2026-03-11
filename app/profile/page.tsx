@@ -18,26 +18,25 @@ function ConfirmCompleteButton({
     onSuccess: () => void;
 }) {
     const [loading, setLoading] = useState(false);
-    const [success, setSuccess] = useState(false);
+    const [requested, setRequested] = useState(false);
     const handleConfirm = async () => {
         if (!jobId || !applicationId) return;
         setLoading(true);
-        setSuccess(false);
         try {
             await api.put(`/api/jobs/${jobId}/applicants/${applicationId}/confirm-complete`);
-            setLoading(false);
-            setSuccess(true);
-            setTimeout(() => onSuccess(), 1400);
+            setRequested(true);
+            onSuccess();
         } catch (err) {
-            console.error("Confirm complete failed", err);
+            console.error("Worker confirm complete failed", err);
+        } finally {
             setLoading(false);
         }
     };
-    if (success) {
+    if (requested) {
         return (
-            <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-black bg-emerald-500/20 text-emerald-700 dark:text-emerald-400">
-                <span className="material-symbols-outlined text-base animate-in zoom-in duration-300">check_circle</span>
-                Đã xác nhận hoàn thành
+            <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-black bg-blue-500/10 text-blue-600 dark:text-blue-400 cursor-not-allowed">
+                <span className="material-symbols-outlined text-base">hourglass_top</span>
+                Đợi HR xác nhận...
             </span>
         );
     }
@@ -51,10 +50,13 @@ function ConfirmCompleteButton({
             {loading ? (
                 <>
                     <span className="material-symbols-outlined text-base animate-spin">progress_activity</span>
-                    Đang xác nhận...
+                    Đang gửi...
                 </>
             ) : (
-                "Xác nhận hoàn thành"
+                <>
+                    <span className="material-symbols-outlined text-base">task_alt</span>
+                    Xác nhận hoàn thành
+                </>
             )}
         </button>
     );
@@ -181,7 +183,7 @@ function ProfileContent() {
     // Profile document image upload state (HR only)
     const [profileDocUploading, setProfileDocUploading] = useState(false);
     const profileDocInputRef = React.useRef<HTMLInputElement>(null);
-    const [profileDocLightbox, setProfileDocLightbox] = useState(false);
+    const [profileDocLightbox, setProfileDocLightbox] = useState<string | null>(null);
 
     // Inline edit thông tin tài khoản (overview)
     const [editingBasicInfo, setEditingBasicInfo] = useState(false);
@@ -362,21 +364,26 @@ function ProfileContent() {
     };
 
     const handleProfileDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        if (file.size > 10 * 1024 * 1024) {
-            alert("Tài liệu quá lớn (Tối đa 10MB)");
-            return;
-        }
-        const formData = new FormData();
-        formData.append("image", file);
+        const files = e.target.files;
+        if (!files || files.length === 0) return;
         setProfileDocUploading(true);
         try {
-            const res = await api.post("/api/auth/upload-company-image", formData, {
-                headers: { "Content-Type": "multipart/form-data" },
-            });
-            if (res.data?.success && res.data?.data?.profileDocumentImage) {
-                setProfileData((prev: any) => ({ ...prev, profileDocumentImage: res.data.data.profileDocumentImage }));
+            for (const file of Array.from(files)) {
+                if (file.size > 10 * 1024 * 1024) {
+                    alert(`"${file.name}" quá lớn (Tối đa 10MB)`);
+                    continue;
+                }
+                const formData = new FormData();
+                formData.append("image", file);
+                const res = await api.post("/api/auth/upload-company-image", formData, {
+                    headers: { "Content-Type": "multipart/form-data" },
+                });
+                if (res.data?.success && res.data?.data?.profileDocumentImages) {
+                    setProfileData((prev: any) => ({
+                        ...prev,
+                        profileDocumentImages: res.data.data.profileDocumentImages
+                    }));
+                }
             }
         } catch (err: any) {
             console.error("Upload profile doc error", err);
@@ -385,6 +392,22 @@ function ProfileContent() {
         } finally {
             setProfileDocUploading(false);
             if (profileDocInputRef.current) profileDocInputRef.current.value = "";
+        }
+    };
+
+    const handleDeleteProfileDoc = async (imageUrl: string) => {
+        if (!confirm("Bạn có chắc muốn xóa ảnh này?")) return;
+        try {
+            const res = await api.delete("/api/auth/upload-company-image", { data: { imageUrl } });
+            if (res.data?.success) {
+                setProfileData((prev: any) => ({
+                    ...prev,
+                    profileDocumentImages: (prev.profileDocumentImages || []).filter((img: string) => img !== imageUrl)
+                }));
+            }
+        } catch (err: any) {
+            console.error("Delete profile doc error", err);
+            alert(err?.response?.data?.message || "Xóa ảnh thất bại");
         }
     };
 
@@ -833,18 +856,19 @@ function ProfileContent() {
                                         </div>
                                     </div>
 
-                                    {/* Hồ sơ năng lực - Premium Display */}
-                                    {isHR && (
+                                    {/* Hồ sơ năng lực - Gallery Multi-Image */}
+                                    {(isHR || profileData?.role === 'worker' || profileData?.role === 'user') && (
                                         <div className={cardStyle + " overflow-hidden relative"}>
                                             <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
-                                            <div className="flex flex-col lg:flex-row items-center gap-12 relative z-10">
-                                                <div className="flex-1 space-y-8">
+                                            <div className="relative z-10 space-y-8">
+                                                {/* Header */}
+                                                <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
                                                     <div>
-                                                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest rounded-lg mb-4 border border-primary/20">
+                                                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest rounded-lg mb-3 border border-primary/20">
                                                             <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
                                                             Verified Document Support
                                                         </div>
-                                                        <h2 className="text-4xl font-black text-slate-900 dark:text-white mb-4 tracking-tighter leading-tight">Hồ sơ năng lực cá nhân</h2>
+                                                        <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">Hồ sơ năng lực cá nhân</h2>
                                                         <p className="text-slate-500 dark:text-slate-400 text-base leading-relaxed max-w-xl font-medium">
                                                             Tài liệu này thể hiện uy tín và kinh nghiệm của bạn. Chúng tôi hỗ trợ cả định dạng PDF và hình ảnh chất lượng cao để đảm bảo hồ sơ của bạn luôn chuyên nghiệp nhất.
                                                         </p>
@@ -855,6 +879,7 @@ function ProfileContent() {
                                                             type="file"
                                                             ref={profileDocInputRef}
                                                             accept="image/*,application/pdf"
+                                                            multiple
                                                             className="hidden"
                                                             onChange={handleProfileDocUpload}
                                                             disabled={profileDocUploading}
@@ -870,7 +895,7 @@ function ProfileContent() {
                                                             ) : (
                                                                 <span className="material-symbols-outlined text-2xl">cloud_upload</span>
                                                             )}
-                                                            {profileData.profileDocumentImage ? 'Cập nhật tài liệu' : 'Tải lên ngay'}
+                                                            {profileData.profileDocumentImages?.length > 0 ? 'Thêm tài liệu' : 'Tải lên ngay'}
                                                         </button>
                                                         <div className="flex flex-col gap-1">
                                                             <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest flex items-center gap-2">
@@ -885,55 +910,65 @@ function ProfileContent() {
                                                     </div>
                                                 </div>
 
-                                                <div className="w-full lg:w-[400px] flex-shrink-0">
-                                                    {profileData.profileDocumentImage ? (
-                                                        <div className="relative group perspective-1000">
-                                                            {profileData.profileDocumentImage.toLowerCase().endsWith('.pdf') ? (
-                                                                <div className="w-full h-[450px] bg-white dark:bg-slate-800/50 rounded-[3rem] border-2 border-slate-100 dark:border-slate-700 flex flex-col items-center justify-center p-10 transition-all group-hover:border-primary/50 shadow-2xl overflow-hidden group-hover:rotate-y-6 duration-500">
-                                                                    <div className="w-28 h-28 bg-red-100 dark:bg-red-500/10 text-red-500 rounded-[2.5rem] flex items-center justify-center mb-8 shadow-inner">
-                                                                        <span className="material-symbols-outlined text-6xl">picture_as_pdf</span>
-                                                                    </div>
-                                                                    <h4 className="text-xl font-black text-slate-900 dark:text-white mb-2 truncate max-w-full italic">Hồ sơ năng lực.pdf</h4>
-                                                                    <p className="text-[11px] text-slate-400 font-black uppercase tracking-[0.3em] mb-12">Tài liệu đã được mã hóa</p>
-                                                                    <a
-                                                                        href={profileData.profileDocumentImage}
-                                                                        target="_blank"
-                                                                        rel="noopener noreferrer"
-                                                                        className="w-full py-5 bg-red-500 text-white rounded-[1.5rem] font-black text-xs flex items-center justify-center gap-3 shadow-xl shadow-red-500/30 hover:bg-red-600 transition-all hover:-translate-y-1"
-                                                                    >
-                                                                        <span className="material-symbols-outlined text-lg">open_in_new</span>
-                                                                        XEM TÀI LIỆU PDF
-                                                                    </a>
-                                                                </div>
-                                                            ) : (
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => setProfileDocLightbox(true)}
-                                                                    className="w-full h-[450px] rounded-[3rem] overflow-hidden border-2 border-slate-100 dark:border-slate-700 shadow-2xl transition-all group-hover:border-primary/50 relative cursor-zoom-in group-hover:rotate-y-6 duration-500"
-                                                                >
-                                                                    <img
-                                                                        src={profileData.profileDocumentImage}
-                                                                        alt="Profile Document"
-                                                                        className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
-                                                                    />
-                                                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
-                                                                        <div className="bg-white/20 backdrop-blur-md p-6 rounded-[2rem] opacity-0 group-hover:opacity-100 transition-all translate-y-4 group-hover:translate-y-0">
-                                                                            <span className="material-symbols-outlined text-4xl text-white">fullscreen</span>
+                                                <div className="w-full">
+                                                    {profileData.profileDocumentImages?.length > 0 ? (
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                                            {profileData.profileDocumentImages.map((img: string, index: number) => (
+                                                                <div key={index} className="relative group perspective-1000">
+                                                                    {img.toLowerCase().endsWith('.pdf') ? (
+                                                                        <div className="w-full h-[300px] bg-white dark:bg-slate-800/50 rounded-[2rem] border-2 border-slate-100 dark:border-slate-700 flex flex-col items-center justify-center p-6 transition-all group-hover:border-primary/50 shadow-xl overflow-hidden group-hover:rotate-y-6 duration-500">
+                                                                            <div className="w-20 h-20 bg-red-100 dark:bg-red-500/10 text-red-500 rounded-[1.5rem] flex items-center justify-center mb-4 shadow-inner">
+                                                                                <span className="material-symbols-outlined text-5xl">picture_as_pdf</span>
+                                                                            </div>
+                                                                            <h4 className="text-sm font-black text-slate-900 dark:text-white mb-2 truncate max-w-full italic">Tài liệu {index + 1}.pdf</h4>
+                                                                            <a
+                                                                                href={img}
+                                                                                target="_blank"
+                                                                                rel="noopener noreferrer"
+                                                                                className="w-full py-3 bg-red-500 text-white rounded-[1rem] font-black text-[10px] flex items-center justify-center gap-2 shadow-lg shadow-red-500/30 hover:bg-red-600 transition-all hover:-translate-y-1"
+                                                                            >
+                                                                                <span className="material-symbols-outlined text-base">open_in_new</span>
+                                                                                XEM PDF
+                                                                            </a>
                                                                         </div>
-                                                                    </div>
-                                                                </button>
-                                                            )}
-                                                            <div className="absolute -top-6 -right-6 w-16 h-16 bg-emerald-500 text-white rounded-[1.8rem] border-[6px] border-white dark:border-slate-800 flex items-center justify-center shadow-2xl shadow-emerald-500/40 rotate-12 group-hover:rotate-0 transition-transform z-20">
-                                                                <span className="material-symbols-outlined text-3xl font-black">verified</span>
-                                                            </div>
+                                                                    ) : (
+                                                                        <div className="relative h-[300px]">
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => setProfileDocLightbox(img)}
+                                                                                className="w-full h-full rounded-[2rem] overflow-hidden border-2 border-slate-100 dark:border-slate-700 shadow-xl transition-all group-hover:border-primary/50 relative cursor-zoom-in group-hover:rotate-y-6 duration-500 focus:outline-none"
+                                                                            >
+                                                                                <img
+                                                                                    src={img}
+                                                                                    alt={`Profile Document ${index + 1}`}
+                                                                                    className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
+                                                                                />
+                                                                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
+                                                                                    <div className="bg-white/20 backdrop-blur-md p-4 rounded-full opacity-0 group-hover:opacity-100 transition-all translate-y-4 group-hover:translate-y-0">
+                                                                                        <span className="material-symbols-outlined text-2xl text-white">fullscreen</span>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </button>
+                                                                            {/* Delete Button */}
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleDeleteProfileDoc(img)}
+                                                                                className="absolute top-4 right-4 w-10 h-10 bg-red-500 text-white rounded-xl shadow-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-red-600 z-30"
+                                                                            >
+                                                                                <span className="material-symbols-outlined text-xl">delete</span>
+                                                                            </button>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            ))}
                                                         </div>
                                                     ) : (
-                                                        <div className="w-full h-[450px] bg-slate-50 dark:bg-slate-800/20 rounded-[3rem] border-2 border-dashed border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center p-12 text-center group transition-all hover:bg-white dark:hover:bg-slate-800/40">
-                                                            <div className="w-24 h-24 bg-white dark:bg-slate-800 rounded-[2.5rem] flex items-center justify-center mb-8 shadow-xl transition-transform group-hover:rotate-12">
-                                                                <span className="material-symbols-outlined text-5xl text-slate-300">add_photo_alternate</span>
+                                                        <div className="w-full h-[300px] bg-slate-50 dark:bg-slate-800/20 rounded-[3rem] border-2 border-dashed border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center p-12 text-center group transition-all hover:bg-white dark:hover:bg-slate-800/40">
+                                                            <div className="w-20 h-20 bg-white dark:bg-slate-800 rounded-[2.5rem] flex items-center justify-center mb-6 shadow-xl transition-transform group-hover:rotate-12">
+                                                                <span className="material-symbols-outlined text-4xl text-slate-300">add_photo_alternate</span>
                                                             </div>
-                                                            <h4 className="text-xl font-black text-slate-400 mb-2">Chưa có tài liệu</h4>
-                                                            <p className="text-[11px] text-slate-400 uppercase tracking-[0.2em] font-black leading-relaxed">Nâng cấp hồ sơ của bạn với hồ sơ năng lực sắc nét</p>
+                                                            <h4 className="text-lg font-black text-slate-400 mb-2">Chưa có tài liệu</h4>
+                                                            <p className="text-[10px] text-slate-400 uppercase tracking-[0.2em] font-black leading-relaxed">Đăng tải hồ sơ năng lực (ảnh hoặc PDF) để tăng uy tín</p>
                                                         </div>
                                                     )}
                                                 </div>
@@ -943,13 +978,13 @@ function ProfileContent() {
 
                                     {/* Lightbox Modal */}
                                     <AnimatePresence>
-                                        {profileDocLightbox && profileData.profileDocumentImage && (
+                                        {profileDocLightbox && (
                                             <motion.div
                                                 initial={{ opacity: 0 }}
                                                 animate={{ opacity: 1 }}
                                                 exit={{ opacity: 0 }}
                                                 className="fixed inset-0 z-[9999] bg-black/98 backdrop-blur-3xl flex items-center justify-center p-6"
-                                                onClick={() => setProfileDocLightbox(false)}
+                                                onClick={() => setProfileDocLightbox(null)}
                                             >
                                                 <motion.div
                                                     initial={{ scale: 0.9, opacity: 0, rotateX: 20 }}
@@ -959,7 +994,7 @@ function ProfileContent() {
                                                     onClick={(e) => e.stopPropagation()}
                                                 >
                                                     <img
-                                                        src={profileData.profileDocumentImage}
+                                                        src={profileDocLightbox}
                                                         alt="Preview"
                                                         className="w-full h-auto max-h-[85vh] object-contain rounded-[3rem] shadow-[0_50px_100px_rgba(0,0,0,0.8)] border border-white/5"
                                                     />
@@ -971,7 +1006,7 @@ function ProfileContent() {
                                                             <h3 className="text-white font-black text-xl tracking-tighter">Bản xác thực hồ sơ năng lực</h3>
                                                         </div>
                                                         <button
-                                                            onClick={() => setProfileDocLightbox(false)}
+                                                            onClick={() => setProfileDocLightbox(null)}
                                                             className="w-12 h-12 bg-white/10 hover:bg-white text-white hover:text-black rounded-2xl flex items-center justify-center transition-all group"
                                                         >
                                                             <span className="material-symbols-outlined text-2xl group-hover:rotate-90 transition-transform">close</span>
@@ -1331,12 +1366,19 @@ function ProfileContent() {
                                                                     <span className="px-4 py-2 rounded-full text-xs font-black bg-primary/10 text-primary">
                                                                         {statusText}
                                                                     </span>
-                                                                    {(app.status === "HIRED" || app.status === "COMPLETION_PENDING") && (
+                                                                    {/* Worker bấm xác nhận -> COMPLETION_PENDING -> HR xác nhận -> COMPLETED */}
+                                                                    {app.status === "HIRED" && (
                                                                         <ConfirmCompleteButton
                                                                             jobId={j?._id}
                                                                             applicationId={app._id}
                                                                             onSuccess={() => loadApplied()}
                                                                         />
+                                                                    )}
+                                                                    {app.status === "COMPLETION_PENDING" && (
+                                                                        <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-black bg-blue-500/10 text-blue-600 dark:text-blue-400 cursor-not-allowed select-none">
+                                                                            <span className="material-symbols-outlined text-base">hourglass_top</span>
+                                                                            Đợi HR xác nhận hoàn thành
+                                                                        </span>
                                                                     )}
                                                                     {app.status === "COMPLETED" && !app.hasWorkerReviewed && (
                                                                         <button
@@ -1347,13 +1389,15 @@ function ProfileContent() {
                                                                                 setReviewComment("");
                                                                                 setReviewError("");
                                                                             }}
-                                                                            className="px-4 py-2 rounded-full text-xs font-black bg-amber-500/20 text-amber-700 dark:text-amber-400 hover:bg-amber-500/30 transition-all"
+                                                                            className="px-4 py-2 rounded-full text-xs font-black bg-amber-500/20 text-amber-700 dark:text-amber-400 hover:bg-amber-500/30 transition-all inline-flex items-center gap-1.5"
                                                                         >
+                                                                            <span className="material-symbols-outlined text-sm">rate_review</span>
                                                                             Đánh giá HR
                                                                         </button>
                                                                     )}
                                                                     {app.status === "COMPLETED" && app.hasWorkerReviewed && (
-                                                                        <span className="px-4 py-2 rounded-full text-xs font-bold text-slate-500 dark:text-slate-400">
+                                                                        <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10">
+                                                                            <span className="material-symbols-outlined text-sm">check_circle</span>
                                                                             Đã đánh giá
                                                                         </span>
                                                                     )}
