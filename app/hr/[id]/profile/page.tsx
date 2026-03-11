@@ -11,7 +11,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import api from '@/utils/api';
 
-export default function HRProfilePage({ params }: { params: Promise<{ id: string }> | { id: string } }) {
+export default function HRProfilePage({ params }: { params: Promise<{ id: string }> }) {
     const [hrData, setHrData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
