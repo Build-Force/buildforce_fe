@@ -282,17 +282,6 @@ export const Header = () => {
                         )}
                         <div className="h-6 w-px bg-slate-200 dark:bg-slate-700"></div>
 
-                        {/* HR quick actions */}
-                        {isLoggedIn && normalizedRole === "HR" && (
-                            <button
-                                onClick={() => router.push("/hr-dashboard")}
-                                className="h-10 px-4 rounded-full bg-slate-900 text-white text-sm font-bold flex items-center gap-1 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200/60 dark:border-slate-700 transition-all"
-                            >
-                                <span className="material-symbols-outlined text-base">dashboard</span>
-                                HR Dashboard
-                            </button>
-                        )}
-
                         {isLoggedIn && (
                             <div className="relative" ref={notifRef}>
                                 <button
