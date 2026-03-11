@@ -454,6 +454,16 @@ export const JobDetailClient: React.FC<JobDetailClientProps> = ({ jobId }) => {
                   )}
                 </div>
               </div>
+
+              {hrId && (
+                <Link
+                  href={`/hr/${typeof hrId === 'string' ? hrId : hrId?._id || 'hr_001'}/profile`}
+                  className="w-full mb-3 py-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center justify-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-lg">person</span>
+                  Xem hồ sơ nhà thầu
+                </Link>
+              )}
               {hrId && (
                 <button
                   type="button"
