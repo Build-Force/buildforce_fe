@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useMemo, useState, useRef } from "react";
+import React, { useMemo, useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Map, { Marker, Popup, NavigationControl, MapRef } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
+import api from "@/utils/api";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN as string | undefined;
 
@@ -23,112 +24,7 @@ type Site = {
   daysLeft: number;
 };
 
-const MOCK_SITES: Site[] = [
-  {
-    id: 1,
-    name: "Khu đô thị ven sông Hòa Xuân",
-    city: "Đà Nẵng",
-    address: "Cẩm Lệ, Đà Nẵng",
-    lat: 16.0205,
-    lng: 108.2346,
-    progress: 45,
-    category: "worker",
-    roleTitle: "Thợ xây kết cấu",
-    rate: "450k/ngày",
-    daysLeft: 5,
-  },
-  {
-    id: 2,
-    name: "Tòa nhà văn phòng trung tâm",
-    city: "Đà Nẵng",
-    address: "Hải Châu, Đà Nẵng",
-    lat: 16.0678,
-    lng: 108.2208,
-    progress: 70,
-    category: "engineer",
-    roleTitle: "Kỹ sư hiện trường",
-    rate: "18tr/tháng",
-    daysLeft: 2,
-  },
-  {
-    id: 3,
-    name: "Khu công nghiệp Hòa Khánh mở rộng",
-    city: "Đà Nẵng",
-    address: "Liên Chiểu, Đà Nẵng",
-    lat: 16.091,
-    lng: 108.159,
-    progress: 30,
-    category: "worker",
-    roleTitle: "Thợ hàn kết cấu",
-    rate: "500k/ngày",
-    daysLeft: 7,
-  },
-  {
-    id: 4,
-    name: "Nhà xưởng lắp ráp cơ khí",
-    city: "Quảng Nam",
-    address: "Điện Bàn, Quảng Nam",
-    lat: 15.9064,
-    lng: 108.2547,
-    progress: 55,
-    category: "engineer",
-    roleTitle: "Giám sát cơ khí",
-    rate: "22tr/tháng",
-    daysLeft: 10,
-  },
-  {
-    id: 5,
-    name: "Cải tạo cầu vượt Nguyễn Tri Phương",
-    city: "Đà Nẵng",
-    address: "Thanh Khê, Đà Nẵng",
-    lat: 16.067,
-    lng: 108.196,
-    progress: 35,
-    category: "worker",
-    roleTitle: "Công nhân cầu đường",
-    rate: "430k/ngày",
-    daysLeft: 3,
-  },
-  {
-    id: 6,
-    name: "Khu nghỉ dưỡng ven biển",
-    city: "Đà Nẵng",
-    address: "Ngũ Hành Sơn, Đà Nẵng",
-    lat: 16.001,
-    lng: 108.265,
-    progress: 60,
-    category: "worker",
-    roleTitle: "Thợ hoàn thiện nội thất",
-    rate: "480k/ngày",
-    daysLeft: 14,
-  },
-  {
-    id: 7,
-    name: "Kho logistics Liên Chiểu",
-    city: "Đà Nẵng",
-    address: "Cảng Liên Chiểu, Đà Nẵng",
-    lat: 16.1305,
-    lng: 108.149,
-    progress: 40,
-    category: "engineer",
-    roleTitle: "Kỹ sư điện công nghiệp",
-    rate: "20tr/tháng",
-    daysLeft: 4,
-  },
-  {
-    id: 8,
-    name: "Trung tâm thương mại mới",
-    city: "Quảng Nam",
-    address: "Hội An, Quảng Nam",
-    lat: 15.8805,
-    lng: 108.335,
-    progress: 25,
-    category: "worker",
-    roleTitle: "Thợ điện thương mại",
-    rate: "460k/ngày",
-    daysLeft: 9,
-  },
-];
+
 
 // Reusable Custom Marker Component
 const ConstructionMarker = ({
@@ -264,8 +160,54 @@ export const ConstructionMapSection = () => {
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [roleFilter, setRoleFilter] = useState<"all" | SiteCategory>("all");
+  const [sites, setSites] = useState<Site[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const mapRef = useRef<MapRef>(null);
   const modalMapRef = useRef<MapRef>(null);
+
+  useEffect(() => {
+    const fetchJobsForMap = async () => {
+      try {
+        const res = await api.get('/api/jobs');
+        if (res.data?.success) {
+          const mapData = res.data.data
+            .filter((j: any) => j.location?.lat && j.location?.lng)
+            .map((j: any, idx: number) => {
+              const lowerTitle = j.title.toLowerCase();
+              const category = (lowerTitle.includes("kỹ sư") || lowerTitle.includes("kỹ thuật") || lowerTitle.includes("giám sát") || lowerTitle.includes("quản lý")) ? "engineer" : "worker";
+              const progress = Math.min(100, Math.round(((j.workersHired || 0) / (j.workersNeeded || 1)) * 100));
+              let daysLeft = 0;
+              if (j.endDate) {
+                  const end = new Date(j.endDate);
+                  const now = new Date();
+                  const diffTime = Math.abs(end.getTime() - now.getTime());
+                  daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+              }
+
+              return {
+                id: j._id || idx,
+                name: j.title || "Công trình",
+                city: j.location?.province || "Việt Nam",
+                address: j.location?.address || j.location?.province || "Chưa cập nhật địa chỉ",
+                lat: j.location?.lat,
+                lng: j.location?.lng,
+                progress,
+                category,
+                roleTitle: j.skills?.[0] || (category === 'engineer' ? 'Kỹ sư/Quản lý' : 'Nhân công'),
+                rate: j.salary?.amount ? `${(j.salary.amount / 1000).toFixed(0)}k/${j.salary.unit === 'month' ? 'tháng' : j.salary.unit === 'day' ? 'ngày' : 'giờ'}` : "Thỏa thuận",
+                daysLeft,
+              } as Site;
+            });
+          setSites(mapData);
+        }
+      } catch (err) {
+        console.error("Failed to load map jobs", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchJobsForMap();
+  },[]);
 
   // Sync with document theme (Header.tsx toggles .dark class on <html>)
   React.useEffect(() => {
@@ -304,29 +246,29 @@ export const ConstructionMapSection = () => {
   };
 
   const initialViewState = useMemo(() => {
-    if (!MOCK_SITES.length) {
+    if (!sites.length) {
       return {
         longitude: 108.2208,
         latitude: 16.0678,
         zoom: 11,
       };
     }
-    const centerLat = MOCK_SITES.reduce((sum, s) => sum + s.lat, 0) / MOCK_SITES.length;
-    const centerLng = MOCK_SITES.reduce((sum, s) => sum + s.lng, 0) / MOCK_SITES.length;
+    const centerLat = sites.reduce((sum, s) => sum + s.lat, 0) / sites.length;
+    const centerLng = sites.reduce((sum, s) => sum + s.lng, 0) / sites.length;
 
     return {
       longitude: centerLng,
       latitude: centerLat,
       zoom: 11,
     };
-  }, []);
+  }, [sites]);
 
   const filteredSites = useMemo(
     () =>
       roleFilter === "all"
-        ? MOCK_SITES
-        : MOCK_SITES.filter((site) => site.category === roleFilter),
-    [roleFilter]
+        ? sites
+        : sites.filter((site) => site.category === roleFilter),
+    [roleFilter, sites]
   );
 
   return (
@@ -361,7 +303,13 @@ export const ConstructionMapSection = () => {
             </motion.p>
 
             <div className="space-y-3 overflow-y-auto max-h-[460px] pr-2 py-4 px-1 custom-scrollbar">
-              {filteredSites.map((site) => {
+              {isLoading ? (
+                  <div className="flex items-center justify-center py-10">
+                    <div className="animate-spin w-8 h-8 rounded-full border-4 border-secondary border-t-transparent"></div>
+                  </div>
+              ) : filteredSites.length === 0 ? (
+                  <div className="text-center py-12 text-slate-500">Chưa có công trình nào trên bản đồ.</div>
+              ) : filteredSites.map((site) => {
                 const isActive = selectedSite?.id === site.id;
                 return (
                   <button

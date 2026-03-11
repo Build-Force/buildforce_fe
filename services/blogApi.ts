@@ -4,6 +4,7 @@ export interface BlogAuthor {
     id: string;
     name: string;
     avatar?: string;
+    role: string;
 }
 
 export interface BlogMedia {

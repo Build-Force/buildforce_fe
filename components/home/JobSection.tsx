@@ -1,8 +1,9 @@
  "use client";
 
-import React from "react";
-import { JOBS } from "@/data/mockData";
+import React, { useState, useEffect } from "react";
 import { JobCard } from "@/components/jobs/JobCard";
+import api from "@/utils/api";
+import Link from "next/link";
 
 export const JobSection = () => {
     const [activeFilter, setActiveFilter] = React.useState<"all" | "engineer" | "worker" | "urgent">("all");
@@ -20,12 +21,61 @@ export const JobSection = () => {
         return "worker";
     };
 
-    const filteredJobs = JOBS.filter((job) => {
+    const [jobs, setJobs] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchJobs = async () => {
+            try {
+                const res = await api.get('/api/jobs');
+                if (res.data?.success) {
+                    const formatSalary = (salary: any) => {
+                        if (!salary?.amount) return "Thỏa thuận";
+                        const unit = salary.unit === "day" ? "ngày" : salary.unit === "month" ? "tháng" : salary.unit === "hour" ? "giờ" : "dự án";
+                        const amount = Number(salary.amount);
+                        const pretty = new Intl.NumberFormat("vi-VN").format(amount) + "VNĐ";
+                        return `${pretty}/${unit}`;
+                    };
+
+                    const fetchedJobs = res.data.data.map((job: any) => {
+                        const hr = job.hrId;
+                        const company = (hr?.companyName && hr.companyName !== "Default Company")
+                            ? hr.companyName
+                            : (hr?.firstName ? `${hr.firstName} ${hr.lastName || ""}`.trim() : "Nhà tuyển dụng");
+                        const location = [job.location?.address, job.location?.city, job.location?.province].filter(Boolean).join(", ") || "Việt Nam";
+
+                        return {
+                            id: job._id,
+                            title: job.title,
+                            company,
+                            location,
+                            compensation: formatSalary(job.salary),
+                            skills: Array.isArray(job.skills) ? job.skills : [],
+                            postedAt: new Date(job.createdAt || Date.now()).toLocaleDateString("vi-VN"),
+                            images: Array.isArray(job.images) ? job.images : [],
+                            workersNeeded: job.workersNeeded ?? 0,
+                            urgent: job.isUrgent || false,
+                            verified: hr?.isVerified || false,
+                            hrId: hr?._id || hr
+                        };
+                    });
+                    setJobs(fetchedJobs);
+                }
+            } catch (err) {
+                console.error("Failed to load jobs", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchJobs();
+    }, []);
+
+    const filteredJobs = jobs.filter((job) => {
         if (activeFilter === "all") return true;
         if (activeFilter === "urgent") return job.urgent;
         const category = getCategory(job.title);
         return category === activeFilter;
-    });
+    }).slice(0, 6);
 
     return (
         <section className="py-32 bg-[var(--bg)] transition-colors duration-300">
@@ -64,24 +114,32 @@ export const JobSection = () => {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-8">
-                    {filteredJobs.map((job, idx) => (
-                        <JobCard
-                            key={job.id}
-                            job={job}
-                            index={idx}
-                            variant="compact"
-                        />
-                    ))}
-                </div>
+                {loading ? (
+                    <div className="flex justify-center items-center py-20">
+                        <div className="animate-spin w-8 h-8 rounded-full border-4 border-[var(--primary)] border-t-transparent"></div>
+                    </div>
+                ) : filteredJobs.length === 0 ? (
+                    <div className="text-center py-12 text-[var(--text-secondary)]">Không tìm thấy công việc phù hợp.</div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {filteredJobs.map((job, idx) => (
+                            <JobCard
+                                key={job.id}
+                                job={job}
+                                index={idx}
+                                variant="compact"
+                            />
+                        ))}
+                    </div>
+                )}
 
                 <div className="mt-10 flex justify-center">
-                    <button
-                        type="button"
+                    <Link
+                        href="/jobs"
                         className="inline-flex items-center gap-2 text-[14px] font-semibold text-[var(--primary)] hover:underline underline-offset-4"
                     >
-                        Xem tất cả 1,240+ việc làm →
-                    </button>
+                        Tìm hiểu thêm →
+                    </Link>
                 </div>
             </div>
         </section>

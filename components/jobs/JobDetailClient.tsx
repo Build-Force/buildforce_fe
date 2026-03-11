@@ -221,9 +221,11 @@ export const JobDetailClient: React.FC<JobDetailClientProps> = ({ jobId }) => {
     const filtered = allJobs.filter((j) => j._id !== jobId).slice(0, 3);
     return filtered.map((j) => {
       const hr = j.hrId;
+      const fullName = (hr?.firstName ? `${hr.firstName} ${hr.lastName || ""}`.trim() : "");
       const company =
-        hr?.companyName ||
-        (hr?.firstName ? `${hr.firstName} ${hr.lastName || ""}`.trim() : "Nhà tuyển dụng");
+        (hr?.companyName && hr.companyName !== "Default Company")
+          ? hr.companyName
+          : (fullName || "Nhà tuyển dụng");
       const location = j.location?.province || j.location?.city || "Việt Nam";
       return {
         id: j._id,
@@ -290,9 +292,11 @@ export const JobDetailClient: React.FC<JobDetailClientProps> = ({ jobId }) => {
   }
 
   const hr = job.hrId;
+  const fullName = (hr?.firstName ? `${hr.firstName} ${hr.lastName || ""}`.trim() : "");
   const company =
-    hr?.companyName ||
-    (hr?.firstName ? `${hr.firstName} ${hr.lastName || ""}`.trim() : "Nhà tuyển dụng");
+    (hr?.companyName && hr.companyName !== "Default Company")
+      ? hr.companyName
+      : (fullName || "Nhà tuyển dụng");
   const locationText =
     [job.location?.address, job.location?.province].filter(Boolean).join(", ") || "Việt Nam";
   const salaryText = formatSalary(job.salary);

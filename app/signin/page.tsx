@@ -54,6 +54,7 @@ export default function AuthPage() {
     const [username, setUsername] = useState("");
     const [phone, setPhone] = useState("");
     const [email, setEmail] = useState("");
+    const [companyName, setCompanyName] = useState("");
 
     const calculatePasswordStrength = (pass: string) => {
         let score = 0;
@@ -192,7 +193,7 @@ export default function AuthPage() {
                 role: userType === "worker" ? "user" : "hr",
                 // Provide placeholder if HR required fields are needed
                 ...(userType === "contractor" && {
-                    companyName: "Default Company",
+                    companyName: companyName.trim() || fullName.trim() || "Nhà thầu",
                     taxCode: "000000000"
                 })
             });
@@ -475,6 +476,12 @@ export default function AuthPage() {
                                         <label className="block text-lg font-bold text-slate-700 dark:text-slate-300 mb-2" htmlFor="fullname">Họ và tên</label>
                                         <input value={fullName} onChange={e => setFullName(e.target.value)} required className="w-full h-16 px-6 rounded-2xl border-2 border-slate-100 dark:border-slate-700 dark:bg-slate-800 text-xl font-medium focus:outline-none custom-focus transition-all" id="fullname" placeholder="Nhập họ và tên của bạn" type="text" />
                                     </div>
+                                    {userType === "contractor" && (
+                                        <div>
+                                            <label className="block text-lg font-bold text-slate-700 dark:text-slate-300 mb-2" htmlFor="companyName">Tên công ty / Đội nhóm</label>
+                                            <input value={companyName} onChange={e => setCompanyName(e.target.value)} className="w-full h-16 px-6 rounded-2xl border-2 border-slate-100 dark:border-slate-700 dark:bg-slate-800 text-xl font-medium focus:outline-none custom-focus transition-all" id="companyName" placeholder="VD: Công ty XD Mainland (không bắt buộc)" type="text" />
+                                        </div>
+                                    )}
                                     <div>
                                         <label className="block text-lg font-bold text-slate-700 dark:text-slate-300 mb-2" htmlFor="username">Username</label>
                                         <input
