@@ -320,7 +320,10 @@ export default function BlogDetailPage() {
                         >
                             {/* Author header */}
                             <div className="flex items-center gap-3 px-6 pt-5 pb-3">
-                                <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-primary to-secondary flex-shrink-0 ring-2 ring-white dark:ring-slate-700 shadow-sm">
+                                <Link
+                                    href={blog.author.role === 'hr' || blog.author.role === 'contractor' ? `/hr/${blog.author.id}/profile` : `/profile/${blog.author.id}`}
+                                    className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-primary to-secondary flex-shrink-0 ring-2 ring-white dark:ring-slate-700 shadow-sm hover:opacity-80 transition-opacity"
+                                >
                                     {blog.author.avatar ? (
                                         <img
                                             src={blog.author.avatar}
@@ -332,11 +335,14 @@ export default function BlogDetailPage() {
                                             {blog.author.name.charAt(0).toUpperCase()}
                                         </div>
                                     )}
-                                </div>
+                                </Link>
                                 <div className="flex-1">
-                                    <p className="font-bold text-slate-900 dark:text-white">
+                                    <Link
+                                        href={blog.author.role === 'hr' || blog.author.role === 'contractor' ? `/hr/${blog.author.id}/profile` : `/profile/${blog.author.id}`}
+                                        className="font-bold text-slate-900 dark:text-white hover:text-primary transition-colors cursor-pointer"
+                                    >
                                         {blog.author.name}
-                                    </p>
+                                    </Link>
                                     <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
                                         {formatTimeAgo(blog.publishedAt || blog.createdAt)}
                                         <span className="text-slate-300 dark:text-slate-600">·</span>

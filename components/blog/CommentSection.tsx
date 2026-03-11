@@ -28,23 +28,38 @@ const formatTimeAgo = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString("vi-VN");
 };
 
-const Avatar: React.FC<{ name: string; avatar?: string; size?: string }> = ({
+import Link from "next/link";
+
+const Avatar: React.FC<{ name: string; avatar?: string; size?: string; id?: string; role?: string }> = ({
     name,
     avatar,
     size = "w-10 h-10",
-}) => (
-    <div
-        className={`${size} rounded-full overflow-hidden bg-gradient-to-br from-primary to-secondary flex-shrink-0`}
-    >
-        {avatar ? (
-            <img src={avatar} alt={name} className="w-full h-full object-cover" />
-        ) : (
-            <div className="w-full h-full flex items-center justify-center text-white text-sm font-bold">
-                {name.charAt(0).toUpperCase()}
-            </div>
-        )}
-    </div>
-);
+    id,
+    role
+}) => {
+    const content = (
+        <div
+            className={`${size} rounded-full overflow-hidden bg-gradient-to-br from-primary to-secondary flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity`}
+        >
+            {avatar ? (
+                <img src={avatar} alt={name} className="w-full h-full object-cover" />
+            ) : (
+                <div className="w-full h-full flex items-center justify-center text-white text-sm font-bold">
+                    {name.charAt(0).toUpperCase()}
+                </div>
+            )}
+        </div>
+    );
+
+    if (id) {
+        return (
+            <Link href={role === 'hr' || role === 'contractor' ? `/hr/${id}/profile` : `/profile/${id}`}>
+                {content}
+            </Link>
+        );
+    }
+    return content;
+};
 
 export const CommentSection: React.FC<CommentSectionProps> = ({
     blogId,
@@ -198,13 +213,18 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                                 <Avatar
                                     name={comment.author.name}
                                     avatar={comment.author.avatar}
+                                    id={comment.author.id}
+                                    role={comment.author.role}
                                 />
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center justify-between mb-1">
                                         <div className="flex items-center gap-2">
-                                            <span className="font-bold text-slate-900 dark:text-white text-sm">
+                                            <Link
+                                                href={comment.author.role === 'hr' || comment.author.role === 'contractor' ? `/hr/${comment.author.id}/profile` : `/profile/${comment.author.id}`}
+                                                className="font-bold text-slate-900 dark:text-white text-sm hover:text-primary transition-colors"
+                                            >
                                                 {comment.author.name}
-                                            </span>
+                                            </Link>
                                             <span className="text-xs text-slate-400">
                                                 {formatTimeAgo(comment.createdAt)}
                                             </span>
@@ -300,13 +320,18 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                                                 name={reply.author.name}
                                                 avatar={reply.author.avatar}
                                                 size="w-7 h-7"
+                                                id={reply.author.id}
+                                                role={reply.author.role}
                                             />
                                             <div className="flex-1">
                                                 <div className="flex items-center justify-between mb-0.5">
                                                     <div className="flex items-center gap-2">
-                                                        <span className="font-bold text-slate-900 dark:text-white text-xs">
+                                                        <Link
+                                                            href={reply.author.role === 'hr' || reply.author.role === 'contractor' ? `/hr/${reply.author.id}/profile` : `/profile/${reply.author.id}`}
+                                                            className="font-bold text-slate-900 dark:text-white text-xs hover:text-primary transition-colors"
+                                                        >
                                                             {reply.author.name}
-                                                        </span>
+                                                        </Link>
                                                         <span className="text-xs text-slate-400">
                                                             {formatTimeAgo(reply.createdAt)}
                                                         </span>

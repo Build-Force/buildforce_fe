@@ -2,93 +2,95 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "@/utils/api";
+import Cropper from 'react-easy-crop';
+import getCroppedImg from '@/utils/cropImage';
 
 function ConfirmCompleteButton({
-  jobId,
-  applicationId,
-  onSuccess,
+    jobId,
+    applicationId,
+    onSuccess,
 }: {
-  jobId: string;
-  applicationId: string;
-  onSuccess: () => void;
+    jobId: string;
+    applicationId: string;
+    onSuccess: () => void;
 }) {
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const handleConfirm = async () => {
-    if (!jobId || !applicationId) return;
-    setLoading(true);
-    setSuccess(false);
-    try {
-      await api.put(`/api/jobs/${jobId}/applicants/${applicationId}/confirm-complete`);
-      setLoading(false);
-      setSuccess(true);
-      setTimeout(() => onSuccess(), 1400);
-    } catch (err) {
-      console.error("Confirm complete failed", err);
-      setLoading(false);
+    const [loading, setLoading] = useState(false);
+    const [success, setSuccess] = useState(false);
+    const handleConfirm = async () => {
+        if (!jobId || !applicationId) return;
+        setLoading(true);
+        setSuccess(false);
+        try {
+            await api.put(`/api/jobs/${jobId}/applicants/${applicationId}/confirm-complete`);
+            setLoading(false);
+            setSuccess(true);
+            setTimeout(() => onSuccess(), 1400);
+        } catch (err) {
+            console.error("Confirm complete failed", err);
+            setLoading(false);
+        }
+    };
+    if (success) {
+        return (
+            <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-black bg-emerald-500/20 text-emerald-700 dark:text-emerald-400">
+                <span className="material-symbols-outlined text-base animate-in zoom-in duration-300">check_circle</span>
+                Đã xác nhận hoàn thành
+            </span>
+        );
     }
-  };
-  if (success) {
     return (
-      <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-black bg-emerald-500/20 text-emerald-700 dark:text-emerald-400">
-        <span className="material-symbols-outlined text-base animate-in zoom-in duration-300">check_circle</span>
-        Đã xác nhận hoàn thành
-      </span>
+        <button
+            type="button"
+            onClick={handleConfirm}
+            disabled={loading}
+            className="px-4 py-2 rounded-full text-xs font-black bg-amber-500/20 text-amber-700 dark:text-amber-400 hover:bg-amber-500/30 transition-all disabled:opacity-60 inline-flex items-center gap-2"
+        >
+            {loading ? (
+                <>
+                    <span className="material-symbols-outlined text-base animate-spin">progress_activity</span>
+                    Đang xác nhận...
+                </>
+            ) : (
+                "Xác nhận hoàn thành"
+            )}
+        </button>
     );
-  }
-  return (
-    <button
-      type="button"
-      onClick={handleConfirm}
-      disabled={loading}
-      className="px-4 py-2 rounded-full text-xs font-black bg-amber-500/20 text-amber-700 dark:text-amber-400 hover:bg-amber-500/30 transition-all disabled:opacity-60 inline-flex items-center gap-2"
-    >
-      {loading ? (
-        <>
-          <span className="material-symbols-outlined text-base animate-spin">progress_activity</span>
-          Đang xác nhận...
-        </>
-      ) : (
-        "Xác nhận hoàn thành"
-      )}
-    </button>
-  );
 }
 
 function OpenChatButton({ hrId, companyName }: { hrId: string; companyName: string }) {
-  const [loading, setLoading] = useState(false);
-  const id = typeof hrId === "string" ? hrId : (hrId as any)?.toString?.();
-  const handleOpen = async () => {
-    if (!id || loading) return;
-    setLoading(true);
-    try {
-      const res = await api.post("/api/chat", { participantId: id });
-      const conv = res.data?.data;
-      if (conv?._id && Array.isArray(conv.participants)) {
-        const hrParticipant = conv.participants.find((p: any) => String(p._id) === String(id));
-        const participant = hrParticipant || { _id: id, firstName: "", lastName: "", role: "hr", companyName };
-        window.dispatchEvent(new CustomEvent("buildforce:openChat", { detail: { conversationId: conv._id, participant } }));
-      }
-    } catch (err) {
-      console.error("Open chat failed", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-  return (
-    <button
-      type="button"
-      onClick={handleOpen}
-      disabled={loading}
-      className="px-4 py-2 rounded-full text-xs font-black bg-primary/10 text-primary hover:bg-primary/20 transition-all disabled:opacity-60 flex items-center gap-1"
-    >
-      <span className="material-symbols-outlined text-sm">chat</span>
-      {loading ? "Đang mở..." : "Nhắn tin"}
-    </button>
-  );
+    const [loading, setLoading] = useState(false);
+    const id = typeof hrId === "string" ? hrId : (hrId as any)?.toString?.();
+    const handleOpen = async () => {
+        if (!id || loading) return;
+        setLoading(true);
+        try {
+            const res = await api.post("/api/chat", { participantId: id });
+            const conv = res.data?.data;
+            if (conv?._id && Array.isArray(conv.participants)) {
+                const hrParticipant = conv.participants.find((p: any) => String(p._id) === String(id));
+                const participant = hrParticipant || { _id: id, firstName: "", lastName: "", role: "hr", companyName };
+                window.dispatchEvent(new CustomEvent("buildforce:openChat", { detail: { conversationId: conv._id, participant } }));
+            }
+        } catch (err) {
+            console.error("Open chat failed", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+    return (
+        <button
+            type="button"
+            onClick={handleOpen}
+            disabled={loading}
+            className="px-4 py-2 rounded-full text-xs font-black bg-primary/10 text-primary hover:bg-primary/20 transition-all disabled:opacity-60 flex items-center gap-1"
+        >
+            <span className="material-symbols-outlined text-sm">chat</span>
+            {loading ? "Đang mở..." : "Nhắn tin"}
+        </button>
+    );
 }
 
 // --- PREMIUM DESIGN TOKENS ---
@@ -148,12 +150,13 @@ const MOCK_HR_STATS = {
     ]
 };
 
-export default function ProfilePage() {
+function ProfileContent() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [mounted, setMounted] = useState(false);
     const [profileData, setProfileData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState("overview");
+    const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "overview");
     const [appliedLoading, setAppliedLoading] = useState(false);
     const [appliedApplications, setAppliedApplications] = useState<any[]>([]);
 
@@ -175,6 +178,11 @@ export default function ProfilePage() {
     const [avatarError, setAvatarError] = useState('');
     const avatarInputRef = React.useRef<HTMLInputElement>(null);
 
+    // Profile document image upload state (HR only)
+    const [profileDocUploading, setProfileDocUploading] = useState(false);
+    const profileDocInputRef = React.useRef<HTMLInputElement>(null);
+    const [profileDocLightbox, setProfileDocLightbox] = useState(false);
+
     // Inline edit thông tin tài khoản (overview)
     const [editingBasicInfo, setEditingBasicInfo] = useState(false);
     const [basicInfoSaving, setBasicInfoSaving] = useState(false);
@@ -186,6 +194,20 @@ export default function ProfilePage() {
     const [reviewComment, setReviewComment] = useState("");
     const [reviewSubmitting, setReviewSubmitting] = useState(false);
     const [reviewError, setReviewError] = useState("");
+
+    // Cropping state
+    const [cropImage, setCropImage] = useState<string | null>(null);
+    const [crop, setCrop] = useState({ x: 0, y: 0 });
+    const [zoom, setZoom] = useState(1);
+    const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
+    const [showCropModal, setShowCropModal] = useState(false);
+    const [reviews, setReviews] = useState<any[]>([]);
+    const [reviewsLoading, setReviewsLoading] = useState(false);
+    const [savedContractors, setSavedContractors] = useState<any[]>([]);
+    const [savedLoading, setSavedLoading] = useState(false);
+    const [activities, setActivities] = useState<any[]>([]);
+    const [activitiesLoading, setActivitiesLoading] = useState(false);
+
     const calculateStrength = () => {
         if (!profileData) return 90; // Fallback for demo
         let score = 0;
@@ -245,10 +267,75 @@ export default function ProfilePage() {
         }
     }, []);
 
+    const loadReviews = React.useCallback(async (userId: string) => {
+        setReviewsLoading(true);
+        try {
+            const res = await api.get(`/api/reviews/target/${userId}`);
+            if (res.data.success) {
+                setReviews(res.data.data || []);
+            }
+        } catch (err) {
+            console.error("Failed to load reviews", err);
+        } finally {
+            setReviewsLoading(false);
+        }
+    }, []);
+
+    const loadSavedContractors = React.useCallback(async () => {
+        setSavedLoading(true);
+        try {
+            const res = await api.get('/api/users/contractors/saved');
+            if (res.data.success) {
+                setSavedContractors(res.data.data || []);
+            }
+        } catch (err) {
+            console.error("Load saved contractors error:", err);
+        } finally {
+            setSavedLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (profileData?._id) {
+            loadReviews(profileData._id);
+            if (profileData.role === 'worker' || profileData.role === 'user') {
+                loadSavedContractors();
+            }
+        }
+    }, [profileData?._id, profileData?.role, loadReviews, loadSavedContractors]);
+
     useEffect(() => {
         if (activeTab !== "applied") return;
         loadApplied();
     }, [activeTab, loadApplied]);
+
+    const loadActivities = React.useCallback(async () => {
+        setActivitiesLoading(true);
+        try {
+            if (profileData?.role === 'hr') {
+                const res = await api.get('/api/hr/jobs');
+                if (res.data.success) {
+                    setActivities(res.data.data || []);
+                }
+            } else {
+                const res = await api.get('/api/users/jobs/applied');
+                if (res.data.success) {
+                    const apps = res.data.data || [];
+                    setActivities(apps.filter((a: any) => ['HIRED', 'COMPLETED', 'COMPLETION_PENDING'].includes(a.status)));
+                }
+            }
+        } catch (err) {
+            console.error("Failed to load activities", err);
+        } finally {
+            setActivitiesLoading(false);
+        }
+    }, [profileData?.role]);
+
+    useEffect(() => {
+        if (activeTab === 'activity' && profileData) {
+            loadActivities();
+        }
+    }, [activeTab, profileData, loadActivities]);
 
     const saveBasicInfo = async () => {
         setBasicInfoError("");
@@ -271,6 +358,76 @@ export default function ProfilePage() {
             setBasicInfoError(err?.response?.data?.message || "Cập nhật thất bại. Thử lại.");
         } finally {
             setBasicInfoSaving(false);
+        }
+    };
+
+    const handleProfileDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (file.size > 10 * 1024 * 1024) {
+            alert("Tài liệu quá lớn (Tối đa 10MB)");
+            return;
+        }
+        const formData = new FormData();
+        formData.append("image", file);
+        setProfileDocUploading(true);
+        try {
+            const res = await api.post("/api/auth/upload-company-image", formData, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+            if (res.data?.success && res.data?.data?.profileDocumentImage) {
+                setProfileData((prev: any) => ({ ...prev, profileDocumentImage: res.data.data.profileDocumentImage }));
+            }
+        } catch (err: any) {
+            console.error("Upload profile doc error", err);
+            const msg = err?.response?.data?.message || "Tải tài liệu lên thất bại";
+            alert(msg);
+        } finally {
+            setProfileDocUploading(false);
+            if (profileDocInputRef.current) profileDocInputRef.current.value = "";
+        }
+    };
+
+    const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (file.size > 15 * 1024 * 1024) {
+            alert("Ảnh quá lớn (Tối đa 15MB)");
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.addEventListener('load', () => {
+            setCropImage(reader.result as string);
+            setShowCropModal(true);
+        });
+        reader.readAsDataURL(file);
+    };
+
+    const handleCropConfirm = async () => {
+        if (!cropImage || !croppedAreaPixels) return;
+        setAvatarUploading(true);
+        setShowCropModal(false);
+        try {
+            const croppedImageBlob = await getCroppedImg(cropImage, croppedAreaPixels);
+            if (!croppedImageBlob) throw new Error("Cropping failed");
+
+            const formData = new FormData();
+            formData.append("avatar", croppedImageBlob, "avatar.jpg");
+
+            const res = await api.post("/api/auth/upload-avatar", formData, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+            if (res.data?.success && res.data?.data?.avatar) {
+                setProfileData((prev: any) => ({ ...prev, avatar: res.data.data.avatar }));
+            }
+        } catch (err: any) {
+            console.error("Upload avatar error", err);
+            setAvatarError(err?.response?.data?.message || "Tải ảnh lên thất bại");
+        } finally {
+            setAvatarUploading(false);
+            setCropImage(null);
+            if (avatarInputRef.current) avatarInputRef.current.value = "";
         }
     };
 
@@ -328,14 +485,33 @@ export default function ProfilePage() {
                             initial={{ scale: 0.8, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             transition={{ duration: 1, type: "spring" }}
-                            className="relative"
+                            className="relative group cursor-pointer"
+                            onClick={() => avatarInputRef.current?.click()}
                         >
-                            <div className="w-28 h-28 rounded-2xl bg-white dark:bg-slate-800 p-1.5 shadow-[0_15px_40px_rgba(59,130,246,0.3)] dark:shadow-[0_15px_40px_rgba(0,0,0,0.5)] overflow-hidden border-4 border-white dark:border-slate-800 relative z-10">
+                            <input
+                                type="file"
+                                ref={avatarInputRef}
+                                onChange={handleAvatarUpload}
+                                accept="image/*"
+                                className="hidden"
+                            />
+                            <div className="w-28 h-28 rounded-2xl bg-white dark:bg-slate-800 p-1.5 shadow-[0_15px_40px_rgba(59,130,246,0.3)] dark:shadow-[0_15px_40px_rgba(0,0,0,0.5)] overflow-hidden border-4 border-white dark:border-slate-800 relative z-10 transition-transform group-hover:scale-105 duration-500">
                                 {profileData.avatar ? (
                                     <img src={profileData.avatar} alt="User Avatar" className="w-full h-full object-cover rounded-xl" />
                                 ) : (
                                     <div className="w-full h-full bg-gradient-to-tr from-sky-500 via-blue-600 to-indigo-700 flex items-center justify-center text-white text-3xl font-black rounded-xl">
                                         {profileData.firstName?.[0]}{profileData.lastName?.[0]}
+                                    </div>
+                                )}
+
+                                {/* Hover Overlay */}
+                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl">
+                                    <span className="material-symbols-outlined text-white text-2xl">photo_camera</span>
+                                </div>
+
+                                {avatarUploading && (
+                                    <div className="absolute inset-0 bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-20">
+                                        <span className="material-symbols-outlined text-primary animate-spin text-2xl">progress_activity</span>
                                     </div>
                                 )}
                             </div>
@@ -465,6 +641,7 @@ export default function ProfilePage() {
                                     { id: 'activity', label: 'Hoạt động', icon: 'auto_graph', desc: 'Dự án & Danh tiếng' },
                                     { id: 'history', label: 'Lịch sử xây dựng', icon: 'history_edu', desc: 'Nhật ký dự án & Chứng chỉ' },
                                     { id: 'applied', label: 'Việc đã ứng tuyển', icon: 'send', desc: 'Theo dõi trạng thái' },
+                                    ...(!isHR ? [{ id: 'saved', label: 'Nhà thầu đã lưu', icon: 'bookmark', desc: 'Danh sách quan tâm' }] : []),
                                     { id: 'account', label: 'Bảo mật tài khoản', icon: 'fingerprint', desc: 'Truy cập & Tài sản' }
                                 ].map(tab => (
                                     <button
@@ -534,7 +711,7 @@ export default function ProfilePage() {
                                     transition={{ duration: 0.5, ease: "circOut" }}
                                     className="space-y-8"
                                 >
-                                    {/* Thông tin cơ bản từ API — có thể sửa Họ tên & SĐT tại đây */}
+                                    {/* Thông tin tài khoản */}
                                     <div className={cardStyle}>
                                         <div className="flex items-center justify-between mb-4">
                                             <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Thông tin tài khoản</h2>
@@ -572,54 +749,54 @@ export default function ProfilePage() {
                                                         type="button"
                                                         onClick={saveBasicInfo}
                                                         disabled={basicInfoSaving}
-                                                        className="px-4 py-2 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90 disabled:opacity-50 transition-all flex items-center gap-2"
+                                                        className="p-2 rounded-xl text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-all disabled:opacity-50"
+                                                        title="Lưu"
                                                     >
                                                         {basicInfoSaving ? (
-                                                            <>
-                                                                <span className="material-symbols-outlined text-lg animate-spin">progress_activity</span>
-                                                                Đang lưu...
-                                                            </>
+                                                            <span className="material-symbols-outlined text-xl animate-spin">progress_activity</span>
                                                         ) : (
-                                                            "Lưu"
+                                                            <span className="material-symbols-outlined text-xl">check</span>
                                                         )}
                                                     </button>
                                                 </div>
                                             )}
                                         </div>
+
                                         {basicInfoError && (
-                                            <p className="text-sm text-red-500 font-bold mb-3">{basicInfoError}</p>
+                                            <div className="mb-4 p-3 bg-red-50 dark:bg-red-500/10 text-red-500 text-xs font-bold rounded-xl border border-red-500/20 flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-sm">error</span>
+                                                {basicInfoError}
+                                            </div>
                                         )}
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            {/* Họ và tên — chỉ hiển thị hoặc cho sửa */}
-                                            <div className="sm:col-span-2">
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                            <div>
                                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Họ và tên</p>
                                                 {editingBasicInfo ? (
-                                                    <div className="flex gap-3 flex-wrap">
+                                                    <div className="flex gap-2">
                                                         <input
                                                             type="text"
                                                             value={editForm.lastName}
                                                             onChange={(e) => setEditForm((f) => ({ ...f, lastName: e.target.value }))}
                                                             placeholder="Họ"
-                                                            className="flex-1 min-w-[120px] h-11 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-bold focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                                                            className="w-1/3 h-11 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-bold focus:outline-none focus:ring-2 focus:ring-primary/30"
                                                         />
                                                         <input
                                                             type="text"
                                                             value={editForm.firstName}
                                                             onChange={(e) => setEditForm((f) => ({ ...f, firstName: e.target.value }))}
                                                             placeholder="Tên"
-                                                            className="flex-1 min-w-[120px] h-11 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-bold focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                                                            className="w-2/3 h-11 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-bold focus:outline-none focus:ring-2 focus:ring-primary/30"
                                                         />
                                                     </div>
                                                 ) : (
-                                                    <p className="text-slate-900 dark:text-white font-bold">
-                                                        {[profileData.lastName, profileData.firstName].filter(Boolean).join(" ") || "—"}
-                                                    </p>
+                                                    <p className="text-slate-900 dark:text-white font-bold">{profileData.lastName} {profileData.firstName}</p>
                                                 )}
                                             </div>
                                             <div>
                                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Email</p>
-                                                <p className="text-slate-900 dark:text-white font-bold">{profileData.email || "—"}</p>
-                                                <p className="text-[10px] text-slate-400 mt-0.5">Không thể thay đổi</p>
+                                                <p className="text-slate-900 dark:text-white font-bold">{profileData.email}</p>
+                                                <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-widest">Không thể thay đổi</p>
                                             </div>
                                             <div>
                                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Số điện thoại</p>
@@ -635,13 +812,6 @@ export default function ProfilePage() {
                                                     <p className="text-slate-900 dark:text-white font-bold">{profileData.phone || "—"}</p>
                                                 )}
                                             </div>
-                                            {profileData.username && (
-                                                <div>
-                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Tên đăng nhập</p>
-                                                    <p className="text-slate-900 dark:text-white font-bold">{profileData.username}</p>
-                                                    <p className="text-[10px] text-slate-400 mt-0.5">Không thể thay đổi</p>
-                                                </div>
-                                            )}
                                             <div>
                                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Vai trò</p>
                                                 <p className="text-slate-900 dark:text-white font-bold">
@@ -662,6 +832,155 @@ export default function ProfilePage() {
                                             )}
                                         </div>
                                     </div>
+
+                                    {/* Hồ sơ năng lực - Premium Display */}
+                                    {isHR && (
+                                        <div className={cardStyle + " overflow-hidden relative"}>
+                                            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
+                                            <div className="flex flex-col lg:flex-row items-center gap-12 relative z-10">
+                                                <div className="flex-1 space-y-8">
+                                                    <div>
+                                                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest rounded-lg mb-4 border border-primary/20">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                                                            Verified Document Support
+                                                        </div>
+                                                        <h2 className="text-4xl font-black text-slate-900 dark:text-white mb-4 tracking-tighter leading-tight">Hồ sơ năng lực cá nhân</h2>
+                                                        <p className="text-slate-500 dark:text-slate-400 text-base leading-relaxed max-w-xl font-medium">
+                                                            Tài liệu này thể hiện uy tín và kinh nghiệm của bạn. Chúng tôi hỗ trợ cả định dạng PDF và hình ảnh chất lượng cao để đảm bảo hồ sơ của bạn luôn chuyên nghiệp nhất.
+                                                        </p>
+                                                    </div>
+
+                                                    <div className="flex flex-wrap items-center gap-6">
+                                                        <input
+                                                            type="file"
+                                                            ref={profileDocInputRef}
+                                                            accept="image/*,application/pdf"
+                                                            className="hidden"
+                                                            onChange={handleProfileDocUpload}
+                                                            disabled={profileDocUploading}
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => profileDocInputRef.current?.click()}
+                                                            disabled={profileDocUploading}
+                                                            className="px-8 py-5 bg-slate-900 dark:bg-white dark:text-slate-900 text-white rounded-[2rem] text-sm font-black transition-all flex items-center gap-4 shadow-2xl hover:scale-[1.02] active:scale-95 disabled:opacity-50"
+                                                        >
+                                                            {profileDocUploading ? (
+                                                                <span className="material-symbols-outlined text-2xl animate-spin">progress_activity</span>
+                                                            ) : (
+                                                                <span className="material-symbols-outlined text-2xl">cloud_upload</span>
+                                                            )}
+                                                            {profileData.profileDocumentImage ? 'Cập nhật tài liệu' : 'Tải lên ngay'}
+                                                        </button>
+                                                        <div className="flex flex-col gap-1">
+                                                            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest flex items-center gap-2">
+                                                                <span className="material-symbols-outlined text-xs">info</span>
+                                                                Hỗ trợ JPG, PNG, PDF
+                                                            </p>
+                                                            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest flex items-center gap-2">
+                                                                <span className="material-symbols-outlined text-xs">file_present</span>
+                                                                Dung lượng tối đa 10MB
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="w-full lg:w-[400px] flex-shrink-0">
+                                                    {profileData.profileDocumentImage ? (
+                                                        <div className="relative group perspective-1000">
+                                                            {profileData.profileDocumentImage.toLowerCase().endsWith('.pdf') ? (
+                                                                <div className="w-full h-[450px] bg-white dark:bg-slate-800/50 rounded-[3rem] border-2 border-slate-100 dark:border-slate-700 flex flex-col items-center justify-center p-10 transition-all group-hover:border-primary/50 shadow-2xl overflow-hidden group-hover:rotate-y-6 duration-500">
+                                                                    <div className="w-28 h-28 bg-red-100 dark:bg-red-500/10 text-red-500 rounded-[2.5rem] flex items-center justify-center mb-8 shadow-inner">
+                                                                        <span className="material-symbols-outlined text-6xl">picture_as_pdf</span>
+                                                                    </div>
+                                                                    <h4 className="text-xl font-black text-slate-900 dark:text-white mb-2 truncate max-w-full italic">Hồ sơ năng lực.pdf</h4>
+                                                                    <p className="text-[11px] text-slate-400 font-black uppercase tracking-[0.3em] mb-12">Tài liệu đã được mã hóa</p>
+                                                                    <a
+                                                                        href={profileData.profileDocumentImage}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="w-full py-5 bg-red-500 text-white rounded-[1.5rem] font-black text-xs flex items-center justify-center gap-3 shadow-xl shadow-red-500/30 hover:bg-red-600 transition-all hover:-translate-y-1"
+                                                                    >
+                                                                        <span className="material-symbols-outlined text-lg">open_in_new</span>
+                                                                        XEM TÀI LIỆU PDF
+                                                                    </a>
+                                                                </div>
+                                                            ) : (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setProfileDocLightbox(true)}
+                                                                    className="w-full h-[450px] rounded-[3rem] overflow-hidden border-2 border-slate-100 dark:border-slate-700 shadow-2xl transition-all group-hover:border-primary/50 relative cursor-zoom-in group-hover:rotate-y-6 duration-500"
+                                                                >
+                                                                    <img
+                                                                        src={profileData.profileDocumentImage}
+                                                                        alt="Profile Document"
+                                                                        className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
+                                                                    />
+                                                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
+                                                                        <div className="bg-white/20 backdrop-blur-md p-6 rounded-[2rem] opacity-0 group-hover:opacity-100 transition-all translate-y-4 group-hover:translate-y-0">
+                                                                            <span className="material-symbols-outlined text-4xl text-white">fullscreen</span>
+                                                                        </div>
+                                                                    </div>
+                                                                </button>
+                                                            )}
+                                                            <div className="absolute -top-6 -right-6 w-16 h-16 bg-emerald-500 text-white rounded-[1.8rem] border-[6px] border-white dark:border-slate-800 flex items-center justify-center shadow-2xl shadow-emerald-500/40 rotate-12 group-hover:rotate-0 transition-transform z-20">
+                                                                <span className="material-symbols-outlined text-3xl font-black">verified</span>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="w-full h-[450px] bg-slate-50 dark:bg-slate-800/20 rounded-[3rem] border-2 border-dashed border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center p-12 text-center group transition-all hover:bg-white dark:hover:bg-slate-800/40">
+                                                            <div className="w-24 h-24 bg-white dark:bg-slate-800 rounded-[2.5rem] flex items-center justify-center mb-8 shadow-xl transition-transform group-hover:rotate-12">
+                                                                <span className="material-symbols-outlined text-5xl text-slate-300">add_photo_alternate</span>
+                                                            </div>
+                                                            <h4 className="text-xl font-black text-slate-400 mb-2">Chưa có tài liệu</h4>
+                                                            <p className="text-[11px] text-slate-400 uppercase tracking-[0.2em] font-black leading-relaxed">Nâng cấp hồ sơ của bạn với hồ sơ năng lực sắc nét</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Lightbox Modal */}
+                                    <AnimatePresence>
+                                        {profileDocLightbox && profileData.profileDocumentImage && (
+                                            <motion.div
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: 1 }}
+                                                exit={{ opacity: 0 }}
+                                                className="fixed inset-0 z-[9999] bg-black/98 backdrop-blur-3xl flex items-center justify-center p-6"
+                                                onClick={() => setProfileDocLightbox(false)}
+                                            >
+                                                <motion.div
+                                                    initial={{ scale: 0.9, opacity: 0, rotateX: 20 }}
+                                                    animate={{ scale: 1, opacity: 1, rotateX: 0 }}
+                                                    exit={{ scale: 0.9, opacity: 0, rotateX: 20 }}
+                                                    className="relative max-w-6xl w-full"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    <img
+                                                        src={profileData.profileDocumentImage}
+                                                        alt="Preview"
+                                                        className="w-full h-auto max-h-[85vh] object-contain rounded-[3rem] shadow-[0_50px_100px_rgba(0,0,0,0.8)] border border-white/5"
+                                                    />
+                                                    <div className="absolute -top-16 left-0 right-0 flex justify-between items-center px-4">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="w-10 h-10 bg-primary/20 backdrop-blur-xl rounded-2xl flex items-center justify-center border border-primary/30">
+                                                                <span className="material-symbols-outlined text-primary text-xl">verified</span>
+                                                            </div>
+                                                            <h3 className="text-white font-black text-xl tracking-tighter">Bản xác thực hồ sơ năng lực</h3>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => setProfileDocLightbox(false)}
+                                                            className="w-12 h-12 bg-white/10 hover:bg-white text-white hover:text-black rounded-2xl flex items-center justify-center transition-all group"
+                                                        >
+                                                            <span className="material-symbols-outlined text-2xl group-hover:rotate-90 transition-transform">close</span>
+                                                        </button>
+                                                    </div>
+                                                </motion.div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
 
                                     <div className={cardStyle}>
                                         <h2 className="text-xl font-black text-slate-900 dark:text-white mb-4 tracking-tight">Tóm tắt năng lực</h2>
@@ -696,6 +1015,79 @@ export default function ProfilePage() {
                                                     </div>
                                                 </div>
                                             </div>
+
+                                            {/* Worker Reviews Section */}
+                                            <div className={cardStyle}>
+                                                <div className="flex items-center justify-between mb-8">
+                                                    <div>
+                                                        <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Đánh giá từ đối tác</h2>
+                                                        <p className="text-slate-400 font-bold uppercase text-[9px] tracking-[0.3em] mt-1">Phản hồi thực tế từ các công trình</p>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-500/5 rounded-xl border border-amber-500/10">
+                                                        <span className="material-symbols-outlined text-amber-500 fill-1 text-xl">star</span>
+                                                        <span className="text-lg font-black text-amber-600 dark:text-amber-400">
+                                                            {(() => {
+                                                                const avg = Number(profileData?.averageRating);
+                                                                return !Number.isNaN(avg) && avg > 0 ? avg.toFixed(1) : "—";
+                                                            })()}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                {reviewsLoading ? (
+                                                    <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                                                        <div className="w-10 h-10 border-4 border-primary border-t-transparent animate-spin rounded-full" />
+                                                        <p className="text-[10px] font-black tracking-[0.3em] uppercase text-slate-400">Đang tải đánh giá...</p>
+                                                    </div>
+                                                ) : reviews.length === 0 ? (
+                                                    <div className="text-center py-12 bg-slate-50 dark:bg-slate-800/20 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                                                        <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
+                                                            <span className="material-symbols-outlined text-3xl text-slate-300">chat_bubble</span>
+                                                        </div>
+                                                        <h4 className="text-slate-900 dark:text-white font-black text-sm mb-1">Chưa có đánh giá nào</h4>
+                                                        <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Hoàn thành nhiều dự án hơn để nhận phản hồi</p>
+                                                    </div>
+                                                ) : (
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        {reviews.map((review: any) => (
+                                                            <div key={review._id} className="p-6 bg-slate-50 dark:bg-slate-800/20 rounded-2xl border border-slate-100 dark:border-slate-800/40 hover:bg-white dark:hover:bg-slate-800/30 transition-all group">
+                                                                <div className="flex items-start gap-4 mb-4">
+                                                                    <div className="w-12 h-12 rounded-xl bg-white dark:bg-slate-800 overflow-hidden border-2 border-white dark:border-slate-700 shadow-sm flex-shrink-0">
+                                                                        {review.reviewerId?.avatar ? (
+                                                                            <img src={review.reviewerId.avatar} alt="Reviewer" className="w-full h-full object-cover" />
+                                                                        ) : (
+                                                                            <div className="w-full h-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                                                                                <span className="material-symbols-outlined text-slate-300 text-xl">person</span>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="flex-grow">
+                                                                        <div className="flex items-center justify-between mb-0.5">
+                                                                            <h4 className="text-sm font-black text-slate-900 dark:text-white">
+                                                                                {review.reviewerId?.firstName} {review.reviewerId?.lastName}
+                                                                            </h4>
+                                                                            <div className="flex gap-0.5">
+                                                                                {[...Array(5)].map((_, i) => (
+                                                                                    <span key={i} className={`material-symbols-outlined text-[14px] ${i < review.rating ? 'text-amber-500 fill-1' : 'text-slate-200 dark:text-slate-700'}`}>star</span>
+                                                                                ))}
+                                                                            </div>
+                                                                        </div>
+                                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{review.jobId?.title || "Dự án đã tham gia"}</p>
+                                                                    </div>
+                                                                </div>
+                                                                <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed italic">&quot;{review.comment || "Đánh giá tuyệt vời về đối tác này!"}&quot;</p>
+                                                                <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800/40 flex items-center justify-between">
+                                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">{new Date(review.createdAt).toLocaleDateString('vi-VN')}</span>
+                                                                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 dark:bg-emerald-500/5 rounded-md border border-emerald-500/10">
+                                                                        <span className="material-symbols-outlined text-emerald-500 text-[12px]">verified</span>
+                                                                        <span className="text-[8px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Đã xác thực</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
 
@@ -727,22 +1119,39 @@ export default function ProfilePage() {
                                     className="space-y-8"
                                 >
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                                        {(isHR ? MOCK_HR_STATS.portfolio : [
-                                            { id: 1, name: "Metropolis Tower A1", tag: "Structural Engineering", img: "https://images.unsplash.com/photo-1541888946425-d81bb19480c5?q=80&w=2070", stats: "Verified Build" },
-                                            { id: 2, name: "Industrial Zone Bridge", tag: "Civil Infrastructure", img: "https://images.unsplash.com/photo-1510673398445-94f476ef2eb4?q=80&w=2072", stats: "High Precision" }
-                                        ]).map((project: any) => (
-                                            <div key={project.id} className="group relative h-64 rounded-2xl overflow-hidden shadow-2xl">
-                                                <img src={project.img} alt={project.name} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
-                                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent p-6 flex flex-col justify-end transform transition-transform group-hover:translate-y-[-5px]">
-                                                    <p className="text-primary font-black uppercase text-[9px] tracking-widest mb-1">#{project.tag}</p>
-                                                    <h4 className="text-white text-xl font-black mb-2 tracking-tighter">{project.name}</h4>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="px-3 py-1 bg-white/10 backdrop-blur-md rounded-full text-white text-[9px] font-black border border-white/20">{project.stats}</span>
-                                                        <span className="material-symbols-outlined text-white text-xl">arrow_right_alt</span>
+                                        {activitiesLoading ? (
+                                            <div className="col-span-full flex justify-center py-12">
+                                                <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+                                            </div>
+                                        ) : activities.length === 0 ? (
+                                            <div className="col-span-full text-center py-12 bg-slate-50 dark:bg-slate-800/20 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                                                <p className="text-slate-500 font-bold">Chưa có hoạt động dự án nào.</p>
+                                            </div>
+                                        ) : activities.map((item: any) => {
+                                            const isHRItem = profileData?.role === 'hr';
+                                            const job = isHRItem ? item : item.jobId;
+                                            const id = isHRItem ? item._id : item._id;
+                                            const name = job?.title || "Dự án";
+                                            const img = job?.image || (job?.images && job.images[0]) || "https://images.unsplash.com/photo-1541888946425-d81bb19480c5?q=80&w=2070";
+                                            const tag = job?.metadata?.location?.province || "Việt Nam";
+                                            const statusText = isHRItem 
+                                                ? (job?.status === 'COMPLETED' ? "Đã hoàn thành" : job?.status === 'APPROVED' ? "Đang tuyển" : job?.status)
+                                                : (item.status === 'COMPLETED' ? "Đã tham gia" : "Đang tham gia");
+
+                                            return (
+                                                <div key={id} className="group relative h-64 rounded-2xl overflow-hidden shadow-2xl">
+                                                    <img src={img} alt={name} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent p-6 flex flex-col justify-end transform transition-transform group-hover:translate-y-[-5px]">
+                                                        <p className="text-primary font-black uppercase text-[9px] tracking-widest mb-1">#{tag}</p>
+                                                        <h4 className="text-white text-xl font-black mb-2 tracking-tighter">{name}</h4>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="px-3 py-1 bg-white/10 backdrop-blur-md rounded-full text-white text-[9px] font-black border border-white/20">{statusText}</span>
+                                                            <Link href={`/jobs/${job?._id || ''}`} className="material-symbols-outlined text-white text-xl hover:text-primary transition-colors">arrow_right_alt</Link>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
 
                                     {/* Follower Stats Section */}
@@ -786,8 +1195,22 @@ export default function ProfilePage() {
                                         </div>
 
                                         <div className="space-y-6">
-                                            {(isHR ? MOCK_HR_STATS.activeJobs : MOCK_WORKER_STATS.workHistory).map((item: any) => (
-                                                <div key={item.id} className="relative pl-10 pb-6 border-l-4 border-slate-50 dark:border-slate-800 last:border-0 last:pb-0">
+                                            {activitiesLoading ? (
+                                                <div className="flex justify-center py-6">
+                                                    <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+                                                </div>
+                                            ) : activities.length === 0 ? (
+                                                <div className="text-center py-8 text-slate-500 font-bold">Chưa có nhật ký nào</div>
+                                            ) : activities.map((item: any) => {
+                                                const isHRItem = profileData?.role === 'hr';
+                                                const job = isHRItem ? item : item.jobId;
+                                                const id = isHRItem ? item._id : item._id;
+                                                const roleOrType = isHRItem ? 'Dự án' : (job?.skills?.[0] || 'Lao động');
+                                                const statusStr = isHRItem ? job?.status : item.status;
+                                                const locText = job?.metadata?.location?.province || "Việt Nam";
+
+                                                return (
+                                                <div key={id} className="relative pl-10 pb-6 border-l-4 border-slate-50 dark:border-slate-800 last:border-0 last:pb-0">
                                                     <div className="absolute left-[-10px] top-0 w-5 h-5 rounded-lg bg-white dark:bg-slate-900 border-4 border-primary shadow-[0_0_12px_rgba(59,130,246,0.4)] z-10 flex items-center justify-center">
                                                         <div className="w-1.5 h-1.5 rounded-full bg-primary" />
                                                     </div>
@@ -795,28 +1218,32 @@ export default function ProfilePage() {
                                                     <div className="bg-slate-50/30 dark:bg-slate-800/5 p-5 rounded-xl border border-slate-100 dark:border-slate-800/40 hover:bg-white dark:hover:bg-slate-800/20 transition-all group">
                                                         <div className="flex flex-col md:flex-row justify-between gap-12">
                                                             <div className="space-y-2">
-                                                                <p className="text-primary font-black uppercase text-[9px] tracking-widest">{item.duration}</p>
-                                                                <h4 className="text-base font-black text-slate-900 dark:text-white tracking-tighter">{isHR ? item.title : item.project}</h4>
+                                                                <p className="text-primary font-black uppercase text-[9px] tracking-widest">{job?.createdAt ? new Date(job.createdAt).toLocaleDateString("vi-VN") : "Gần đây"}</p>
+                                                                <h4 className="text-base font-black text-slate-900 dark:text-white tracking-tighter">{job?.title || "Công việc"}</h4>
                                                                 <div className="flex items-center gap-4">
                                                                     <div className="flex items-center gap-3 text-slate-400 font-black text-xs uppercase tracking-widest">
                                                                         <span className="material-symbols-outlined text-primary">business</span>
-                                                                        {isHR ? item.location : item.hr}
+                                                                        {isHRItem ? locText : (job?.hrId?.companyName || "Công ty")}
                                                                     </div>
                                                                     <span className="px-6 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl text-[10px] font-black uppercase tracking-widest">
-                                                                        {item.role || item.type}
+                                                                        {roleOrType}
                                                                     </span>
                                                                 </div>
                                                             </div>
                                                             <div className="text-right flex flex-col justify-between">
                                                                 <div className="flex items-center gap-2 justify-end text-emerald-500 font-black text-[10px] uppercase tracking-widest">
                                                                     <span className="material-symbols-outlined text-lg">verified</span>
-                                                                    Hợp đồng {item.status}
+                                                                    Hợp đồng {statusStr === "COMPLETED" ? "đã hoàn thành" : 
+                                                                              statusStr === "APPROVED" ? "đang tuyển" : 
+                                                                              statusStr === "COMPLETION_PENDING" ? "chờ xác nhận" : 
+                                                                              statusStr === "HIRED" ? "đang tham gia" : statusStr}
                                                                 </div>
                                                             </div>
                                                         </div>
                                                     </div>
                                                 </div>
-                                            ))}
+                                            );
+                                            })}
                                         </div>
                                     </div>
                                 </motion.div>
@@ -954,6 +1381,115 @@ export default function ProfilePage() {
                                     </div>
                                 </motion.div>
                             )}
+                            {/* SAVED CONTRACTORS TAB */}
+                            {activeTab === 'saved' && (
+                                <motion.div
+                                    key="saved"
+                                    initial={{ opacity: 0, y: 30 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0 }}
+                                    className="space-y-8"
+                                >
+                                    <div className={cardStyle}>
+                                        <div className="flex items-center justify-between mb-8">
+                                            <div>
+                                                <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Nhà thầu đã lưu</h2>
+                                                <p className="text-slate-400 font-bold uppercase text-[9px] tracking-[0.3em] mt-1">Danh sách đối tác bạn đang quan tâm</p>
+                                            </div>
+                                            <span className="px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-full text-xs font-black text-slate-500">
+                                                {savedContractors.length} nhà thầu
+                                            </span>
+                                        </div>
+
+                                        {savedLoading ? (
+                                            <div className="flex items-center gap-3 text-slate-500 font-bold py-12 justify-center">
+                                                <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+                                                Đang tải...
+                                            </div>
+                                        ) : savedContractors.length === 0 ? (
+                                            <div className="p-12 bg-slate-50 dark:bg-slate-800/20 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 text-center">
+                                                <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm text-slate-300">
+                                                    <span className="material-symbols-outlined text-3xl">bookmark</span>
+                                                </div>
+                                                <p className="text-slate-500 font-bold mb-1">Chưa lưu nhà thầu nào.</p>
+                                                <p className="text-slate-400 text-xs font-medium uppercase tracking-widest mb-6">Lưu các đối tác uy tín để dễ dàng theo dõi</p>
+                                                <Link href="/jobs" className="inline-block px-8 py-3 bg-primary text-white rounded-xl font-bold text-sm shadow-lg shadow-primary/20 hover:opacity-90 transition-all">
+                                                    Khám phá ngay
+                                                </Link>
+                                            </div>
+                                        ) : (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {savedContractors.map((c: any) => (
+                                                    <div key={c._id} className="p-5 rounded-2xl bg-white dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
+                                                        <div className="flex items-start gap-4">
+                                                            <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 overflow-hidden flex-shrink-0 border-2 border-white dark:border-slate-700 shadow-sm">
+                                                                {c.avatar ? (
+                                                                    <img src={c.avatar} alt={c.companyName} className="w-full h-full object-cover" />
+                                                                ) : (
+                                                                    <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary font-bold text-xl">
+                                                                        {c.companyName?.[0] || c.firstName?.[0] || "?"}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex-grow min-w-0">
+                                                                <div className="flex items-center gap-2 mb-1">
+                                                                    <h4 className="text-base font-black text-slate-900 dark:text-white tracking-tight truncate">
+                                                                        {c.companyName || `${c.firstName} ${c.lastName}`}
+                                                                    </h4>
+                                                                    {c.hrInfo?.verificationStatus === 'VERIFIED' && (
+                                                                        <span className="material-symbols-outlined text-emerald-500 text-lg fill-1">verified</span>
+                                                                    )}
+                                                                </div>
+                                                                <div className="flex items-center gap-3 text-slate-400 font-bold text-[9px] uppercase tracking-widest mb-3">
+                                                                    <span className="flex items-center gap-1">
+                                                                        <span className="material-symbols-outlined text-xs">location_on</span>
+                                                                        {c.hrInfo?.address || "Việt Nam"}
+                                                                    </span>
+                                                                </div>
+
+                                                                <div className="flex items-center gap-4">
+                                                                    {c.hrInfo?.averageRating > 0 && (
+                                                                        <div className="flex items-center gap-1 px-2 py-0.5 bg-amber-50 dark:bg-amber-500/5 rounded-md border border-amber-500/10">
+                                                                            <span className="material-symbols-outlined text-amber-500 text-[12px] fill-1">star</span>
+                                                                            <span className="text-[10px] font-black text-amber-600 dark:text-amber-400">{c.hrInfo.averageRating.toFixed(1)}</span>
+                                                                        </div>
+                                                                    )}
+                                                                    <div className="flex items-center gap-1 font-black text-[9px] text-slate-400 uppercase tracking-widest">
+                                                                        {c.hrInfo?.totalJobsPosted || 0} Dự án
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="mt-4 pt-4 border-t border-slate-50 dark:border-slate-800/40 flex gap-2">
+                                                            <Link
+                                                                href={`/hr/${c._id}/profile`}
+                                                                className="flex-1 h-9 flex items-center justify-center rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[10px] font-black uppercase tracking-widest transition-all hover:scale-[1.02]"
+                                                            >
+                                                                Xem hồ sơ
+                                                            </Link>
+                                                            <button
+                                                                onClick={async () => {
+                                                                    try {
+                                                                        await api.post('/api/users/contractors/save', { contractorId: c._id });
+                                                                        loadSavedContractors();
+                                                                    } catch (err) {
+                                                                        console.error(err);
+                                                                    }
+                                                                }}
+                                                                className="w-9 h-9 flex items-center justify-center rounded-lg bg-red-50 dark:bg-red-500/10 text-red-500 border border-red-100 dark:border-red-900/30 transition-all hover:bg-red-500 hover:text-white overflow-hidden group/btn"
+                                                                title="Bỏ lưu"
+                                                            >
+                                                                <span className="material-symbols-outlined text-lg group-hover/btn:scale-110">bookmark_remove</span>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </motion.div>
+                            )}
 
                             {/* ACCOUNT & SECURITY TAB */}
                             {activeTab === 'account' && (
@@ -1009,63 +1545,160 @@ export default function ProfilePage() {
                                 </motion.div>
                             )}
                         </AnimatePresence>
-                    </main>
-                </div>
-            </div>
+                    </main >
+                </div >
+            </div >
 
             {/* Modal: Đánh giá HR (worker) */}
-            {reviewModalApp && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => !reviewSubmitting && setReviewModalApp(null)}>
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
-                        <h3 className="text-lg font-black text-slate-900 dark:text-white mb-1">Đánh giá nhà tuyển dụng</h3>
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-                            {reviewModalApp.jobId?.title || "Công việc"} — {reviewModalApp.jobId?.hrId?.companyName || "Nhà tuyển dụng"}
-                        </p>
-                        <div className="mb-4">
-                            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Điểm (1–5 sao)</p>
-                            <div className="flex gap-2">
-                                {[1, 2, 3, 4, 5].map((n) => (
-                                    <button
-                                        key={n}
-                                        type="button"
-                                        onClick={() => setReviewRating(n)}
-                                        className={`w-10 h-10 rounded-full font-black text-sm transition-all ${reviewRating >= n ? "bg-amber-400 text-amber-900" : "bg-slate-100 dark:bg-slate-800 text-slate-400"}`}
-                                    >
-                                        {n}
-                                    </button>
-                                ))}
+            {
+                reviewModalApp && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => !reviewSubmitting && setReviewModalApp(null)}>
+                        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+                            <h3 className="text-lg font-black text-slate-900 dark:text-white mb-1">Đánh giá nhà tuyển dụng</h3>
+                            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+                                {reviewModalApp.jobId?.title || "Công việc"} — {reviewModalApp.jobId?.hrId?.companyName || "Nhà tuyển dụng"}
+                            </p>
+                            <div className="mb-4">
+                                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Điểm (1–5 sao)</p>
+                                <div className="flex gap-2">
+                                    {[1, 2, 3, 4, 5].map((n) => (
+                                        <button
+                                            key={n}
+                                            type="button"
+                                            onClick={() => setReviewRating(n)}
+                                            className={`w-10 h-10 rounded-full font-black text-sm transition-all ${reviewRating >= n ? "bg-amber-400 text-amber-900" : "bg-slate-100 dark:bg-slate-800 text-slate-400"}`}
+                                        >
+                                            {n}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="mb-4">
+                                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Nhận xét (tùy chọn)</label>
+                                <textarea
+                                    value={reviewComment}
+                                    onChange={(e) => setReviewComment(e.target.value)}
+                                    placeholder="Viết vài dòng về trải nghiệm làm việc..."
+                                    className="w-full h-24 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 text-sm resize-none"
+                                />
+                            </div>
+                            {reviewError && <p className="text-sm text-red-500 mb-3">{reviewError}</p>}
+                            <div className="flex gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => !reviewSubmitting && setReviewModalApp(null)}
+                                    className="flex-1 py-2.5 rounded-xl font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+                                >
+                                    Hủy
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={submitReview}
+                                    disabled={reviewSubmitting}
+                                    className="flex-1 py-2.5 rounded-xl font-bold bg-primary text-white hover:opacity-90 disabled:opacity-50 transition-all"
+                                >
+                                    {reviewSubmitting ? "Đang gửi..." : "Gửi đánh giá"}
+                                </button>
                             </div>
                         </div>
-                        <div className="mb-4">
-                            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Nhận xét (tùy chọn)</label>
-                            <textarea
-                                value={reviewComment}
-                                onChange={(e) => setReviewComment(e.target.value)}
-                                placeholder="Viết vài dòng về trải nghiệm làm việc..."
-                                className="w-full h-24 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 text-sm resize-none"
-                            />
-                        </div>
-                        {reviewError && <p className="text-sm text-red-500 mb-3">{reviewError}</p>}
-                        <div className="flex gap-3">
-                            <button
-                                type="button"
-                                onClick={() => !reviewSubmitting && setReviewModalApp(null)}
-                                className="flex-1 py-2.5 rounded-xl font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
-                            >
-                                Hủy
-                            </button>
-                            <button
-                                type="button"
-                                onClick={submitReview}
-                                disabled={reviewSubmitting}
-                                className="flex-1 py-2.5 rounded-xl font-bold bg-primary text-white hover:opacity-90 disabled:opacity-50 transition-all"
-                            >
-                                {reviewSubmitting ? "Đang gửi..." : "Gửi đánh giá"}
-                            </button>
-                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
+            {/* Modal: Avatar Crop */}
+            <AnimatePresence>
+                {showCropModal && cropImage && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[10000] bg-black/98 backdrop-blur-2xl flex flex-col items-center justify-center p-4 md:p-8"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 20 }}
+                            className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-[3rem] overflow-hidden shadow-2xl flex flex-col h-[85vh] md:h-[75vh] border border-white/10"
+                        >
+                            <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-white dark:bg-slate-900 z-20">
+                                <div>
+                                    <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">Căn chỉnh ảnh đại diện</h3>
+                                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mt-2 flex items-center gap-2">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                                        Sử dụng chuột hoặc cảm ứng để kéo ảnh
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => setShowCropModal(false)}
+                                    className="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all hover:rotate-90"
+                                >
+                                    <span className="material-symbols-outlined text-2xl">close</span>
+                                </button>
+                            </div>
+
+                            <div className="relative flex-1 bg-black overflow-hidden">
+                                <Cropper
+                                    image={cropImage}
+                                    crop={crop}
+                                    zoom={zoom}
+                                    aspect={1}
+                                    onCropChange={setCrop}
+                                    onCropComplete={(_, pixels) => setCroppedAreaPixels(pixels)}
+                                    onZoomChange={setZoom}
+                                    cropShape="round"
+                                    showGrid={false}
+                                />
+                            </div>
+
+                            <div className="p-10 space-y-10 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 z-20">
+                                <div className="flex items-center gap-8">
+                                    <span className="material-symbols-outlined text-slate-400 text-2xl">zoom_out</span>
+                                    <input
+                                        type="range"
+                                        value={zoom}
+                                        min={1}
+                                        max={3}
+                                        step={0.1}
+                                        aria-labelledby="Zoom"
+                                        onChange={(e) => setZoom(Number(e.target.value))}
+                                        className="flex-1 h-2 bg-slate-100 dark:bg-slate-800 rounded-full appearance-none cursor-pointer accent-primary"
+                                    />
+                                    <span className="material-symbols-outlined text-slate-400 text-2xl">zoom_in</span>
+                                </div>
+
+                                <div className="flex gap-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowCropModal(false)}
+                                        className="flex-1 py-5 px-8 rounded-[1.5rem] font-black text-slate-500 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all text-xs tracking-[0.2em]"
+                                    >
+                                        HỦY BỎ
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleCropConfirm}
+                                        className="flex-1 py-5 px-8 rounded-[1.5rem] font-black text-white bg-primary shadow-2xl shadow-primary/40 hover:scale-[1.02] active:scale-95 transition-all text-xs tracking-[0.2em]"
+                                    >
+                                        CẮT & LƯU ẢNH
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
+    );
+}
+
+export default function ProfilePage() {
+    return (
+        <React.Suspense fallback={
+            <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center space-y-4">
+                <div className="w-10 h-10 border-4 border-primary border-t-transparent animate-spin rounded-full" />
+                <p className="text-[10px] font-black tracking-[0.3em] uppercase text-slate-400">Đang tải...</p>
+            </div>
+        }>
+            <ProfileContent />
+        </React.Suspense>
     );
 }

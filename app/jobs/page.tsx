@@ -80,7 +80,9 @@ export default function JobsPage() {
 
         return jobs.map((j) => {
             const hr = j.hrId;
-            const company = hr?.companyName || (hr?.firstName ? `${hr.firstName} ${hr.lastName || ""}`.trim() : "Nhà tuyển dụng");
+            const company = (hr?.companyName && hr.companyName !== "Default Company")
+                ? hr.companyName
+                : (hr?.firstName ? `${hr.firstName} ${hr.lastName || ""}`.trim() : "Nhà tuyển dụng");
             const location = [j.location?.address, j.location?.city, j.location?.province].filter(Boolean).join(", ") || "Việt Nam";
             const monthlyVnd = getMonthlySalaryVnd(j.salary);
             return {
