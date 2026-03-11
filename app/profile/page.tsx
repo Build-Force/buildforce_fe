@@ -150,7 +150,7 @@ const MOCK_HR_STATS = {
     ]
 };
 
-export default function ProfilePage() {
+function ProfileContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [mounted, setMounted] = useState(false);
@@ -1687,5 +1687,18 @@ export default function ProfilePage() {
                 )}
             </AnimatePresence>
         </div>
+    );
+}
+
+export default function ProfilePage() {
+    return (
+        <React.Suspense fallback={
+            <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center space-y-4">
+                <div className="w-10 h-10 border-4 border-primary border-t-transparent animate-spin rounded-full" />
+                <p className="text-[10px] font-black tracking-[0.3em] uppercase text-slate-400">Đang tải...</p>
+            </div>
+        }>
+            <ProfileContent />
+        </React.Suspense>
     );
 }
