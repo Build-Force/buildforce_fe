@@ -222,7 +222,7 @@ export default function WorkerReviews({ reviews, ratingBreakdown, avgRating, tot
                                 </div>
 
                                 <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-sm lg:text-base">
-                                    "{review.content}"
+                                    &quot;{review.content}&quot;
                                 </p>
                             </div>
                         ))}

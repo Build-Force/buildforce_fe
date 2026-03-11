@@ -3,6 +3,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import Image from "next/image";
 import { MapPin, CalendarDays, Users2, BadgeCheck, Bolt, ArrowRight, BriefcaseBusiness } from "lucide-react";
 
 type JobCategory = "engineer" | "worker";
@@ -101,10 +102,12 @@ export const JobCard: React.FC<JobCardProps> = ({ job, index = 0, variant = "exp
                   className="absolute inset-0 block h-full w-full cursor-zoom-in focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-slate-900/50"
                   aria-label="Xem ảnh phóng to"
                 >
-                  <img
+                  <Image
                     alt={job.title}
                     src={imageList[imgIndex]}
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105 pointer-events-none"
+                    fill
+                    sizes="(max-width: 768px) 100vw, 33vw"
+                    className="object-cover transition-transform duration-300 group-hover:scale-105 pointer-events-none"
                   />
                 </button>
                 {hasMultiple && (
@@ -305,12 +308,15 @@ export const JobCard: React.FC<JobCardProps> = ({ job, index = 0, variant = "exp
           >
             ✕
           </button>
-          <img
-            src={lightboxUrl}
-            alt=""
-            className="max-h-[90vh] w-auto max-w-full object-contain"
-            onClick={(e) => e.stopPropagation()}
-          />
+          <div className="relative w-full h-[90vh] max-w-5xl" onClick={(e) => e.stopPropagation()}>
+            <Image
+              src={lightboxUrl}
+              alt="Phóng to ảnh"
+              fill
+              sizes="100vw"
+              className="object-contain"
+            />
+          </div>
         </div>
       )}
     </motion.article>

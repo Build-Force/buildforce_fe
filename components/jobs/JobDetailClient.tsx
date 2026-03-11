@@ -99,12 +99,18 @@ function JobImagesBlock({ images }: { images: string[] }) {
           >
             <span className="material-symbols-outlined text-3xl">close</span>
           </button>
-          <img
-            src={lightboxUrl}
-            alt=""
-            className="max-w-full max-h-[90vh] w-auto h-auto object-contain"
+          <div
+            className="relative w-full h-[90vh] max-w-5xl"
             onClick={(e) => e.stopPropagation()}
-          />
+          >
+            <Image
+              src={lightboxUrl}
+              alt=""
+              fill
+              sizes="100vw"
+              className="object-contain"
+            />
+          </div>
         </div>
       )}
     </>

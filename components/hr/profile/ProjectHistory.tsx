@@ -204,7 +204,7 @@ export default function ProjectHistory({ projects }: ProjectHistoryProps) {
                                 {project.reviewSnippet && (
                                     <div className="mt-3 bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-100 dark:border-gray-800">
                                         <p className="text-sm italic text-gray-500 dark:text-gray-400">
-                                            "{project.reviewSnippet}"
+                                            &quot;{project.reviewSnippet}&quot;
                                         </p>
                                     </div>
                                 )}
