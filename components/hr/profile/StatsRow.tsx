@@ -3,6 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Star } from 'lucide-react';
+import Image from 'next/image';
 
 interface StatsProps {
     stats: {
@@ -49,7 +50,7 @@ export default function StatsRow({ stats, industry, joinedDate, experienceYears,
                         </p>
                         {description && description !== "Chưa cập nhật mô tả." && (
                             <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed italic">
-                                "{description}"
+                                &quot;{description}&quot;
                             </p>
                         )}
                     </div>
@@ -85,7 +86,13 @@ export default function StatsRow({ stats, industry, joinedDate, experienceYears,
                             return (
                                 <div key={idx} className="group overflow-hidden rounded-[2.5rem] bg-gray-50 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-800/60 shadow-sm hover:shadow-xl transition-all duration-500">
                                     <div className="aspect-video overflow-hidden relative">
-                                        <img src={img} alt={title} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
+                                        <Image 
+                                            src={img} 
+                                            alt={title} 
+                                            fill
+                                            className="object-cover transition-transform duration-1000 group-hover:scale-110" 
+                                            unoptimized // Since these are external unsplash/user images
+                                        />
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
                                             <div className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
                                                 <div className="flex items-center gap-1 text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1.5">
@@ -132,7 +139,13 @@ export default function StatsRow({ stats, industry, joinedDate, experienceYears,
                         {portfolios.map((item: any, idx: number) => (
                             <div key={idx} className="group overflow-hidden rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-lg transition-all duration-500">
                                 <div className="aspect-square overflow-hidden relative">
-                                    <img src={item.image} alt={item.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                                    <Image 
+                                        src={item.image} 
+                                        alt={item.title} 
+                                        fill
+                                        className="object-cover transition-transform duration-700 group-hover:scale-110" 
+                                        unoptimized
+                                    />
                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                         <span className="material-symbols-outlined text-white text-2xl scale-75 group-hover:scale-100 transition-transform">zoom_in</span>
                                     </div>
