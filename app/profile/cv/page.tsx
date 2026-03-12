@@ -333,7 +333,7 @@ export default function CVBuilderPage() {
                                             <input
                                                 value={(cvData as any).experienceYears || ""}
                                                 onChange={(e) => updateBasicField("experienceYears", e.target.value)}
-                                                type="text"
+                                                type="number"
                                                 className="w-full h-11 px-4 rounded-xl bg-slate-50 dark:bg-slate-800 border-none text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/50 transition-all font-medium"
                                                 placeholder="VD: 2"
                                             />

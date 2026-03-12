@@ -104,11 +104,13 @@ export default function PublicWorkerProfilePage({ params }: { params: Promise<{ 
                             stats={hrData.stats} 
                             industry={hrData.industryType} 
                             joinedDate={hrData.joinedDate} 
+                            experienceYears={hrData.experienceYears}
                             description={hrData.description}
+                            platformProjects={(hrData.projects || []).filter((p: any) => p.status === 'completed')}
                             portfolios={hrData.portfolios || []}
                         />
                         <PaymentHistory paymentHistory={hrData.paymentHistory} onTimePaymentRate={hrData.stats.onTimePaymentRate} />
-                        <ProjectHistory projects={hrData.projects || []} />
+
                         <WorkerReviews reviews={hrData.reviews || []} ratingBreakdown={hrData.ratingBreakdown} avgRating={hrData.stats.avgRating} totalReviews={hrData.stats.totalReviews} />
                         <ActiveJobs jobs={hrData.activeJobs || []} />
                     </div>
@@ -399,6 +401,45 @@ export default function PublicWorkerProfilePage({ params }: { params: Promise<{ 
                                 </div>
                             </motion.div>
                         )}
+                        
+                        {/* Portfolio / Công trình đã làm (Manual Uploads) */}
+                        {!isHR && user.portfolios && user.portfolios.length > 0 && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.2 }}
+                                className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-800 shadow-xl"
+                            >
+                                <div className="flex items-center justify-between mb-8">
+                                    <h2 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
+                                        <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center">
+                                            <span className="material-symbols-outlined text-primary text-xl">construction</span>
+                                        </div>
+                                        Dự án tiêu biểu
+                                    </h2>
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{user.portfolios.length} dự án</span>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    {user.portfolios.map((item: any, idx: number) => (
+                                        <div key={idx} className="group overflow-hidden rounded-[2rem] bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-700/50 shadow-sm hover:shadow-xl transition-all duration-500">
+                                            <div className="aspect-video overflow-hidden relative">
+                                                <img src={item.image} alt={item.title} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
+                                                    <p className="text-xs text-white/90 font-medium leading-relaxed line-clamp-2 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                                                        {item.description}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="p-6">
+                                                <h4 className="font-black text-slate-900 dark:text-white text-base mb-1 group-hover:text-primary transition-colors">{item.title}</h4>
+                                                <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1 font-medium">{item.description}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </motion.div>
+                        )}
 
                         {!isHR && completedProjects.length === 0 && (
                             <motion.div
@@ -412,6 +453,57 @@ export default function PublicWorkerProfilePage({ params }: { params: Promise<{ 
                                 </div>
                                 <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2">Chưa có công trình hoàn thành</h3>
                                 <p className="text-slate-500 dark:text-slate-400 text-sm">Người lao động này chưa có dự án nào hoàn thành trên hệ thống.</p>
+                            </motion.div>
+                        )}
+
+                        {/* Profile Documents Gallery for Workers */}
+                        {!isHR && user.profileDocumentImages && user.profileDocumentImages.length > 0 && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.3 }}
+                                className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-800 shadow-xl"
+                            >
+                                <div className="space-y-6">
+                                    <div className="flex flex-col gap-1">
+                                        <p className="text-[10px] font-bold text-primary uppercase tracking-widest">Hồ sơ năng lực cá nhân</p>
+                                        <h3 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
+                                            <ShieldCheck className="w-4 h-4 text-primary" />
+                                            Tài liệu đã được xác minh
+                                        </h3>
+                                    </div>
+
+                                    <div className="flex flex-wrap gap-4 justify-center md:justify-start">
+                                        {user.profileDocumentImages.map((img: string, idx: number) => {
+                                            const isPdf = img.toLowerCase().endsWith('.pdf');
+                                            return (
+                                                <a
+                                                    key={idx}
+                                                    href={img}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="group overflow-hidden rounded-xl border-2 border-white dark:border-gray-800 bg-white relative block shadow-sm hover:shadow-xl transition-all hover:border-primary/50 hover:-translate-y-1"
+                                                >
+                                                    {isPdf ? (
+                                                        <div className="w-24 h-32 flex flex-col items-center justify-center bg-red-50 text-red-500 group-hover:bg-red-100 transition-colors">
+                                                            <span className="material-symbols-outlined text-4xl mb-1">picture_as_pdf</span>
+                                                            <span className="text-[10px] font-black uppercase tracking-wider">PDF</span>
+                                                        </div>
+                                                    ) : (
+                                                        <img
+                                                            src={img}
+                                                            alt={`Tài liệu ${idx + 1}`}
+                                                            className="w-24 h-32 object-cover transition-transform duration-700 group-hover:scale-110"
+                                                        />
+                                                    )}
+                                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center">
+                                                        <span className="material-symbols-outlined text-white opacity-0 group-hover:opacity-100 drop-shadow-md transition-opacity scale-75 group-hover:scale-100 duration-300">visibility</span>
+                                                    </div>
+                                                </a>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
                             </motion.div>
                         )}
 

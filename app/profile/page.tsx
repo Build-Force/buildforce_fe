@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -170,7 +171,7 @@ function ProfileContent() {
     const [pwSuccess, setPwSuccess] = useState('');
 
     // Edit Profile state
-    const [editForm, setEditForm] = useState({ firstName: '', lastName: '', phone: '', companyName: '', taxCode: '' });
+    const [editForm, setEditForm] = useState({ firstName: '', lastName: '', phone: '', companyName: '', taxCode: '', experienceYears: '' });
     const [editLoading, setEditLoading] = useState(false);
     const [editError, setEditError] = useState('');
     const [editSuccess, setEditSuccess] = useState('');
@@ -209,15 +210,23 @@ function ProfileContent() {
     const [savedLoading, setSavedLoading] = useState(false);
     const [activities, setActivities] = useState<any[]>([]);
     const [activitiesLoading, setActivitiesLoading] = useState(false);
+    
+    // Portfolio (Completed Projects) state
+    const [portfolioUploading, setPortfolioUploading] = useState(false);
+    const portfolioImageInputRef = React.useRef<HTMLInputElement>(null);
+    const [showPortfolioModal, setShowPortfolioModal] = useState(false);
+    const [portfolioForm, setPortfolioForm] = useState({ title: '', description: '', image: '' });
+    const [portfolioSaving, setPortfolioSaving] = useState(false);
 
     const calculateStrength = () => {
-        if (!profileData) return 90; // Fallback for demo
+        if (!profileData) return 0;
         let score = 0;
         if (profileData.avatar) score += 20;
-        if (profileData.skills?.length > 0 || MOCK_WORKER_STATS.skills.length > 0) score += 20;
-        if (profileData.experience || MOCK_WORKER_STATS.experienceYears > 0) score += 20;
-        if (profileData.isVerified || MOCK_WORKER_STATS.trust.cccdVerified) score += 20;
-        if (MOCK_WORKER_STATS.jobsCompleted >= 1) score += 20;
+        if (profileData.skills?.length > 0) score += 20;
+        if (Number(profileData.experienceYears) > 0) score += 20;
+        if (profileData.isVerified) score += 20;
+        const jobs = isHR ? profileData.totalJobsPosted : profileData.jobsCompleted;
+        if (jobs >= 1) score += 20;
         return score;
     };
 
@@ -240,6 +249,7 @@ function ProfileContent() {
                         phone: d.phone || '',
                         companyName: d.companyName || '',
                         taxCode: d.taxCode || '',
+                        experienceYears: d.experienceYears || '',
                     });
                 } else {
                     router.push('/signin');
@@ -347,6 +357,7 @@ function ProfileContent() {
                 firstName: editForm.firstName?.trim() || profileData.firstName,
                 lastName: editForm.lastName?.trim() ?? profileData.lastName,
                 phone: editForm.phone?.trim() || null,
+                experienceYears: editForm.experienceYears ? Number(editForm.experienceYears) : undefined,
                 ...(isHR && {
                     companyName: profileData.companyName,
                     taxCode: profileData.taxCode,
@@ -369,6 +380,10 @@ function ProfileContent() {
         setProfileDocUploading(true);
         try {
             for (const file of Array.from(files)) {
+                if (file.type === 'application/pdf') {
+                    alert(`"${file.name}" không được hỗ trợ. Chúng tôi đã ngừng hỗ trợ định dạng PDF.`);
+                    continue;
+                }
                 if (file.size > 10 * 1024 * 1024) {
                     alert(`"${file.name}" quá lớn (Tối đa 10MB)`);
                     continue;
@@ -408,6 +423,68 @@ function ProfileContent() {
         } catch (err: any) {
             console.error("Delete profile doc error", err);
             alert(err?.response?.data?.message || "Xóa ảnh thất bại");
+        }
+    };
+
+    const handlePortfolioImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (file.type === 'application/pdf') {
+            alert("Vui lòng tải lên định dạng hình ảnh. Chúng tôi không còn hỗ trợ PDF cho phần này.");
+            return;
+        }
+        setPortfolioUploading(true);
+        try {
+            const formData = new FormData();
+            formData.append("image", file);
+            const res = await api.post("/api/auth/upload-image", formData, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+            if (res.data?.success && res.data?.data?.url) {
+                setPortfolioForm(prev => ({ ...prev, image: res.data.data.url }));
+            }
+        } catch (err: any) {
+            console.error("Upload portfolio image error", err);
+            alert(err?.response?.data?.message || "Tải ảnh lên thất bại");
+        } finally {
+            setPortfolioUploading(false);
+            if (portfolioImageInputRef.current) portfolioImageInputRef.current.value = "";
+        }
+    };
+
+    const handleSavePortfolio = async () => {
+        if (!portfolioForm.image) {
+            alert("Vui lòng tải lên hình ảnh công trình");
+            return;
+        }
+        setPortfolioSaving(true);
+        try {
+            const updatedPortfolios = [...(profileData.portfolios || []), portfolioForm];
+            const res = await api.put("/api/auth/profile", { portfolios: updatedPortfolios });
+            if (res.data?.success) {
+                setProfileData((prev: any) => ({ ...prev, portfolios: updatedPortfolios }));
+                setShowPortfolioModal(false);
+                setPortfolioForm({ title: '', description: '', image: '' });
+            }
+        } catch (err: any) {
+            console.error("Save portfolio error", err);
+            alert("Không thể lưu dự án. Vui lòng thử lại.");
+        } finally {
+            setPortfolioSaving(false);
+        }
+    };
+
+    const handleDeletePortfolio = async (index: number) => {
+        if (!confirm("Bạn có chắc muốn xóa dự án này?")) return;
+        try {
+            const updatedPortfolios = (profileData.portfolios || []).filter((_: any, i: number) => i !== index);
+            const res = await api.put("/api/auth/profile", { portfolios: updatedPortfolios });
+            if (res.data?.success) {
+                setProfileData((prev: any) => ({ ...prev, portfolios: updatedPortfolios }));
+            }
+        } catch (err: any) {
+            console.error("Delete portfolio error", err);
+            alert("Xóa dự án thất bại");
         }
     };
 
@@ -552,19 +629,25 @@ function ProfileContent() {
                                 transition={{ delay: 0.2 }}
                                 className="space-y-2"
                             >
-                                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 mb-1">
-                                    <h1 className="text-2xl lg:text-3xl font-black tracking-tight text-slate-900 dark:text-white leading-tight">
+                                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 mb-2">
+                                    <h1 className="text-3xl lg:text-4xl font-black tracking-tighter text-slate-900 dark:text-white leading-tight">
                                         {profileData.firstName} {profileData.lastName}
                                     </h1>
-                                    <div className="flex flex-wrap gap-1.5 h-fit">
-                                        {(isHR ? MOCK_HR_STATS.badges : MOCK_WORKER_STATS.badges).map((badge, i) => (
-                                            <span key={badge} className="px-2.5 py-0.5 bg-primary/10 text-primary dark:text-sky-400 text-[9px] font-black rounded-full uppercase tracking-widest border border-primary/20">
-                                                {badge}
-                                            </span>
-                                        ))}
+                                    <div className="flex flex-wrap gap-2 items-center">
+                                        {profileData.isVerified && (
+                                            <div className="group flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 text-emerald-500 text-[10px] font-black rounded-full uppercase tracking-[0.15em] border border-emerald-500/20 shadow-sm shadow-emerald-500/5 hover:bg-emerald-500/20 transition-all cursor-default">
+                                                <span className="material-symbols-outlined text-base fill-1 animate-pulse">verified</span>
+                                                DNA VERIFIED
+                                            </div>
+                                        )}
+                                        <div className="px-3 py-1 bg-primary/10 text-primary text-[10px] font-black rounded-full uppercase tracking-[0.15em] border border-primary/20 shadow-sm shadow-primary/5">
+                                            {profileData.role === 'hr' ? 'RECRUITER' : 'PROFESSIONAL'}
+                                        </div>
                                     </div>
                                 </div>
-                                <p className="text-sm font-black text-slate-400 dark:text-slate-500 tracking-tighter uppercase">{isHR ? "Trưởng phòng Tuyển dụng" : "Kỹ sư Kết cấu Cao cấp"}</p>
+                                <p className="text-sm font-black text-slate-400 dark:text-slate-500 tracking-tighter uppercase">
+                                    {isHR ? (profileData.companyName || "Chưa cập nhật tên công ty") : (profileData.skills?.[0] || "Lao động lành nghề")}
+                                </p>
                             </motion.div>
 
                             <motion.div
@@ -573,6 +656,17 @@ function ProfileContent() {
                                 transition={{ delay: 0.5 }}
                                 className="flex flex-wrap justify-center lg:justify-start items-center gap-5 lg:gap-6"
                             >
+                                <div className="flex items-center gap-3 group cursor-default">
+                                    <div className="w-10 h-10 rounded-xl bg-slate-50 dark:bg-slate-800/50 flex items-center justify-center border border-slate-100 dark:border-slate-800 group-hover:scale-110 transition-transform">
+                                        <span className="material-symbols-outlined text-primary text-xl animate-pulse">dna</span>
+                                    </div>
+                                    <div>
+                                        <p className="text-lg font-black text-slate-900 dark:text-white leading-none tracking-tighter">
+                                            {profileData.experienceYears || 0} năm
+                                        </p>
+                                        <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mt-1">Hoạt động thực tế</p>
+                                    </div>
+                                </div>
                                 <div className="flex items-center gap-3">
                                     <span className="material-symbols-outlined text-amber-500 text-xl fill-1">star</span>
                                     <div>
@@ -583,7 +677,7 @@ function ProfileContent() {
                                             })()}
                                         </p>
                                         <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                                            Đánh giá chung {(() => {
+                                            Đánh giá {(() => {
                                                 const cnt = Number(profileData.reviewCount);
                                                 return !Number.isNaN(cnt) && cnt > 0 ? `(${cnt})` : "";
                                             })()}
@@ -598,14 +692,14 @@ function ProfileContent() {
                                                 ? (profileData.totalJobsPosted ?? "—")
                                                 : (typeof profileData.jobsCompleted === "number" ? profileData.jobsCompleted : "—")}
                                         </p>
-                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Lịch sử làm việc</p>
+                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Dự án</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">
                                     <span className="material-symbols-outlined text-slate-400 text-xl">map</span>
                                     <div>
-                                        <p className="text-base font-black text-slate-900 dark:text-white leading-none">{MOCK_WORKER_STATS.location}</p>
-                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Khu vực hiện tại</p>
+                                        <p className="text-base font-black text-slate-900 dark:text-white leading-none">{profileData.preferredLocationCity || "Việt Nam"}</p>
+                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Khu vực</p>
                                     </div>
                                 </div>
 
@@ -655,9 +749,20 @@ function ProfileContent() {
 
                     {/* LEFT COLUMN: NAVIGATION TOOLS */}
                     <aside className="w-full lg:w-64 xl:w-72 space-y-5 flex-shrink-0">
+                        {/* DNA Sidebar Header */}
+                        <div className="bg-[#0f172a] rounded-2xl p-4 flex items-center gap-4 border border-slate-800 shadow-xl overflow-hidden relative">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 blur-[60px] rounded-full" />
+                            <div className="w-12 h-12 bg-white flex items-center justify-center rounded-xl shrink-0">
+                                <span className="text-slate-900 font-black text-xl italic tracking-tighter">DNA</span>
+                            </div>
+                            <div className="relative z-10">
+                                <h3 className="text-white font-black text-sm leading-tight">Hồ sơ năng lực</h3>
+                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] mt-0.5">Chuyên môn & Khả năng</p>
+                            </div>
+                        </div>
 
                         {/* Smooth Tab Nav */}
-                        <div className={glassStyle + " rounded-2xl p-3 shadow-inner"}>
+                        <div className={glassStyle + " rounded-2xl p-2 shadow-inner"}>
                             <nav className="space-y-1">
                                 {[
                                     { id: 'overview', label: 'Hồ sơ năng lực', icon: 'dna', desc: 'Chuyên môn & Khả năng' },
@@ -669,18 +774,19 @@ function ProfileContent() {
                                 ].map(tab => (
                                     <button
                                         key={tab.id}
-                                        onClick={() => setActiveTab(tab.id)}
-                                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-300 group ${activeTab === tab.id
-                                            ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-lg scale-[1.01]'
-                                            : 'text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800'}`}
+                                        onClick={() => setActiveTab(tab.id as any)}
+                                        className={`group relative flex items-center gap-4 w-full p-4 rounded-2xl transition-all duration-500 ${activeTab === tab.id ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-2xl shadow-slate-900/20 translate-x-2' : 'text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                                     >
-                                        <span className={`material-symbols-outlined text-xl transition-transform ${activeTab === tab.id ? 'scale-110' : 'group-hover:scale-110'}`}>{tab.icon}</span>
-                                        <div>
-                                            <p className="font-bold text-sm leading-tight">{tab.label}</p>
-                                            <p className={`text-[9px] font-bold uppercase tracking-widest mt-0.5 ${activeTab === tab.id ? 'text-white/40 dark:text-black/40' : 'text-slate-400'}`}>
-                                                {tab.desc}
-                                            </p>
+                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-500 ${activeTab === tab.id ? 'bg-primary text-white scale-110' : 'bg-slate-50 dark:bg-slate-800'}`}>
+                                            <span className="material-symbols-outlined text-xl transition-transform group-hover:rotate-12">{tab.icon}</span>
                                         </div>
+                                        <div className="flex flex-col text-left">
+                                            <span className="text-[12px] font-black uppercase tracking-[0.1em]">{tab.label}</span>
+                                            <span className={`text-[8px] font-bold uppercase tracking-widest mt-0.5 transition-colors ${activeTab === tab.id ? 'text-white/40 dark:text-slate-400' : 'text-slate-400'}`}>{tab.desc}</span>
+                                        </div>
+                                        {activeTab === tab.id && (
+                                            <div className="absolute right-4 w-1.5 h-1.5 rounded-full bg-primary animate-ping" />
+                                        )}
                                     </button>
                                 ))}
                             </nav>
@@ -748,6 +854,7 @@ function ProfileContent() {
                                                             phone: profileData.phone || "",
                                                             companyName: profileData.companyName || "",
                                                             taxCode: profileData.taxCode || "",
+                                                            experienceYears: profileData.experienceYears || "",
                                                         });
                                                         setBasicInfoError("");
                                                         setEditingBasicInfo(true);
@@ -851,6 +958,20 @@ function ProfileContent() {
                                                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Mã số thuế</p>
                                                         <p className="text-slate-900 dark:text-white font-bold">{profileData.taxCode || "—"}</p>
                                                     </div>
+                                                    <div className="sm:col-span-2">
+                                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Số năm kinh nghiệm</p>
+                                                        {editingBasicInfo ? (
+                                                            <input
+                                                                type="number"
+                                                                value={editForm.experienceYears}
+                                                                onChange={(e) => setEditForm((f) => ({ ...f, experienceYears: e.target.value }))}
+                                                                placeholder="Số năm"
+                                                                className="w-full h-11 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-bold focus:outline-none focus:ring-2 focus:ring-primary/30"
+                                                            />
+                                                        ) : (
+                                                            <p className="text-slate-900 dark:text-white font-bold">{profileData.experienceYears || 0} năm</p>
+                                                        )}
+                                                    </div>
                                                 </>
                                             )}
                                         </div>
@@ -870,7 +991,7 @@ function ProfileContent() {
                                                         </div>
                                                         <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">Hồ sơ năng lực cá nhân</h2>
                                                         <p className="text-slate-500 dark:text-slate-400 text-base leading-relaxed max-w-xl font-medium">
-                                                            Tài liệu này thể hiện uy tín và kinh nghiệm của bạn. Chúng tôi hỗ trợ cả định dạng PDF và hình ảnh chất lượng cao để đảm bảo hồ sơ của bạn luôn chuyên nghiệp nhất.
+                                                            Tài liệu này thể hiện uy tín và kinh nghiệm của bạn. Vui lòng tải lên các hình ảnh chứng chỉ hoặc hồ sơ dự án chất lượng cao.
                                                         </p>
                                                     </div>
 
@@ -878,7 +999,7 @@ function ProfileContent() {
                                                         <input
                                                             type="file"
                                                             ref={profileDocInputRef}
-                                                            accept="image/*,application/pdf"
+                                                            accept="image/*"
                                                             multiple
                                                             className="hidden"
                                                             onChange={handleProfileDocUpload}
@@ -900,7 +1021,7 @@ function ProfileContent() {
                                                         <div className="flex flex-col gap-1">
                                                             <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest flex items-center gap-2">
                                                                 <span className="material-symbols-outlined text-xs">info</span>
-                                                                Hỗ trợ JPG, PNG, PDF
+                                                                Hỗ trợ JPG, PNG, WEBP
                                                             </p>
                                                             <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest flex items-center gap-2">
                                                                 <span className="material-symbols-outlined text-xs">file_present</span>
@@ -976,51 +1097,68 @@ function ProfileContent() {
                                         </div>
                                     )}
 
-                                    {/* Lightbox Modal */}
-                                    <AnimatePresence>
-                                        {profileDocLightbox && (
-                                            <motion.div
-                                                initial={{ opacity: 0 }}
-                                                animate={{ opacity: 1 }}
-                                                exit={{ opacity: 0 }}
-                                                className="fixed inset-0 z-[9999] bg-black/98 backdrop-blur-3xl flex items-center justify-center p-6"
-                                                onClick={() => setProfileDocLightbox(null)}
-                                            >
-                                                <motion.div
-                                                    initial={{ scale: 0.9, opacity: 0, rotateX: 20 }}
-                                                    animate={{ scale: 1, opacity: 1, rotateX: 0 }}
-                                                    exit={{ scale: 0.9, opacity: 0, rotateX: 20 }}
-                                                    className="relative max-w-6xl w-full"
-                                                    onClick={(e) => e.stopPropagation()}
-                                                >
-                                                    <img
-                                                        src={profileDocLightbox}
-                                                        alt="Preview"
-                                                        className="w-full h-auto max-h-[85vh] object-contain rounded-[3rem] shadow-[0_50px_100px_rgba(0,0,0,0.8)] border border-white/5"
-                                                    />
-                                                    <div className="absolute -top-16 left-0 right-0 flex justify-between items-center px-4">
-                                                        <div className="flex items-center gap-4">
-                                                            <div className="w-10 h-10 bg-primary/20 backdrop-blur-xl rounded-2xl flex items-center justify-center border border-primary/30">
-                                                                <span className="material-symbols-outlined text-primary text-xl">verified</span>
-                                                            </div>
-                                                            <h3 className="text-white font-black text-xl tracking-tighter">Bản xác thực hồ sơ năng lực</h3>
-                                                        </div>
-                                                        <button
-                                                            onClick={() => setProfileDocLightbox(null)}
-                                                            className="w-12 h-12 bg-white/10 hover:bg-white text-white hover:text-black rounded-2xl flex items-center justify-center transition-all group"
-                                                        >
-                                                            <span className="material-symbols-outlined text-2xl group-hover:rotate-90 transition-transform">close</span>
-                                                        </button>
+                                    {/* Công trình đã làm - Portfolios */}
+                                    {(isHR || profileData?.role === 'worker' || profileData?.role === 'user') && (
+                                        <div className={cardStyle + " overflow-hidden relative"}>
+                                            <div className="relative z-10 space-y-8">
+                                                <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                                                    <div>
+                                                        <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">Hình ảnh công trình đã làm</h2>
+                                                        <p className="text-slate-500 dark:text-slate-400 text-base leading-relaxed max-w-xl font-medium">
+                                                            Trưng bày những dự án tiêu biểu mà đơn vị của bạn đã thực hiện thành công.
+                                                        </p>
                                                     </div>
-                                                </motion.div>
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowPortfolioModal(true)}
+                                                        className="px-6 py-3 bg-primary text-white rounded-xl font-black text-sm flex items-center gap-2 shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all"
+                                                    >
+                                                        <span className="material-symbols-outlined">add_circle</span>
+                                                        Thêm công trình
+                                                    </button>
+                                                </div>
+
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                                    {profileData.portfolios?.length > 0 ? (
+                                                        profileData.portfolios.map((item: any, index: number) => (
+                                                            <div key={index} className="group relative rounded-[2rem] overflow-hidden bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 shadow-xl transition-all duration-500 hover:border-primary/50">
+                                                                <div className="aspect-video relative overflow-hidden">
+                                                                    <img src={item.image} alt={item.title} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
+                                                                    <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+                                                                        <h4 className="text-white font-black text-sm truncate">{item.title}</h4>
+                                                                    </div>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleDeletePortfolio(index)}
+                                                                        className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center shadow-lg"
+                                                                    >
+                                                                        <span className="material-symbols-outlined text-sm">delete</span>
+                                                                    </button>
+                                                                </div>
+                                                                {item.description && (
+                                                                    <div className="p-4">
+                                                                        <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{item.description}</p>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        ))
+                                                    ) : (
+                                                        <div className="col-span-full h-40 bg-slate-50 dark:bg-slate-800/20 rounded-[2rem] border-2 border-dashed border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center text-slate-400">
+                                                            <span className="material-symbols-outlined text-4xl mb-2">construction</span>
+                                                            <p className="text-xs font-black uppercase tracking-widest">Chưa có công trình nào được thêm</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+
 
                                     <div className={cardStyle}>
                                         <h2 className="text-xl font-black text-slate-900 dark:text-white mb-4 tracking-tight">Tóm tắt năng lực</h2>
                                         <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed italic font-medium">
-                                            &quot;Tận tâm với sự xuất sắc trong kỹ thuật xây dựng. Làm chủ sự giao thoa giữa tính toàn vẹn cấu trúc truyền thống và độ chính xác kiến trúc hiện đại. Với hơn {MOCK_WORKER_STATS.experienceYears} năm thực chiến thành công trong các dự án công nghiệp quy mô lớn.&quot;
+                                            &quot;Tận tâm với sự xuất sắc trong kỹ thuật xây dựng. Làm chủ sự giao thoa giữa tính toàn vẹn cấu trúc truyền thống và độ chính xác kiến trúc hiện đại. Với hơn {profileData.experienceYears || 0} năm thực chiến thành công trong các dự án công nghiệp quy mô lớn.&quot;
                                         </p>
 
                                         <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1029,7 +1167,7 @@ function ProfileContent() {
                                                     <span className="w-1 h-5 bg-primary rounded-full" /> Thẻ kỹ năng chuyên sâu
                                                 </h4>
                                                 <div className="flex flex-wrap gap-3">
-                                                    {MOCK_WORKER_STATS.skills.map(skill => (
+                                                    {(profileData.skills?.length > 0 ? profileData.skills : ["Chưa cập nhật kỹ năng"]).map((skill: string) => (
                                                         <span key={skill} className="px-3 py-1 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg font-semibold text-xs border border-slate-100 dark:border-slate-800 shadow-sm">
                                                             {skill}
                                                         </span>
@@ -1046,91 +1184,20 @@ function ProfileContent() {
                                                     </div>
                                                     <div>
                                                         <p className="text-sm font-black text-emerald-700 dark:text-emerald-400">Sẵn sàng làm việc</p>
-                                                        <p className="text-[10px] font-bold text-emerald-600/50 uppercase tracking-widest">{MOCK_WORKER_STATS.availability}</p>
+                                                        <p className="text-[10px] font-bold text-emerald-600/50 uppercase tracking-widest">Active</p>
                                                     </div>
                                                 </div>
                                             </div>
 
-                                            {/* Worker Reviews Section */}
-                                            <div className={cardStyle}>
-                                                <div className="flex items-center justify-between mb-8">
-                                                    <div>
-                                                        <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Đánh giá từ đối tác</h2>
-                                                        <p className="text-slate-400 font-bold uppercase text-[9px] tracking-[0.3em] mt-1">Phản hồi thực tế từ các công trình</p>
-                                                    </div>
-                                                    <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-500/5 rounded-xl border border-amber-500/10">
-                                                        <span className="material-symbols-outlined text-amber-500 fill-1 text-xl">star</span>
-                                                        <span className="text-lg font-black text-amber-600 dark:text-amber-400">
-                                                            {(() => {
-                                                                const avg = Number(profileData?.averageRating);
-                                                                return !Number.isNaN(avg) && avg > 0 ? avg.toFixed(1) : "—";
-                                                            })()}
-                                                        </span>
-                                                    </div>
-                                                </div>
-
-                                                {reviewsLoading ? (
-                                                    <div className="flex flex-col items-center justify-center py-12 space-y-4">
-                                                        <div className="w-10 h-10 border-4 border-primary border-t-transparent animate-spin rounded-full" />
-                                                        <p className="text-[10px] font-black tracking-[0.3em] uppercase text-slate-400">Đang tải đánh giá...</p>
-                                                    </div>
-                                                ) : reviews.length === 0 ? (
-                                                    <div className="text-center py-12 bg-slate-50 dark:bg-slate-800/20 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
-                                                        <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
-                                                            <span className="material-symbols-outlined text-3xl text-slate-300">chat_bubble</span>
-                                                        </div>
-                                                        <h4 className="text-slate-900 dark:text-white font-black text-sm mb-1">Chưa có đánh giá nào</h4>
-                                                        <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Hoàn thành nhiều dự án hơn để nhận phản hồi</p>
-                                                    </div>
-                                                ) : (
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                        {reviews.map((review: any) => (
-                                                            <div key={review._id} className="p-6 bg-slate-50 dark:bg-slate-800/20 rounded-2xl border border-slate-100 dark:border-slate-800/40 hover:bg-white dark:hover:bg-slate-800/30 transition-all group">
-                                                                <div className="flex items-start gap-4 mb-4">
-                                                                    <div className="w-12 h-12 rounded-xl bg-white dark:bg-slate-800 overflow-hidden border-2 border-white dark:border-slate-700 shadow-sm flex-shrink-0">
-                                                                        {review.reviewerId?.avatar ? (
-                                                                            <img src={review.reviewerId.avatar} alt="Reviewer" className="w-full h-full object-cover" />
-                                                                        ) : (
-                                                                            <div className="w-full h-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                                                                                <span className="material-symbols-outlined text-slate-300 text-xl">person</span>
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                    <div className="flex-grow">
-                                                                        <div className="flex items-center justify-between mb-0.5">
-                                                                            <h4 className="text-sm font-black text-slate-900 dark:text-white">
-                                                                                {review.reviewerId?.firstName} {review.reviewerId?.lastName}
-                                                                            </h4>
-                                                                            <div className="flex gap-0.5">
-                                                                                {[...Array(5)].map((_, i) => (
-                                                                                    <span key={i} className={`material-symbols-outlined text-[14px] ${i < review.rating ? 'text-amber-500 fill-1' : 'text-slate-200 dark:text-slate-700'}`}>star</span>
-                                                                                ))}
-                                                                            </div>
-                                                                        </div>
-                                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{review.jobId?.title || "Dự án đã tham gia"}</p>
-                                                                    </div>
-                                                                </div>
-                                                                <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed italic">&quot;{review.comment || "Đánh giá tuyệt vời về đối tác này!"}&quot;</p>
-                                                                <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800/40 flex items-center justify-between">
-                                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">{new Date(review.createdAt).toLocaleDateString('vi-VN')}</span>
-                                                                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 dark:bg-emerald-500/5 rounded-md border border-emerald-500/10">
-                                                                        <span className="material-symbols-outlined text-emerald-500 text-[12px]">verified</span>
-                                                                        <span className="text-[8px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Đã xác thực</span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
+                                            {/* Reviews moved to Activity Tab */}
                                         </div>
                                     </div>
 
                                     {/* Stats Matrix */}
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                         {[
-                                            { label: "Dự án hoàn thành", value: "248", icon: "task_alt" },
-                                            { label: "Chỉ số chính xác", value: "9.9", icon: "precision_manufacturing" },
+                                            { label: "Dự án hoàn thành", value: isHR ? (profileData.totalJobsPosted || 0).toString() : (profileData.jobsCompleted || 0).toString(), icon: "task_alt" },
+                                            { label: "Sao đánh giá", value: Number(profileData.averageRating) > 0 ? profileData.averageRating.toFixed(1) : "—", icon: "precision_manufacturing" },
                                             { label: "Độ phủ mạng lưới", value: "A+", icon: "hub" }
                                         ].map((stat, i) => (
                                             <div key={i} className={cardStyle + " text-center group"}>
@@ -1153,6 +1220,79 @@ function ProfileContent() {
                                     animate={{ opacity: 1, y: 0 }}
                                     className="space-y-8"
                                 >
+                                    {/* Worker Reviews Section */}
+                                    <div className={cardStyle}>
+                                        <div className="flex items-center justify-between mb-8">
+                                            <div>
+                                                <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Đánh giá & Uy tín</h2>
+                                                <p className="text-slate-400 font-bold uppercase text-[9px] tracking-[0.3em] mt-1">Phản hồi thực tế từ các công trình</p>
+                                            </div>
+                                            <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-500/5 rounded-xl border border-amber-500/10">
+                                                <span className="material-symbols-outlined text-amber-500 fill-1 text-xl">star</span>
+                                                <span className="text-lg font-black text-amber-600 dark:text-amber-400">
+                                                    {(() => {
+                                                        const avg = Number(profileData?.averageRating);
+                                                        return !Number.isNaN(avg) && avg > 0 ? avg.toFixed(1) : "—";
+                                                    })()}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {reviewsLoading ? (
+                                            <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                                                <div className="w-10 h-10 border-4 border-primary border-t-transparent animate-spin rounded-full" />
+                                                <p className="text-[10px] font-black tracking-[0.3em] uppercase text-slate-400">Đang tải đánh giá...</p>
+                                            </div>
+                                        ) : reviews.length === 0 ? (
+                                            <div className="text-center py-12 bg-slate-50 dark:bg-slate-800/20 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                                                <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
+                                                    <span className="material-symbols-outlined text-3xl text-slate-300">chat_bubble</span>
+                                                </div>
+                                                <h4 className="text-slate-900 dark:text-white font-black text-sm mb-1">Chưa có đánh giá nào</h4>
+                                                <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Hoàn thành nhiều dự án hơn để nhận phản hồi</p>
+                                            </div>
+                                        ) : (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {reviews.map((review: any) => (
+                                                    <div key={review._id} className="p-6 bg-slate-50/50 dark:bg-slate-800/20 rounded-2xl border border-slate-100 dark:border-slate-800/40 hover:bg-white dark:hover:bg-slate-800/30 transition-all group overflow-hidden">
+                                                        <div className="flex items-start gap-4 mb-4">
+                                                            <div className="w-12 h-12 rounded-xl bg-white dark:bg-slate-800 overflow-hidden border-2 border-white dark:border-slate-700 shadow-sm flex-shrink-0">
+                                                                {review.reviewerId?.avatar ? (
+                                                                    <img src={review.reviewerId.avatar} alt="Reviewer" className="w-full h-full object-cover" />
+                                                                ) : (
+                                                                    <div className="w-full h-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                                                                        <span className="material-symbols-outlined text-slate-300 text-xl">person</span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-0.5">
+                                                                    <h4 className="text-sm font-black text-slate-900 dark:text-white truncate">
+                                                                        {review.reviewerId?.firstName} {review.reviewerId?.lastName}
+                                                                    </h4>
+                                                                    <div className="flex gap-0.5 shrink-0">
+                                                                        {[...Array(5)].map((_, i) => (
+                                                                            <span key={i} className={`material-symbols-outlined text-[12px] ${i < review.rating ? 'text-amber-500 fill-1' : 'text-slate-200 dark:text-slate-700'}`}>star</span>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">{review.jobId?.title || "Dự án đã tham gia"}</p>
+                                                            </div>
+                                                        </div>
+                                                        <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed italic line-clamp-2">&quot;{review.comment || "Đánh giá tuyệt vời về đối tác này!"}&quot;</p>
+                                                        <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800/40 flex items-center justify-between">
+                                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">{new Date(review.createdAt).toLocaleDateString('vi-VN')}</span>
+                                                            <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 dark:bg-emerald-500/5 rounded-md border border-emerald-500/10">
+                                                                <span className="material-symbols-outlined text-emerald-500 text-[12px]">verified</span>
+                                                                <span className="text-[8px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Đã xác thực</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                    
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                                         {activitiesLoading ? (
                                             <div className="col-span-full flex justify-center py-12">
@@ -1192,17 +1332,16 @@ function ProfileContent() {
                                     {/* Follower Stats Section */}
                                     <div className={cardStyle + " flex flex-wrap justify-between items-center gap-5"}>
                                         <div className="text-center md:text-left">
-                                            <p className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">{MOCK_WORKER_STATS.social.followers}</p>
-                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.3em]">Industry Peers Following</p>
+                                            <p className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">Verified</p>
+                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.3em]">Xác thực tài khoản</p>
                                         </div>
-                                        <div className="flex -space-x-4">
-                                            {[1, 2, 3, 4, 5].map(i => (
-                                                <div key={i} className="w-10 h-10 rounded-full border-2 border-white dark:border-slate-900 bg-slate-200 overflow-hidden shadow-lg">
-                                                    <img src={`https://i.pravatar.cc/150?u=${i}`} alt="Peer" />
-                                                </div>
-                                            ))}
-                                            <div className="w-10 h-10 rounded-full border-2 border-white dark:border-slate-900 bg-primary text-white flex items-center justify-center font-black text-xs shadow-lg">
-                                                +2K
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
+                                                <span className="material-symbols-outlined text-emerald-500 text-2xl">verified</span>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">Cộng đồng tin cậy</p>
+                                                <p className="text-[10px] font-bold text-slate-400">Giao lưu cùng chuyên gia hàng đầu</p>
                                             </div>
                                         </div>
                                     </div>
@@ -1265,22 +1404,22 @@ function ProfileContent() {
                                                                     </span>
                                                                 </div>
                                                             </div>
-                                                            <div className="text-right flex flex-col justify-between">
-                                                                <div className="flex items-center gap-2 justify-end text-emerald-500 font-black text-[10px] uppercase tracking-widest">
-                                                                    <span className="material-symbols-outlined text-lg">verified</span>
-                                                                    Hợp đồng {statusStr === "COMPLETED" ? "đã hoàn thành" : 
-                                                                              statusStr === "APPROVED" ? "đang tuyển" : 
-                                                                              statusStr === "COMPLETION_PENDING" ? "chờ xác nhận" : 
-                                                                              statusStr === "HIRED" ? "đang tham gia" : statusStr}
+                                                                    <div className="text-right flex flex-col justify-between shrink-0">
+                                                                        <div className={`flex items-center gap-2 justify-end font-black text-[10px] uppercase tracking-widest ${statusStr === "COMPLETED" ? "text-emerald-500" : "text-amber-500"}`}>
+                                                                            <span className="material-symbols-outlined text-lg">{statusStr === "COMPLETED" ? "verified" : "auto_stories"}</span>
+                                                                            {statusStr === "COMPLETED" ? "Đã hoàn thành" : 
+                                                                             statusStr === "APPROVED" ? "Đang tuyển" : 
+                                                                             statusStr === "COMPLETION_PENDING" ? "Chờ xác nhận" : 
+                                                                             statusStr === "HIRED" ? "Đang tham gia" : statusStr}
+                                                                        </div>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                    </div>
+                                                    );
+                                                    })}
                                                 </div>
-                                            );
-                                            })}
-                                        </div>
-                                    </div>
+                                            </div>
                                 </motion.div>
                             )}
 
@@ -1324,97 +1463,100 @@ function ProfileContent() {
                                                     const company = hr?.companyName || (hr?.firstName ? `${hr.firstName} ${hr.lastName || ""}`.trim() : "Nhà tuyển dụng");
                                                     const location = j?.location?.province || "Việt Nam";
                                                     const statusLabel: Record<string, string> = {
-                                                        APPLIED: "Đã gửi",
-                                                        ACCEPTED: "Đã chấp nhận",
-                                                        REJECTED: "Bị từ chối",
-                                                        HIRED: "Đã nhận việc",
-                                                        COMPLETION_PENDING: "Chờ xác nhận hoàn thành",
-                                                        COMPLETED: "Hoàn thành",
+                                                        APPLIED: "Đã gửi hồ sơ",
+                                                        ACCEPTED: "Đang xem xét",
+                                                        REJECTED: "Từ chối",
+                                                        HIRED: "Đang thực hiện",
+                                                        COMPLETION_PENDING: "Chờ xác nhận",
+                                                        COMPLETED: "Hoàn tất",
                                                     };
                                                     const statusText = statusLabel[app.status] ?? app.status;
+                                                    const isSuccess = app.status === 'COMPLETED' || app.status === 'HIRED';
                                                     return (
                                                         <div
                                                             key={app._id}
-                                                            className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/20 border border-slate-100 dark:border-slate-800/40 hover:bg-white dark:hover:bg-slate-800/30 transition-all"
+                                                            className="p-6 rounded-2xl bg-white dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60 transition-all hover:shadow-lg hover:border-primary/20 group"
                                                         >
-                                                            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                                                                <div className="min-w-0">
-                                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">
-                                                                        {company} • {location}
-                                                                    </p>
-                                                                    <p className="text-base font-black text-slate-900 dark:text-white truncate">
+                                                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                                                                <div className="min-w-0 flex-1">
+                                                                    <div className="flex items-center gap-3 mb-2">
+                                                                        <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 text-[8px] font-black uppercase tracking-widest rounded">#{j?._id?.slice(-6) || "JOB"}</span>
+                                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] truncate">
+                                                                            {company} • {location}
+                                                                        </p>
+                                                                    </div>
+                                                                    <h4 className="text-lg font-black text-slate-900 dark:text-white truncate mb-1 group-hover:text-primary transition-colors">
                                                                         {j?.title || "Công việc"}
-                                                                    </p>
-                                                                    <p className="text-xs font-bold text-slate-400 mt-1">
-                                                                        Ứng tuyển: {app.appliedAt ? new Date(app.appliedAt).toLocaleDateString("vi-VN") : "—"}
-                                                                    </p>
-                                                                    {(() => {
-                                                                        const stars = Number(app.hrRating);
-                                                                        if (!Number.isNaN(stars) && stars > 0) return (
-                                                                            <p className="text-xs font-bold text-amber-600 dark:text-amber-400 mt-1 inline-flex items-center gap-1">
-                                                                                <span className="material-symbols-outlined text-amber-500 text-sm fill-amber-500">star</span>
-                                                                                {stars.toFixed(1)} (nhà tuyển dụng đã đánh giá)
-                                                                            </p>
-                                                                        );
-                                                                        return null;
-                                                                    })()}
+                                                                    </h4>
+                                                                    <div className="flex flex-wrap items-center gap-4 text-xs font-bold text-slate-400 mt-2">
+                                                                        <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm">calendar_month</span> {app.appliedAt ? new Date(app.appliedAt).toLocaleDateString("vi-VN") : "—"}</span>
+                                                                        {Number(app.hrRating) > 0 && (
+                                                                            <span className="px-2 py-0.5 bg-amber-50 dark:bg-amber-500/5 text-amber-600 dark:text-amber-400 rounded-md border border-amber-500/10 flex items-center gap-1 animate-pulse">
+                                                                                <span className="material-symbols-outlined text-xs fill-1">star</span>
+                                                                                {Number(app.hrRating).toFixed(1)}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
                                                                     {app.status === "REJECTED" && app.decisionReason && (
-                                                                        <p className="text-xs font-bold text-red-600 dark:text-red-400 mt-2">Lý do: {app.decisionReason}</p>
+                                                                        <div className="mt-3 p-3 bg-red-50 dark:bg-red-500/5 rounded-xl border border-red-500/10">
+                                                                            <p className="text-xs font-bold text-red-600 dark:text-red-400">Phản hồi: {app.decisionReason}</p>
+                                                                        </div>
                                                                     )}
                                                                 </div>
-                                                                <div className="flex items-center gap-3 flex-wrap">
-                                                                    <span className="px-4 py-2 rounded-full text-xs font-black bg-primary/10 text-primary">
+                                                                <div className="flex items-center gap-3 flex-wrap md:flex-nowrap shrink-0">
+                                                                    <div className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border ${
+                                                                        app.status === 'COMPLETED' ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" :
+                                                                        app.status === 'REJECTED' ? "bg-red-500/10 text-red-500 border-red-500/20" :
+                                                                        "bg-primary/10 text-primary border-primary/20"
+                                                                    }`}>
                                                                         {statusText}
-                                                                    </span>
-                                                                    {/* Worker bấm xác nhận -> COMPLETION_PENDING -> HR xác nhận -> COMPLETED */}
-                                                                    {app.status === "HIRED" && (
-                                                                        <ConfirmCompleteButton
-                                                                            jobId={j?._id}
-                                                                            applicationId={app._id}
-                                                                            onSuccess={() => loadApplied()}
-                                                                        />
-                                                                    )}
-                                                                    {app.status === "COMPLETION_PENDING" && (
-                                                                        <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-black bg-blue-500/10 text-blue-600 dark:text-blue-400 cursor-not-allowed select-none">
-                                                                            <span className="material-symbols-outlined text-base">hourglass_top</span>
-                                                                            Đợi HR xác nhận hoàn thành
-                                                                        </span>
-                                                                    )}
-                                                                    {app.status === "COMPLETED" && !app.hasWorkerReviewed && (
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => {
-                                                                                setReviewModalApp(app);
-                                                                                setReviewRating(5);
-                                                                                setReviewComment("");
-                                                                                setReviewError("");
-                                                                            }}
-                                                                            className="px-4 py-2 rounded-full text-xs font-black bg-amber-500/20 text-amber-700 dark:text-amber-400 hover:bg-amber-500/30 transition-all inline-flex items-center gap-1.5"
-                                                                        >
-                                                                            <span className="material-symbols-outlined text-sm">rate_review</span>
-                                                                            Đánh giá HR
-                                                                        </button>
-                                                                    )}
-                                                                    {app.status === "COMPLETED" && app.hasWorkerReviewed && (
-                                                                        <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10">
-                                                                            <span className="material-symbols-outlined text-sm">check_circle</span>
-                                                                            Đã đánh giá
-                                                                        </span>
-                                                                    )}
-                                                                    {j?._id && (
-                                                                        <Link
-                                                                            href={`/jobs/${j._id}`}
-                                                                            className="px-4 py-2 rounded-full text-xs font-black bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:opacity-90 transition-all"
-                                                                        >
-                                                                            Xem job
-                                                                        </Link>
-                                                                    )}
-                                                                    {(app.hrId || (hr as any)?._id) && (
-                                                                        <OpenChatButton
-                                                                            hrId={(hr as any)?._id ?? app.hrId}
-                                                                            companyName={company}
-                                                                        />
-                                                                    )}
+                                                                    </div>
+                                                                    
+                                                                    <div className="flex items-center gap-2">
+                                                                        {app.status === "HIRED" && (
+                                                                            <ConfirmCompleteButton
+                                                                                jobId={j?._id}
+                                                                                applicationId={app._id}
+                                                                                onSuccess={() => loadApplied()}
+                                                                            />
+                                                                        )}
+                                                                        {app.status === "COMPLETION_PENDING" && (
+                                                                            <span className="h-10 flex items-center gap-2 px-4 rounded-xl text-[10px] font-black bg-slate-100 dark:bg-slate-800 text-slate-500 animate-pulse border border-slate-200 dark:border-slate-700">
+                                                                                <span className="material-symbols-outlined text-sm">hourglass_empty</span>
+                                                                                ĐỢI XÁC NHẬN
+                                                                            </span>
+                                                                        )}
+                                                                        {app.status === "COMPLETED" && !app.hasWorkerReviewed && (
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => {
+                                                                                    setReviewModalApp(app);
+                                                                                    setReviewRating(5);
+                                                                                    setReviewComment("");
+                                                                                    setReviewError("");
+                                                                                }}
+                                                                                className="h-10 px-5 rounded-xl font-black bg-amber-500 text-white shadow-lg shadow-amber-500/30 hover:scale-[1.05] transition-all text-[10px] uppercase tracking-widest flex items-center gap-2"
+                                                                            >
+                                                                                <span className="material-symbols-outlined text-sm">rate_review</span>
+                                                                                Đánh giá
+                                                                            </button>
+                                                                        )}
+                                                                        {j?._id && (
+                                                                            <Link
+                                                                                href={`/jobs/${j._id}`}
+                                                                                className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:scale-[1.05] transition-all border border-slate-100 dark:border-slate-800 shadow-md"
+                                                                                title="Chi tiết công việc"
+                                                                            >
+                                                                                <span className="material-symbols-outlined text-xl">open_in_new</span>
+                                                                            </Link>
+                                                                        )}
+                                                                        {(app.hrId || (hr as any)?._id) && (
+                                                                            <OpenChatButton
+                                                                                hrId={(hr as any)?._id ?? app.hrId}
+                                                                                companyName={company}
+                                                                            />
+                                                                        )}
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -1593,143 +1735,299 @@ function ProfileContent() {
                 </div >
             </div >
 
-            {/* Modal: Đánh giá HR (worker) */}
-            {
-                reviewModalApp && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => !reviewSubmitting && setReviewModalApp(null)}>
-                        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
-                            <h3 className="text-lg font-black text-slate-900 dark:text-white mb-1">Đánh giá nhà tuyển dụng</h3>
-                            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-                                {reviewModalApp.jobId?.title || "Công việc"} — {reviewModalApp.jobId?.hrId?.companyName || "Nhà tuyển dụng"}
-                            </p>
-                            <div className="mb-4">
-                                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Điểm (1–5 sao)</p>
-                                <div className="flex gap-2">
-                                    {[1, 2, 3, 4, 5].map((n) => (
-                                        <button
-                                            key={n}
-                                            type="button"
-                                            onClick={() => setReviewRating(n)}
-                                            className={`w-10 h-10 rounded-full font-black text-sm transition-all ${reviewRating >= n ? "bg-amber-400 text-amber-900" : "bg-slate-100 dark:bg-slate-800 text-slate-400"}`}
+            {/* Portfolio Add Modal */}
+            {mounted && typeof document !== "undefined" && createPortal(
+                <AnimatePresence mode="wait">
+                    {showPortfolioModal && (
+                        <div key="portfolio-modal" className="fixed inset-0 z-[10001] flex items-center justify-center p-4" onClick={() => setShowPortfolioModal(false)}>
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                            />
+                            <motion.div
+                                initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                                animate={{ scale: 1, opacity: 1, y: 0 }}
+                                exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                                onClick={(e) => e.stopPropagation()}
+                                className="relative bg-white dark:bg-slate-900 w-full max-w-lg rounded-[2.5rem] p-8 shadow-2xl border border-slate-100 dark:border-slate-800 max-h-[90vh] overflow-y-auto"
+                            >
+                                <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-6">Thêm công trình tiêu biểu</h3>
+                                <div className="space-y-5">
+                                    <div>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Tên công trình</label>
+                                        <input
+                                            type="text"
+                                            value={portfolioForm.title}
+                                            onChange={e => setPortfolioForm(prev => ({ ...prev, title: e.target.value }))}
+                                            placeholder="Ví dụ: Căn hộ cao cấp Sky Villa"
+                                            className="w-full h-12 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-bold focus:outline-none focus:ring-2 focus:ring-primary/30"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Mô tả ngắn</label>
+                                        <textarea
+                                            value={portfolioForm.description}
+                                            onChange={e => setPortfolioForm(prev => ({ ...prev, description: e.target.value }))}
+                                            placeholder="Mô tả qua về quy mô hoặc đặc điểm..."
+                                            className="w-full h-24 p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-bold focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Hình ảnh</label>
+                                        <div
+                                            onClick={() => portfolioImageInputRef.current?.click()}
+                                            className="w-full aspect-video rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center overflow-hidden cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all relative group"
                                         >
-                                            {n}
-                                        </button>
-                                    ))}
+                                            {portfolioForm.image ? (
+                                                <>
+                                                    <img src={portfolioForm.image} alt="Preview" className="w-full h-full object-cover" />
+                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                        <span className="text-white font-black text-xs uppercase tracking-widest">Thay đổi ảnh</span>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <span className="material-symbols-outlined text-3xl text-slate-300 mb-2">add_photo_alternate</span>
+                                                    <p className="text-[10px] font-black text-slate-400 tracking-widest uppercase">Click để tải ảnh</p>
+                                                </>
+                                            )}
+                                            {portfolioUploading && (
+                                                <div className="absolute inset-0 bg-white/60 dark:bg-slate-900/60 flex items-center justify-center">
+                                                    <span className="material-symbols-outlined animate-spin text-primary text-2xl">progress_activity</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <input
+                                            type="file"
+                                            ref={portfolioImageInputRef}
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={handlePortfolioImageUpload}
+                                        />
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="mb-4">
-                                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Nhận xét (tùy chọn)</label>
-                                <textarea
-                                    value={reviewComment}
-                                    onChange={(e) => setReviewComment(e.target.value)}
-                                    placeholder="Viết vài dòng về trải nghiệm làm việc..."
-                                    className="w-full h-24 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 text-sm resize-none"
-                                />
-                            </div>
-                            {reviewError && <p className="text-sm text-red-500 mb-3">{reviewError}</p>}
-                            <div className="flex gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => !reviewSubmitting && setReviewModalApp(null)}
-                                    className="flex-1 py-2.5 rounded-xl font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
-                                >
-                                    Hủy
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={submitReview}
-                                    disabled={reviewSubmitting}
-                                    className="flex-1 py-2.5 rounded-xl font-bold bg-primary text-white hover:opacity-90 disabled:opacity-50 transition-all"
-                                >
-                                    {reviewSubmitting ? "Đang gửi..." : "Gửi đánh giá"}
-                                </button>
-                            </div>
+
+                                <div className="flex gap-4 mt-8">
+                                    <button
+                                        onClick={() => setShowPortfolioModal(false)}
+                                        className="flex-1 h-12 rounded-xl border-2 border-slate-100 dark:border-slate-800 font-bold text-slate-500 hover:bg-slate-50 transition-all"
+                                    >
+                                        Hủy
+                                    </button>
+                                    <button
+                                        onClick={handleSavePortfolio}
+                                        disabled={portfolioSaving || portfolioUploading}
+                                        className="flex-1 h-12 rounded-xl bg-primary text-white font-black shadow-lg shadow-primary/20 hover:opacity-90 transition-all disabled:opacity-50"
+                                    >
+                                        {portfolioSaving ? 'Đang lưu...' : 'Lưu dự án'}
+                                    </button>
+                                </div>
+                            </motion.div>
                         </div>
-                    </div>
-                )
-            }
-            {/* Modal: Avatar Crop */}
-            <AnimatePresence>
-                {showCropModal && cropImage && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[10000] bg-black/98 backdrop-blur-2xl flex flex-col items-center justify-center p-4 md:p-8"
-                    >
+                    )}
+                </AnimatePresence>,
+                document.body
+            )}
+
+            {/* Lightbox Modal */}
+            {mounted && typeof document !== "undefined" && createPortal(
+                <AnimatePresence mode="wait">
+                    {profileDocLightbox && (
                         <motion.div
-                            initial={{ scale: 0.9, y: 20 }}
-                            animate={{ scale: 1, y: 0 }}
-                            exit={{ scale: 0.9, y: 20 }}
-                            className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-[3rem] overflow-hidden shadow-2xl flex flex-col h-[85vh] md:h-[75vh] border border-white/10"
+                            key="profile-doc-lightbox"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-[10001] bg-black/98 backdrop-blur-3xl flex items-center justify-center p-6"
+                            onClick={() => setProfileDocLightbox(null)}
                         >
-                            <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-white dark:bg-slate-900 z-20">
-                                <div>
-                                    <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">Căn chỉnh ảnh đại diện</h3>
-                                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mt-2 flex items-center gap-2">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                                        Sử dụng chuột hoặc cảm ứng để kéo ảnh
-                                    </p>
-                                </div>
-                                <button
-                                    onClick={() => setShowCropModal(false)}
-                                    className="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all hover:rotate-90"
-                                >
-                                    <span className="material-symbols-outlined text-2xl">close</span>
-                                </button>
-                            </div>
-
-                            <div className="relative flex-1 bg-black overflow-hidden">
-                                <Cropper
-                                    image={cropImage}
-                                    crop={crop}
-                                    zoom={zoom}
-                                    aspect={1}
-                                    onCropChange={setCrop}
-                                    onCropComplete={(_, pixels) => setCroppedAreaPixels(pixels)}
-                                    onZoomChange={setZoom}
-                                    cropShape="round"
-                                    showGrid={false}
+                            <motion.div
+                                initial={{ scale: 0.9, opacity: 0, rotateX: 20 }}
+                                animate={{ scale: 1, opacity: 1, rotateX: 0 }}
+                                exit={{ scale: 0.9, opacity: 0, rotateX: 20 }}
+                                className="relative max-w-6xl w-full"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <img
+                                    src={profileDocLightbox || ""}
+                                    alt="Preview"
+                                    className="w-full h-auto max-h-[85vh] object-contain rounded-[3rem] shadow-[0_50px_100px_rgba(0,0,0,0.8)] border border-white/5"
                                 />
-                            </div>
-
-                            <div className="p-10 space-y-10 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 z-20">
-                                <div className="flex items-center gap-8">
-                                    <span className="material-symbols-outlined text-slate-400 text-2xl">zoom_out</span>
-                                    <input
-                                        type="range"
-                                        value={zoom}
-                                        min={1}
-                                        max={3}
-                                        step={0.1}
-                                        aria-labelledby="Zoom"
-                                        onChange={(e) => setZoom(Number(e.target.value))}
-                                        className="flex-1 h-2 bg-slate-100 dark:bg-slate-800 rounded-full appearance-none cursor-pointer accent-primary"
-                                    />
-                                    <span className="material-symbols-outlined text-slate-400 text-2xl">zoom_in</span>
-                                </div>
-
-                                <div className="flex gap-4">
+                                <div className="absolute -top-16 left-0 right-0 flex justify-between items-center px-4">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 bg-primary/20 backdrop-blur-xl rounded-2xl flex items-center justify-center border border-primary/30">
+                                            <span className="material-symbols-outlined text-primary text-xl">verified</span>
+                                        </div>
+                                        <h3 className="text-white font-black text-xl tracking-tighter">Bản xác thực hồ sơ năng lực</h3>
+                                    </div>
                                     <button
-                                        type="button"
-                                        onClick={() => setShowCropModal(false)}
-                                        className="flex-1 py-5 px-8 rounded-[1.5rem] font-black text-slate-500 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all text-xs tracking-[0.2em]"
+                                        onClick={() => setProfileDocLightbox(null)}
+                                        className="w-12 h-12 bg-white/10 hover:bg-white text-white hover:text-black rounded-2xl flex items-center justify-center transition-all group"
                                     >
-                                        HỦY BỎ
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={handleCropConfirm}
-                                        className="flex-1 py-5 px-8 rounded-[1.5rem] font-black text-white bg-primary shadow-2xl shadow-primary/40 hover:scale-[1.02] active:scale-95 transition-all text-xs tracking-[0.2em]"
-                                    >
-                                        CẮT & LƯU ẢNH
+                                        <span className="material-symbols-outlined text-2xl group-hover:rotate-90 transition-transform">close</span>
                                     </button>
                                 </div>
-                            </div>
+                            </motion.div>
                         </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                    )}
+                </AnimatePresence>,
+                document.body
+            )}
+
+            {/* Modal: Đánh giá HR (worker) */}
+            {mounted && typeof document !== "undefined" && createPortal(
+                <AnimatePresence mode="wait">
+                    {reviewModalApp && (
+                        <div key="review-modal" className="fixed inset-0 z-[10001] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => !reviewSubmitting && setReviewModalApp(null)}>
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.9 }}
+                                className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 max-w-md w-full p-6"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <h3 className="text-lg font-black text-slate-900 dark:text-white mb-1">Đánh giá nhà tuyển dụng</h3>
+                                <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+                                    {reviewModalApp.jobId?.title || "Công việc"} — {reviewModalApp.jobId?.hrId?.companyName || "Nhà tuyển dụng"}
+                                </p>
+                                <div className="mb-4">
+                                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Điểm (1–5 sao)</p>
+                                    <div className="flex gap-2">
+                                        {[1, 2, 3, 4, 5].map((n) => (
+                                            <button
+                                                key={n}
+                                                type="button"
+                                                onClick={() => setReviewRating(n)}
+                                                className={`w-10 h-10 rounded-full font-black text-sm transition-all ${reviewRating >= n ? "bg-amber-400 text-amber-900" : "bg-slate-100 dark:bg-slate-800 text-slate-400"}`}
+                                            >
+                                                {n}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="mb-4">
+                                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Nhận xét (tùy chọn)</label>
+                                    <textarea
+                                        value={reviewComment}
+                                        onChange={(e) => setReviewComment(e.target.value)}
+                                        placeholder="Viết vài dòng về trải nghiệm làm việc..."
+                                        className="w-full h-24 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 text-sm resize-none"
+                                    />
+                                </div>
+                                {reviewError && <p className="text-sm text-red-500 mb-3">{reviewError}</p>}
+                                <div className="flex gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => !reviewSubmitting && setReviewModalApp(null)}
+                                        className="flex-1 py-2.5 rounded-xl font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+                                    >
+                                        Hủy
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={submitReview}
+                                        disabled={reviewSubmitting}
+                                        className="flex-1 py-2.5 rounded-xl font-bold bg-primary text-white hover:opacity-90 disabled:opacity-50 transition-all"
+                                    >
+                                        {reviewSubmitting ? "Đang gửi..." : "Gửi đánh giá"}
+                                    </button>
+                                </div>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>,
+                document.body
+            )}
+
+            {/* Modal: Avatar Crop */}
+            {mounted && typeof document !== "undefined" && createPortal(
+                <AnimatePresence mode="wait">
+                    {showCropModal && cropImage && (
+                        <motion.div
+                            key="avatar-crop-modal"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-[10001] bg-black/98 backdrop-blur-2xl flex flex-col items-center justify-center p-4 md:p-8"
+                        >
+                            <motion.div
+                                initial={{ scale: 0.9, y: 20 }}
+                                animate={{ scale: 1, y: 0 }}
+                                exit={{ scale: 0.9, y: 20 }}
+                                className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-[3rem] overflow-hidden shadow-2xl flex flex-col h-[85vh] md:h-[75vh] border border-white/10"
+                            >
+                                <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-white dark:bg-slate-900 z-20">
+                                    <div>
+                                        <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">Căn chỉnh ảnh đại diện</h3>
+                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mt-2 flex items-center gap-2">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                                            Sử dụng chuột hoặc cảm ứng để kéo ảnh
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={() => setShowCropModal(false)}
+                                        className="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all hover:rotate-90"
+                                    >
+                                        <span className="material-symbols-outlined text-2xl">close</span>
+                                    </button>
+                                </div>
+
+                                <div className="relative flex-1 bg-black overflow-hidden">
+                                    <Cropper
+                                        image={cropImage || ""}
+                                        crop={crop}
+                                        zoom={zoom}
+                                        aspect={1}
+                                        onCropChange={setCrop}
+                                        onCropComplete={(_, pixels) => setCroppedAreaPixels(pixels)}
+                                        onZoomChange={setZoom}
+                                        cropShape="round"
+                                        showGrid={false}
+                                    />
+                                </div>
+
+                                <div className="p-10 space-y-10 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 z-20">
+                                    <div className="flex items-center gap-8">
+                                        <span className="material-symbols-outlined text-slate-400 text-2xl">zoom_out</span>
+                                        <input
+                                            type="range"
+                                            value={zoom}
+                                            min={1}
+                                            max={3}
+                                            step={0.1}
+                                            aria-labelledby="Zoom"
+                                            onChange={(e) => setZoom(Number(e.target.value))}
+                                            className="flex-1 h-2 bg-slate-100 dark:bg-slate-800 rounded-full appearance-none cursor-pointer accent-primary"
+                                        />
+                                        <span className="material-symbols-outlined text-slate-400 text-2xl">zoom_in</span>
+                                    </div>
+
+                                    <div className="flex gap-4">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowCropModal(false)}
+                                            className="flex-1 py-5 px-8 rounded-[1.5rem] font-black text-slate-500 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all text-xs tracking-[0.2em]"
+                                        >
+                                            HỦY BỎ
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleCropConfirm}
+                                            className="flex-1 py-5 px-8 rounded-[1.5rem] font-black text-white bg-primary shadow-2xl shadow-primary/40 hover:scale-[1.02] active:scale-95 transition-all text-xs tracking-[0.2em]"
+                                        >
+                                            CẮT & LƯU ẢNH
+                                        </button>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>,
+                document.body
+            )}
+
         </div>
     );
 }

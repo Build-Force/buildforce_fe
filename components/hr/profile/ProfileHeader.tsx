@@ -270,9 +270,21 @@ export default function ProfileHeader({ hr }: { hr: HRProps }) {
             {((hr.profileDocumentImages && hr.profileDocumentImages.length > 0) || hr.profileDocumentImage) && (
                 <>
                     <div className="h-px w-full bg-gray-100 dark:bg-gray-700 my-6" />
-                    <div className="flex flex-col md:flex-row items-center md:items-start gap-6 p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                    <div className="flex flex-col gap-6 p-6 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                        {/* Info at top */}
+                        <div className="space-y-1.5 border-b border-gray-100 dark:border-gray-700/50 pb-4">
+                            <p className="text-[10px] font-bold text-primary uppercase tracking-widest">Hồ sơ năng lực</p>
+                            <div className="flex items-center gap-2">
+                                <ShieldCheck className="w-4 h-4 text-primary" />
+                                <p className="text-sm font-black text-gray-900 dark:text-gray-100">{hr.name}</p>
+                            </div>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed font-medium">
+                                Tài liệu năng lực đã được hệ thống kiểm duyệt chính thức. Nhấp vào từng ảnh để xem chi tiết ở chế độ toàn màn hình.
+                            </p>
+                        </div>
+
                         {/* Images Gallery */}
-                        <div className="flex flex-wrap gap-3 flex-shrink-0 justify-center md:justify-start">
+                        <div className="flex flex-wrap gap-4 justify-center md:justify-start">
                             {(hr.profileDocumentImages && hr.profileDocumentImages.length > 0
                                 ? hr.profileDocumentImages
                                 : hr.profileDocumentImage
@@ -292,7 +304,7 @@ export default function ProfileHeader({ hr }: { hr: HRProps }) {
                                     }}
                                     target={isPdf ? "_blank" : undefined}
                                     rel={isPdf ? "noopener noreferrer" : undefined}
-                                    className="group overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white relative block shadow-sm hover:shadow-md transition-all hover:border-primary/30"
+                                    className="group overflow-hidden rounded-xl border-2 border-white dark:border-gray-700 bg-white relative block shadow-sm hover:shadow-xl transition-all hover:border-primary/50 hover:-translate-y-1"
                                 >
                                     {isPdf ? (
                                         <div className="w-24 h-32 flex flex-col items-center justify-center bg-red-50 text-red-500 group-hover:bg-red-100 transition-colors">
@@ -305,7 +317,7 @@ export default function ProfileHeader({ hr }: { hr: HRProps }) {
                                         <img
                                             src={img}
                                             alt={`Hồ sơ năng lực ${idx + 1}`}
-                                            className="w-24 h-32 object-cover group-hover:scale-105 transition-transform duration-500"
+                                            className="w-24 h-32 object-cover transition-transform duration-700 group-hover:scale-110"
                                         />
                                     )}
                                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center">
@@ -314,15 +326,6 @@ export default function ProfileHeader({ hr }: { hr: HRProps }) {
                                 </a>
                                 );
                             })}
-                        </div>
-                        
-                        {/* Info */}
-                        <div className="flex flex-col justify-center min-h-[8rem] text-center md:text-left">
-                            <p className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1.5">Hồ sơ năng lực</p>
-                            <p className="text-sm font-black text-gray-900 dark:text-gray-100 mb-2">{hr.name}</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed font-medium mb-3">
-                                Tài liệu năng lực đã được kiểm duyệt. Nhấp vào từng ảnh để mở lớn và xem chi tiết đầy đủ.
-                            </p>
                         </div>
                     </div>
                 </>
