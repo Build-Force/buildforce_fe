@@ -80,9 +80,17 @@ export default function HRProfilePage({ params }: { params: Promise<{ id: string
 
                 <div className="space-y-12">
                     <ProfileHeader hr={hrData} />
-                    <StatsRow stats={hrData.stats} />
+                    <StatsRow 
+                        stats={hrData.stats} 
+                        industry={hrData.industryType} 
+                        joinedDate={hrData.joinedDate} 
+                        experienceYears={hrData.experienceYears}
+                        description={hrData.description}
+                        platformProjects={(hrData.projects || []).filter((p: any) => p.status === 'completed')}
+                        portfolios={hrData.portfolios || []}
+                    />
                     <PaymentHistory paymentHistory={hrData.paymentHistory} onTimePaymentRate={hrData.stats.onTimePaymentRate} />
-                    <ProjectHistory projects={hrData.projects || []} />
+
                     <WorkerReviews reviews={hrData.reviews || []} ratingBreakdown={hrData.ratingBreakdown} avgRating={hrData.stats.avgRating} totalReviews={hrData.stats.totalReviews} />
                     <ActiveJobs jobs={hrData.activeJobs || []} />
                 </div>
